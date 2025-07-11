@@ -14,6 +14,7 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
+    "lib": ["DOM", "ES2022"],
 
     "baseUrl": ".",
     "paths": {
