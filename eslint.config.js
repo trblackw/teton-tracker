@@ -33,6 +33,7 @@ export default [
         Response: 'readonly',
         Request: 'readonly',
         fetch: 'readonly',
+        crypto: 'readonly'
       },
     },
     plugins: {
