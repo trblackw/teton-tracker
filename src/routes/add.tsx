@@ -1,7 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, useRouter } from '@tanstack/react-router';
-import { Clock, MapPin, Plane, Plus } from 'lucide-react';
+import { Clock, MapPin, Plane, Plus, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '../components/ui/button';
 import {
@@ -34,6 +35,22 @@ import { toasts } from '../lib/toast';
 function AddRun() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [isInfoMessageDismissed, setIsInfoMessageDismissed] =
+    useState<boolean>(false);
+
+  // Check sessionStorage for dismissed state on component mount
+  useEffect(() => {
+    const dismissed = sessionStorage.getItem('snake-river-info-dismissed');
+    if (dismissed === 'true') {
+      setIsInfoMessageDismissed(true);
+    }
+  }, []);
+
+  // Function to dismiss the info message
+  const dismissInfoMessage = () => {
+    setIsInfoMessageDismissed(true);
+    sessionStorage.setItem('snake-river-info-dismissed', 'true');
+  };
 
   const form = useForm<NewRunForm>({
     resolver: zodResolver(NewRunFormSchema),
@@ -90,6 +107,31 @@ function AddRun() {
           Schedule a new pickup or dropoff run
         </p>
       </div>
+
+      {/* Dismissable Info Message */}
+      {!isInfoMessageDismissed && (
+        <Card className='border-blue-200 py-1 bg-blue-50 dark:border-blue-800 dark:bg-blue-950'>
+          <CardContent className='px-2 py-0'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center gap-2'>
+                <Plane className='size-12 text-blue-600 dark:text-blue-400' />
+                <p className='text-sm text-blue-800 dark:text-blue-200'>
+                  <strong>Snake River employee?</strong> Copy & paste scheduled
+                  run messages directly
+                </p>
+              </div>
+              <Button
+                variant='ghost'
+                size='sm'
+                onClick={dismissInfoMessage}
+                className='h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900'
+              >
+                <X className='h-4 w-4' />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
