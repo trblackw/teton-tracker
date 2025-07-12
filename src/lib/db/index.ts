@@ -55,6 +55,7 @@ export async function initializeSchema(): Promise<void> {
         id TEXT PRIMARY KEY,
         home_airport TEXT,
         theme TEXT DEFAULT 'system',
+        timezone TEXT DEFAULT 'UTC',
         notification_preferences TEXT DEFAULT '{}',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -120,6 +121,17 @@ export async function initializeSchema(): Promise<void> {
     } catch (error) {
       // Column might already exist, which is fine
       console.log('💡 Price column already exists or could not be added');
+    }
+
+    // Migration: Add timezone column to existing user_preferences table
+    try {
+      await db.execute(`
+        ALTER TABLE user_preferences ADD COLUMN timezone TEXT NOT NULL DEFAULT 'UTC'
+      `);
+      console.log('✅ Added timezone column to user_preferences table');
+    } catch (error) {
+      // Column might already exist, which is fine
+      console.log('💡 Timezone column already exists or could not be added');
     }
 
     console.log('✅ Database schema initialized successfully');

@@ -4,6 +4,7 @@ export interface UserPreferences {
   id: string;
   homeAirport?: string;
   theme: 'light' | 'dark' | 'system';
+  timezone: string;
   notificationPreferences: {
     flightUpdates: boolean;
     trafficAlerts: boolean;
@@ -16,6 +17,7 @@ export interface UserPreferences {
 export interface UpdatePreferencesData {
   homeAirport?: string;
   theme?: 'light' | 'dark' | 'system';
+  timezone?: string;
   notificationPreferences?: Partial<UserPreferences['notificationPreferences']>;
 }
 
@@ -29,7 +31,7 @@ export async function getUserPreferences(
 
     const result = await db.execute({
       sql: `
-        SELECT id, home_airport, theme, notification_preferences, 
+        SELECT id, home_airport, theme, timezone, notification_preferences, 
                created_at, updated_at
         FROM user_preferences 
         WHERE id = ?
@@ -50,6 +52,7 @@ export async function getUserPreferences(
       id: row.id as string,
       homeAirport: row.home_airport as string | undefined,
       theme: (row.theme as 'light' | 'dark' | 'system') || 'system',
+      timezone: (row.timezone as string) || 'UTC',
       notificationPreferences: {
         flightUpdates: notificationPreferences.flightUpdates ?? true,
         trafficAlerts: notificationPreferences.trafficAlerts ?? true,
@@ -87,12 +90,13 @@ export async function updateUserPreferences(
       await db.execute({
         sql: `
           UPDATE user_preferences 
-          SET home_airport = ?, theme = ?, notification_preferences = ?, updated_at = ?
+          SET home_airport = ?, theme = ?, timezone = ?, notification_preferences = ?, updated_at = ?
           WHERE id = ?
         `,
         args: [
           data.homeAirport ?? existing.homeAirport ?? null,
           data.theme ?? existing.theme,
+          data.timezone ?? existing.timezone,
           JSON.stringify(mergedNotificationPreferences),
           now,
           currentUserId,
@@ -106,6 +110,7 @@ export async function updateUserPreferences(
         ...existing,
         homeAirport: data.homeAirport ?? existing.homeAirport,
         theme: data.theme ?? existing.theme,
+        timezone: data.timezone ?? existing.timezone,
         notificationPreferences: mergedNotificationPreferences,
         updatedAt: new Date(now),
       };
@@ -121,13 +126,14 @@ export async function updateUserPreferences(
       await db.execute({
         sql: `
           INSERT INTO user_preferences 
-          (id, home_airport, theme, notification_preferences, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?)
+          (id, home_airport, theme, timezone, notification_preferences, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
         `,
         args: [
           currentUserId,
           data.homeAirport || null,
           data.theme || 'system',
+          data.timezone || 'UTC',
           JSON.stringify(defaultNotificationPreferences),
           now,
           now,
@@ -140,6 +146,7 @@ export async function updateUserPreferences(
         id: currentUserId,
         homeAirport: data.homeAirport,
         theme: data.theme || 'system',
+        timezone: data.timezone || 'UTC',
         notificationPreferences: defaultNotificationPreferences,
         createdAt: new Date(now),
         updatedAt: new Date(now),

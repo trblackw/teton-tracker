@@ -1,0 +1,256 @@
+{
+  "timezones": [
+    {
+      "id": "America/New_York",
+      "label": "Eastern Time (New York)",
+      "region": "North America",
+      "abbreviation": "ET",
+      "utcOffset": "-05:00/-04:00"
+    },
+    {
+      "id": "America/Chicago",
+      "label": "Central Time (Chicago)",
+      "region": "North America",
+      "abbreviation": "CT",
+      "utcOffset": "-06:00/-05:00"
+    },
+    {
+      "id": "America/Denver",
+      "label": "Mountain Time (Denver)",
+      "region": "North America",
+      "abbreviation": "MT",
+      "utcOffset": "-07:00/-06:00"
+    },
+    {
+      "id": "America/Los_Angeles",
+      "label": "Pacific Time (Los Angeles)",
+      "region": "North America",
+      "abbreviation": "PT",
+      "utcOffset": "-08:00/-07:00"
+    },
+    {
+      "id": "America/Anchorage",
+      "label": "Alaska Time (Anchorage)",
+      "region": "North America",
+      "abbreviation": "AKT",
+      "utcOffset": "-09:00/-08:00"
+    },
+    {
+      "id": "Pacific/Honolulu",
+      "label": "Hawaii Time (Honolulu)",
+      "region": "North America",
+      "abbreviation": "HST",
+      "utcOffset": "-10:00"
+    },
+    {
+      "id": "Europe/London",
+      "label": "Greenwich Mean Time (London)",
+      "region": "Europe",
+      "abbreviation": "GMT",
+      "utcOffset": "+00:00/+01:00"
+    },
+    {
+      "id": "Europe/Paris",
+      "label": "Central European Time (Paris)",
+      "region": "Europe",
+      "abbreviation": "CET",
+      "utcOffset": "+01:00/+02:00"
+    },
+    {
+      "id": "Europe/Berlin",
+      "label": "Central European Time (Berlin)",
+      "region": "Europe",
+      "abbreviation": "CET",
+      "utcOffset": "+01:00/+02:00"
+    },
+    {
+      "id": "Europe/Rome",
+      "label": "Central European Time (Rome)",
+      "region": "Europe",
+      "abbreviation": "CET",
+      "utcOffset": "+01:00/+02:00"
+    },
+    {
+      "id": "Europe/Madrid",
+      "label": "Central European Time (Madrid)",
+      "region": "Europe",
+      "abbreviation": "CET",
+      "utcOffset": "+01:00/+02:00"
+    },
+    {
+      "id": "Europe/Amsterdam",
+      "label": "Central European Time (Amsterdam)",
+      "region": "Europe",
+      "abbreviation": "CET",
+      "utcOffset": "+01:00/+02:00"
+    },
+    {
+      "id": "Europe/Stockholm",
+      "label": "Central European Time (Stockholm)",
+      "region": "Europe",
+      "abbreviation": "CET",
+      "utcOffset": "+01:00/+02:00"
+    },
+    {
+      "id": "Europe/Helsinki",
+      "label": "Eastern European Time (Helsinki)",
+      "region": "Europe",
+      "abbreviation": "EET",
+      "utcOffset": "+02:00/+03:00"
+    },
+    {
+      "id": "Europe/Athens",
+      "label": "Eastern European Time (Athens)",
+      "region": "Europe",
+      "abbreviation": "EET",
+      "utcOffset": "+02:00/+03:00"
+    },
+    {
+      "id": "Europe/Moscow",
+      "label": "Moscow Time (Moscow)",
+      "region": "Europe",
+      "abbreviation": "MSK",
+      "utcOffset": "+03:00"
+    },
+    {
+      "id": "Asia/Tokyo",
+      "label": "Japan Standard Time (Tokyo)",
+      "region": "Asia",
+      "abbreviation": "JST",
+      "utcOffset": "+09:00"
+    },
+    {
+      "id": "Asia/Shanghai",
+      "label": "China Standard Time (Shanghai)",
+      "region": "Asia",
+      "abbreviation": "CST",
+      "utcOffset": "+08:00"
+    },
+    {
+      "id": "Asia/Hong_Kong",
+      "label": "Hong Kong Time (Hong Kong)",
+      "region": "Asia",
+      "abbreviation": "HKT",
+      "utcOffset": "+08:00"
+    },
+    {
+      "id": "Asia/Singapore",
+      "label": "Singapore Time (Singapore)",
+      "region": "Asia",
+      "abbreviation": "SGT",
+      "utcOffset": "+08:00"
+    },
+    {
+      "id": "Asia/Seoul",
+      "label": "Korea Standard Time (Seoul)",
+      "region": "Asia",
+      "abbreviation": "KST",
+      "utcOffset": "+09:00"
+    },
+    {
+      "id": "Asia/Bangkok",
+      "label": "Indochina Time (Bangkok)",
+      "region": "Asia",
+      "abbreviation": "ICT",
+      "utcOffset": "+07:00"
+    },
+    {
+      "id": "Asia/Mumbai",
+      "label": "India Standard Time (Mumbai)",
+      "region": "Asia",
+      "abbreviation": "IST",
+      "utcOffset": "+05:30"
+    },
+    {
+      "id": "Asia/Dubai",
+      "label": "Gulf Standard Time (Dubai)",
+      "region": "Asia",
+      "abbreviation": "GST",
+      "utcOffset": "+04:00"
+    },
+    {
+      "id": "Australia/Sydney",
+      "label": "Australian Eastern Time (Sydney)",
+      "region": "Australia",
+      "abbreviation": "AET",
+      "utcOffset": "+10:00/+11:00"
+    },
+    {
+      "id": "Australia/Melbourne",
+      "label": "Australian Eastern Time (Melbourne)",
+      "region": "Australia",
+      "abbreviation": "AET",
+      "utcOffset": "+10:00/+11:00"
+    },
+    {
+      "id": "Australia/Perth",
+      "label": "Australian Western Time (Perth)",
+      "region": "Australia",
+      "abbreviation": "AWT",
+      "utcOffset": "+08:00"
+    },
+    {
+      "id": "Pacific/Auckland",
+      "label": "New Zealand Time (Auckland)",
+      "region": "Pacific",
+      "abbreviation": "NZST",
+      "utcOffset": "+12:00/+13:00"
+    },
+    {
+      "id": "America/Sao_Paulo",
+      "label": "Brasília Time (São Paulo)",
+      "region": "South America",
+      "abbreviation": "BRT",
+      "utcOffset": "-03:00"
+    },
+    {
+      "id": "America/Argentina/Buenos_Aires",
+      "label": "Argentina Time (Buenos Aires)",
+      "region": "South America",
+      "abbreviation": "ART",
+      "utcOffset": "-03:00"
+    },
+    {
+      "id": "America/Mexico_City",
+      "label": "Central Standard Time (Mexico City)",
+      "region": "North America",
+      "abbreviation": "CST",
+      "utcOffset": "-06:00"
+    },
+    {
+      "id": "America/Toronto",
+      "label": "Eastern Time (Toronto)",
+      "region": "North America",
+      "abbreviation": "ET",
+      "utcOffset": "-05:00/-04:00"
+    },
+    {
+      "id": "America/Vancouver",
+      "label": "Pacific Time (Vancouver)",
+      "region": "North America",
+      "abbreviation": "PT",
+      "utcOffset": "-08:00/-07:00"
+    },
+    {
+      "id": "Africa/Cairo",
+      "label": "Eastern European Time (Cairo)",
+      "region": "Africa",
+      "abbreviation": "EET",
+      "utcOffset": "+02:00"
+    },
+    {
+      "id": "Africa/Johannesburg",
+      "label": "South Africa Time (Johannesburg)",
+      "region": "Africa",
+      "abbreviation": "SAST",
+      "utcOffset": "+02:00"
+    },
+    {
+      "id": "UTC",
+      "label": "Coordinated Universal Time (UTC)",
+      "region": "UTC",
+      "abbreviation": "UTC",
+      "utcOffset": "+00:00"
+    }
+  ]
+}

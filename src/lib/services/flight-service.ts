@@ -104,8 +104,8 @@ export interface UpcomingFlight {
   flightNumber: string;
   airline: string;
   destination: string;
-  scheduledDeparture: string;
-  estimatedDeparture?: string;
+  scheduledDeparture: string; // ISO datetime string
+  estimatedDeparture?: string; // ISO datetime string
   status: string;
   aircraft?: string;
   gate?: string;
@@ -242,11 +242,9 @@ export class FlightService {
       flight.flight.iata || flight.flight.number || 'Unknown';
     const airline = flight.airline.name || flight.airline.iata || 'Unknown';
 
-    // Format departure time (convert from ISO string to HH:MM)
-    const scheduledDeparture = this.formatTime(flight.departure.scheduled);
-    const estimatedDeparture = flight.departure.estimated
-      ? this.formatTime(flight.departure.estimated)
-      : undefined;
+    // Preserve full ISO datetime strings for timezone-aware formatting
+    const scheduledDeparture = flight.departure.scheduled || new Date().toISOString();
+    const estimatedDeparture = flight.departure.estimated;
 
     // Get destination with proper formatting
     const destination =
@@ -270,17 +268,7 @@ export class FlightService {
     };
   }
 
-  /**
-   * Format ISO time string to HH:MM format
-   */
-  private formatTime(isoString: string): string {
-    try {
-      const date = new Date(isoString);
-      return date.toTimeString().substring(0, 5);
-    } catch (error) {
-      return 'Unknown';
-    }
-  }
+
 
   /**
    * Convert AviationStack flight status to readable format
@@ -355,8 +343,8 @@ export class FlightService {
         destination: getAirportDisplayName(
           destinations[Math.floor(Math.random() * destinations.length)]
         ),
-        scheduledDeparture: departureTime.toTimeString().substring(0, 5),
-        estimatedDeparture: departureTime.toTimeString().substring(0, 5),
+        scheduledDeparture: departureTime.toISOString(),
+        estimatedDeparture: departureTime.toISOString(),
         status: statuses[Math.floor(Math.random() * statuses.length)],
         gate: `${Math.floor(Math.random() * 20 + 1)}${['A', 'B', 'C'][Math.floor(Math.random() * 3)]}`,
       });

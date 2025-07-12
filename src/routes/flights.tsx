@@ -33,6 +33,7 @@ import {
 import airlinesData from '../data/airlines.json';
 import airportsData from '../data/airports-comprehensive.json';
 import { preferencesApi } from '../lib/api/client';
+import { useTimezoneFormatters } from '../lib/hooks/use-timezone';
 import { getFlightServiceWithConfig } from '../lib/services/flight-service';
 
 interface Airline {
@@ -52,6 +53,7 @@ function UpcomingFlights() {
   const [searchMode, setSearchMode] = useState<'selected' | 'all'>('selected');
   const [isSearchExpanded, setIsSearchExpanded] = useState<boolean>(false);
   const [isFilterExpanded, setIsFilterExpanded] = useState<boolean>(false);
+  const { formatDateTime } = useTimezoneFormatters();
 
   // Query for user preferences to get home airport
   const { data: preferences, isLoading: isLoadingPreferences } = useQuery({
@@ -253,11 +255,12 @@ function UpcomingFlights() {
         <Button
           variant='outline'
           size='sm'
+          className='mt-2'
           onClick={() => refetch()}
           disabled={isLoading}
         >
           <RefreshCw
-            className={`h-4 w-4 border-2 border-primary/20 rounded-full mr-2 ${isLoading ? 'animate-spin' : ''}`}
+            className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`}
           />
           Refresh
         </Button>
@@ -454,13 +457,14 @@ function UpcomingFlights() {
                     <Clock className='h-4 w-4 text-muted-foreground flex-shrink-0' />
                     <div className='text-sm'>
                       <div className='font-medium'>
-                        Departure: {flight.scheduledDeparture}
+                        Departure: {formatDateTime(flight.scheduledDeparture)}
                       </div>
                       {flight.estimatedDeparture &&
                         flight.estimatedDeparture !==
                           flight.scheduledDeparture && (
                           <div className='text-muted-foreground'>
-                            Estimated: {flight.estimatedDeparture}
+                            Estimated:{' '}
+                            {formatDateTime(flight.estimatedDeparture)}
                           </div>
                         )}
                     </div>

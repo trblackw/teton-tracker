@@ -8,7 +8,7 @@ import {
   Navigation,
   Plane,
   Plus,
-  Trash2
+  Trash2,
 } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -21,12 +21,14 @@ import {
 } from '../components/ui/card';
 import { runsApi } from '../lib/api/client';
 import { useMultipleRunsData } from '../lib/hooks/use-api-data';
-import { invalidateAllApiData } from '../lib/react-query-client';
+import { useTimezoneFormatters } from '../lib/hooks/use-timezone';
 import { type Run, type RunStatus } from '../lib/schema';
 import { pollingService } from '../lib/services/polling-service';
+import { toasts } from '../lib/toast';
 
 function Runs() {
   const queryClient = useQueryClient();
+  const { formatScheduleTime } = useTimezoneFormatters();
 
   // Query for runs from API
   const {
@@ -54,19 +56,24 @@ function Runs() {
     },
   });
 
-  // Mutation for deleting run
+  // Mutation for deleting runs
   const deleteRunMutation = useMutation({
-    mutationFn: (id: string) => runsApi.deleteRun(id),
+    mutationFn: runsApi.deleteRun,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['runs'] });
+      toasts.success('Run deleted', 'The run has been successfully removed.');
     },
     onError: error => {
       console.error('Failed to delete run:', error);
+      toasts.error(
+        'Failed to delete run',
+        'Please try again or contact support if the problem persists.'
+      );
     },
   });
 
   const refreshAllData = () => {
-    invalidateAllApiData();
+    queryClient.invalidateQueries({ queryKey: ['runs'] });
     runsApiData.refetchAll();
     refetchRuns();
   };
@@ -118,9 +125,7 @@ function Runs() {
         <Card>
           <CardContent className='p-8 text-center'>
             <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4'></div>
-            <p className='text-muted-foreground'>
-              Loading runs from database...
-            </p>
+            <p className='text-muted-foreground'>Loading runs...</p>
           </CardContent>
         </Card>
       </div>
@@ -156,7 +161,7 @@ function Runs() {
             Manage your pickup & dropoff runs
           </p>
         </div>
-        <Card className='bg-accent/50 border rounded-md'>
+        <Card className='bg-accent/50'>
           <CardContent className='p-8 text-center'>
             <Plane className='h-16 w-16 text-muted-foreground mx-auto mb-6' />
             <p className='text-muted-foreground text-lg mb-4'>
@@ -182,6 +187,17 @@ function Runs() {
           <p className='text-muted-foreground mt-1'>
             {runs.length} run{runs.length !== 1 ? 's' : ''} scheduled
           </p>
+        </div>
+        <div className='flex gap-2'>
+          <Button variant='outline' onClick={refreshAllData}>
+            Refresh
+          </Button>
+          <Link to='/add'>
+            <Button>
+              <Plus className='h-4 w-4 mr-2' />
+              Add Run
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -240,7 +256,7 @@ function Runs() {
                     <div className='flex items-center gap-2'>
                       <Clock className='h-4 w-4 text-muted-foreground flex-shrink-0' />
                       <span className='text-sm font-medium'>
-                        {new Date(run.scheduledTime).toLocaleString()}
+                        {formatScheduleTime(run.scheduledTime)}
                       </span>
                     </div>
                     <div className='flex items-start gap-2'>

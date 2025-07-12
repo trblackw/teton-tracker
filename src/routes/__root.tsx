@@ -102,14 +102,14 @@ export const Route = createRootRoute({
               </aside>
 
               {/* Main Content */}
-              <main className='flex-1 lg:max-w-4xl'>
+              <main className='flex-1 lg:max-w-4xl pb-20 lg:pb-0'>
                 <Outlet />
               </main>
             </div>
           </div>
 
           {/* Mobile Navigation */}
-          <div className='lg:hidden fixed bottom-0 left-0 right-0 border-t border-border bg-card'>
+          <div className='lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-sm'>
             <nav className='flex items-center justify-center gap-1 p-2'>
               <Button
                 asChild
@@ -198,7 +198,7 @@ export const Route = createRootRoute({
             theme='system'
             richColors
             closeButton
-            offset='80px'
+            offset='100px'
             expand={false}
             visibleToasts={3}
           />
