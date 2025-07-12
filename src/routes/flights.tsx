@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from '../components/ui/card';
 import airlinesData from '../data/airlines.json';
+import airportsData from '../data/airports-full.json';
 import { preferencesApi } from '../lib/api/client';
 import { openskyService } from '../lib/services/opensky-service';
 
@@ -84,6 +85,29 @@ function UpcomingFlights() {
   const getAirlineLogo = (airlineCode: string) => {
     const airline = airlines.find(a => a.id === airlineCode);
     return airline?.logo;
+  };
+
+  const getAirportName = (airportCode: string) => {
+    if (!airportCode || airportCode === 'Unknown') return 'Unknown';
+
+    // Remove 'K' prefix if present (US airports)
+    const cleanCode = airportCode.startsWith('K')
+      ? airportCode.substring(1)
+      : airportCode;
+
+    // Find airport in data - check both with and without 'K' prefix
+    const airport = Object.values(airportsData).find(
+      (airport: any) =>
+        airport.iata === cleanCode ||
+        airport.icao === airportCode ||
+        airport.icao === cleanCode
+    );
+
+    if (airport) {
+      return `${airport.city}, ${airport.state} (${airport.iata || cleanCode})`;
+    }
+
+    return airportCode;
   };
 
   if (isLoadingPreferences) {
@@ -292,7 +316,7 @@ function UpcomingFlights() {
                     <MapPin className='h-4 w-4 text-muted-foreground flex-shrink-0' />
                     <div className='text-sm'>
                       <div className='font-medium'>
-                        To: {flight.destination}
+                        To: {getAirportName(flight.destination)}
                       </div>
                     </div>
                   </div>
