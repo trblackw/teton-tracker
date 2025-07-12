@@ -265,18 +265,39 @@ export const transformOpenSkyToFlightStatus = (
   openSkyData: OpenSkyFlightResponse,
   flightNumber: string
 ): FlightStatus => {
+  // Determine flight status based on OpenSky data
+  let status: FlightStatusType = 'Unknown';
+  
+  if (openSkyData.firstSeen && openSkyData.lastSeen) {
+    const currentTime = Math.floor(Date.now() / 1000);
+    const timeSinceLastSeen = currentTime - openSkyData.lastSeen;
+    
+    if (timeSinceLastSeen < 300) { // Less than 5 minutes ago
+      status = 'Departed'; // Flight is currently active
+    } else if (openSkyData.estArrivalAirport) {
+      status = 'Arrived'; // Flight has landed
+    } else {
+      status = 'Departed'; // Flight has taken off
+    }
+  } else if (openSkyData.firstSeen) {
+    status = 'Boarding'; // Flight is preparing to depart
+  }
+  
   return FlightStatusSchema.parse({
     flightNumber,
-    status: 'Unknown' as const,
+    status,
     scheduledDeparture: undefined,
     actualDeparture: openSkyData.firstSeen
-      ? new Date(openSkyData.firstSeen * 1000).toISOString()
+      ? new Date(openSkyData.firstSeen * 1000).toTimeString().substring(0, 5)
       : undefined,
     scheduledArrival: undefined,
     actualArrival: openSkyData.lastSeen
-      ? new Date(openSkyData.lastSeen * 1000).toISOString()
+      ? new Date(openSkyData.lastSeen * 1000).toTimeString().substring(0, 5)
       : undefined,
     delay: undefined,
+    gate: undefined,
+    terminal: undefined,
+    aircraft: undefined,
     lastUpdated: new Date(),
   });
 };

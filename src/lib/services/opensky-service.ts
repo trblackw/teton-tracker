@@ -75,6 +75,7 @@ export class OpenSkyFlightService {
   private async searchFlightByCallsign(flightNumber: string): Promise<OpenSkyFlightData | null> {
     // Clean the flight number for search
     const cleanFlightNumber = flightNumber.replace(/\s+/g, '').toUpperCase();
+    console.log(`🔍 Searching OpenSky for flight: ${cleanFlightNumber}`);
     
     // OpenSky Network API endpoint for flight search
     const now = Math.floor(Date.now() / 1000);
@@ -94,29 +95,39 @@ export class OpenSkyFlightService {
       const response = await fetch(statesUrl, fetchOptions);
       
       if (!response.ok) {
+        console.error(`❌ OpenSky API error: ${response.status} ${response.statusText}`);
         throw new Error(`OpenSky API error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log(`📊 OpenSky returned ${data.states?.length || 0} current flights`);
       
       // Search through current states for matching callsign
       if (data.states && Array.isArray(data.states)) {
+        let checkedCount = 0;
         for (const state of data.states) {
           const callsign = state[1]?.trim()?.toUpperCase();
-          if (callsign && this.matchesFlightNumber(callsign, cleanFlightNumber)) {
-            // Found a matching flight in current states
-            return this.convertStateToFlightData(state);
+          if (callsign) {
+            checkedCount++;
+            if (this.matchesFlightNumber(callsign, cleanFlightNumber)) {
+              console.log(`✅ Found matching flight: ${callsign}`);
+              return this.convertStateToFlightData(state);
+            }
           }
         }
+        console.log(`🔍 Checked ${checkedCount} flights, no match found for ${cleanFlightNumber}`);
       }
 
       // If not found in current states, try historical data
+      console.log(`🕐 Searching historical data for ${cleanFlightNumber}`);
       return await this.searchHistoricalFlights(cleanFlightNumber, oneDayAgo, now);
       
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
+        console.error(`⏱️ OpenSky API request timed out for ${cleanFlightNumber}`);
         throw new Error('OpenSky API request timed out');
       }
+      console.error(`❌ OpenSky search failed for ${cleanFlightNumber}:`, error);
       throw error;
     }
   }
@@ -207,6 +218,7 @@ export class OpenSkyFlightService {
    * Create a "not found" flight status
    */
   private createNotFoundStatus(flightNumber: string): FlightStatus {
+    console.log(`❌ Flight ${flightNumber} not found in OpenSky database`);
     return {
       flightNumber,
       status: 'Unknown',

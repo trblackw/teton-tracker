@@ -74,7 +74,7 @@ export default function App() {
   // Initialize services on component mount
   useEffect(() => {
     initializeTomTomService();
-    
+
     // Configure polling service to work with React Query
     pollingService.config = {
       ...pollingService.config,
@@ -84,24 +84,26 @@ export default function App() {
           queryClient.invalidateQueries({ queryKey: ['flight-status', key] });
         } else if (type === 'traffic') {
           const [origin, destination] = key.split('-');
-          queryClient.invalidateQueries({ queryKey: ['traffic-data', origin, destination] });
+          queryClient.invalidateQueries({
+            queryKey: ['traffic-data', origin, destination],
+          });
         }
       },
       onError: (error, context) => {
         console.error(`[PollingService] Error in ${context}:`, error);
       },
     };
-    
+
     // Start polling if enabled
     if (pollingEnabled) {
       pollingService.start();
     }
-    
+
     // Update debug info every second
     const debugInterval = window.setInterval(() => {
       setDebugInfo(pollingService.getDebugInfo());
     }, 1000);
-    
+
     return () => {
       pollingService.stop();
       window.clearInterval(debugInterval);
@@ -208,9 +210,18 @@ export default function App() {
           warnings: result.warnings,
         });
 
-        // Show notification
-        if (result.success) {
+        // Show notification and auto-fill form if successful
+        if (result.success && result.runs.length > 0) {
           console.log(`📋 Schedule detected! Found ${result.runs.length} runs`);
+
+          // Auto-fill the form fields with the first run's data
+          const today = new Date().toISOString().split('T')[0];
+          const firstRun = result.runs[0];
+          const formData = convertParsedRunToForm(firstRun, today);
+
+          console.log('🔄 Auto-filling form fields with:', formData);
+          setNewRun(formData);
+
           // Auto-hide the notification after 3 seconds
           window.setTimeout(() => setShowPasteDetected(false), 3000);
         }
@@ -348,6 +359,16 @@ export default function App() {
 
     const result = parseScheduleMessage(scheduleText);
     setParseResult(result);
+
+    // Auto-fill form fields with the first run's data if parsing was successful
+    if (result.success && result.runs.length > 0) {
+      const today = new Date().toISOString().split('T')[0];
+      const firstRun = result.runs[0];
+      const formData = convertParsedRunToForm(firstRun, today);
+
+      console.log('🔄 Auto-filling form fields with:', formData);
+      setNewRun(formData);
+    }
   };
 
   const handleBulkImport = () => {
@@ -413,8 +434,12 @@ export default function App() {
     const runData = runsApiData.data.find(data => data.run.id === run.id);
     if (runData) {
       // Invalidate specific queries for this run
-      queryClient.invalidateQueries({ queryKey: ['flight-status', run.flightNumber] });
-      queryClient.invalidateQueries({ queryKey: ['traffic-data', run.pickupLocation, run.dropoffLocation] });
+      queryClient.invalidateQueries({
+        queryKey: ['flight-status', run.flightNumber],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['traffic-data', run.pickupLocation, run.dropoffLocation],
+      });
     }
   };
 
@@ -424,12 +449,16 @@ export default function App() {
 
     const activeRunsCount = runs.filter(run => run.status === 'active').length;
     const isDebugMode = debugInfo.apiCallsBlocked > 0;
-    const lastPollTime = debugInfo.lastPolled 
+    const lastPollTime = debugInfo.lastPolled
       ? new Date(debugInfo.lastPolled).toLocaleTimeString()
       : 'Never';
 
     return {
-      status: pollingEnabled ? (isDebugMode ? 'Debug Mode' : 'Active') : 'Disabled',
+      status: pollingEnabled
+        ? isDebugMode
+          ? 'Debug Mode'
+          : 'Active'
+        : 'Disabled',
       activeRuns: activeRunsCount,
       lastPoll: lastPollTime,
       pollCount: debugInfo.pollCount,
@@ -455,7 +484,7 @@ export default function App() {
 
   return (
     <div className='min-h-screen bg-gray-50 p-4'>
-      <div className='max-w-6xl mx-auto'>
+      <div className='max-w-3xl mx-auto'>
         <div className='mb-8'>
           <div className='flex items-center justify-between'>
             <div className='flex items-center gap-4'>
@@ -529,13 +558,20 @@ export default function App() {
               {(() => {
                 const debugDisplay = formatDebugInfo();
                 if (!debugDisplay) return <p>No debug info available</p>;
-                
+
                 return (
                   <div className='grid grid-cols-2 md:grid-cols-4 gap-4 text-sm'>
                     <div>
                       <p className='font-medium'>Polling Status</p>
-                      <p className={`${debugDisplay.status === 'Active' ? 'text-green-600' : 
-                        debugDisplay.status === 'Debug Mode' ? 'text-yellow-600' : 'text-gray-600'}`}>
+                      <p
+                        className={`${
+                          debugDisplay.status === 'Active'
+                            ? 'text-green-600'
+                            : debugDisplay.status === 'Debug Mode'
+                              ? 'text-yellow-600'
+                              : 'text-gray-600'
+                        }`}
+                      >
                         {debugDisplay.status}
                       </p>
                     </div>
@@ -553,7 +589,13 @@ export default function App() {
                     </div>
                     <div>
                       <p className='font-medium'>React Query Status</p>
-                      <p className={runsApiData.isFetching ? 'text-blue-600' : 'text-green-600'}>
+                      <p
+                        className={
+                          runsApiData.isFetching
+                            ? 'text-blue-600'
+                            : 'text-green-600'
+                        }
+                      >
                         {runsApiData.isFetching ? 'Fetching' : 'Idle'}
                       </p>
                     </div>
@@ -564,7 +606,9 @@ export default function App() {
                     {debugDisplay.apiCallsBlocked > 0 && (
                       <div className='col-span-2'>
                         <p className='font-medium'>API Calls Blocked</p>
-                        <p className='text-yellow-600'>{debugDisplay.apiCallsBlocked} (Debug Mode)</p>
+                        <p className='text-yellow-600'>
+                          {debugDisplay.apiCallsBlocked} (Debug Mode)
+                        </p>
                       </div>
                     )}
                     {debugDisplay.errors.length > 0 && (
@@ -584,14 +628,16 @@ export default function App() {
               })()}
               <div className='mt-4 pt-4 border-t border-yellow-200'>
                 <p className='text-xs text-gray-600'>
-                  <strong>Debug Mode:</strong> {pollingService.config.enableDebugMode ? 'ON' : 'OFF'} - 
-                  {pollingService.config.enableDebugMode 
+                  <strong>Debug Mode:</strong>{' '}
+                  {pollingService.config.enableDebugMode ? 'ON' : 'OFF'} -
+                  {pollingService.config.enableDebugMode
                     ? ' API calls are blocked to prevent unnecessary requests during development.'
                     : ' API calls are enabled for active runs every 5 minutes.'}
                 </p>
                 <p className='text-xs text-gray-600 mt-1'>
-                  <strong>React Query:</strong> Automatic background refetching every 5 minutes for stale data. 
-                  Data is cached for 10 minutes and considered fresh for 2-3 minutes.
+                  <strong>React Query:</strong> Automatic background refetching
+                  every 5 minutes for stale data. Data is cached for 10 minutes
+                  and considered fresh for 2-3 minutes.
                 </p>
               </div>
             </CardContent>
@@ -612,10 +658,18 @@ export default function App() {
           </Card>
         )}
 
-        <Tabs value={currentTab} onValueChange={setCurrentTab} className='w-full'>
+        <Tabs
+          value={currentTab}
+          onValueChange={setCurrentTab}
+          className='w-full'
+        >
           <TabsList className='grid w-full grid-cols-2'>
-            <TabsTrigger className='cursor-pointer' value='runs'>Current Runs</TabsTrigger>
-            <TabsTrigger className='cursor-pointer' value='add'>Add New Run</TabsTrigger>
+            <TabsTrigger className='cursor-pointer' value='runs'>
+              Current Runs
+            </TabsTrigger>
+            <TabsTrigger className='cursor-pointer' value='add'>
+              Add New Run
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value='runs' className='mt-6'>
@@ -630,152 +684,160 @@ export default function App() {
               </Card>
             ) : (
               <div className='grid gap-4'>
-                {runsApiData.data.map(({ run, flightStatus, trafficData, isLoading, isError }) => {
-                  return (
-                    <Card key={run.id} className='w-full'>
-                      <CardHeader className='pb-3'>
-                        <div className='flex items-start justify-between'>
-                          <div>
-                            <CardTitle className='text-lg'>
-                              {run.flightNumber}
-                              {isLoading && (
-                                <span className='ml-2 inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600'></span>
-                              )}
-                              {isError && (
-                                <span className='ml-2 text-red-500 text-sm'>⚠️</span>
-                              )}
-                            </CardTitle>
-                            <CardDescription>
-                              {run.airline} • {run.departure} → {run.arrival}
-                            </CardDescription>
-                          </div>
-                          <div className='flex items-center gap-2'>
-                            <Badge className={getStatusColor(run.status)}>
-                              {run.status}
-                            </Badge>
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              onClick={() => deleteRun(run.id)}
-                            >
-                              <Trash2 className='h-4 w-4' />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                          <div className='space-y-2'>
-                            <div className='flex items-center gap-2'>
-                              <Clock className='h-4 w-4 text-gray-500' />
-                              <span className='text-sm font-medium'>
-                                {new Date(run.scheduledTime).toLocaleString()}
-                              </span>
-                            </div>
-                            <div className='flex items-center gap-2'>
-                              <MapPin className='h-4 w-4 text-gray-500' />
-                              <span className='text-sm'>
-                                {run.type === 'pickup' ? 'Pickup' : 'Dropoff'} •{' '}
-                                {run.pickupLocation} → {run.dropoffLocation}
-                              </span>
-                            </div>
-                            {run.notes && (
-                              <div className='flex items-center gap-2'>
-                                <FileText className='h-4 w-4 text-gray-500' />
-                                <span className='text-sm text-gray-600'>
-                                  {run.notes}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className='space-y-2'>
-                            {flightStatus && (
-                              <div className='flex items-center gap-2'>
-                                <Plane className='h-4 w-4 text-gray-500' />
-                                <span className='text-sm'>
-                                  Flight: {flightStatus.status}
-                                  {flightStatus.delay && flightStatus.delay > 0 && (
-                                    <span className='text-red-600 ml-1'>
-                                      (+{flightStatus.delay} min)
-                                    </span>
-                                  )}
-                                </span>
-                              </div>
-                            )}
-                            {trafficData && (
-                              <div className='flex items-center gap-2'>
-                                <Navigation className='h-4 w-4 text-gray-500' />
-                                <span className='text-sm'>
-                                  Traffic: {trafficData.duration} min •{' '}
-                                  {trafficData.distance} •{' '}
-                                  <span
-                                    className={
-                                      trafficData.status === 'heavy'
-                                        ? 'text-red-600'
-                                        : trafficData.status === 'moderate'
-                                          ? 'text-yellow-600'
-                                          : 'text-green-600'
-                                    }
-                                  >
-                                    {trafficData.status}
+                {runsApiData.data.map(
+                  ({ run, flightStatus, trafficData, isLoading, isError }) => {
+                    return (
+                      <Card key={run.id} className='w-full'>
+                        <CardHeader className='pb-3'>
+                          <div className='flex items-start justify-between'>
+                            <div>
+                              <CardTitle className='text-lg'>
+                                {run.flightNumber}
+                                {isLoading && (
+                                  <span className='ml-2 inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600'></span>
+                                )}
+                                {isError && (
+                                  <span className='ml-2 text-red-500 text-sm'>
+                                    ⚠️
                                   </span>
-                                </span>
-                              </div>
-                            )}
-                            {trafficData?.incidents && trafficData.incidents.length > 0 && (
+                                )}
+                              </CardTitle>
+                              <CardDescription>
+                                {run.airline} • {run.departure} → {run.arrival}
+                              </CardDescription>
+                            </div>
+                            <div className='flex items-center gap-2'>
+                              <Badge className={getStatusColor(run.status)}>
+                                {run.status}
+                              </Badge>
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                onClick={() => deleteRun(run.id)}
+                              >
+                                <Trash2 className='h-4 w-4' />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                            <div className='space-y-2'>
                               <div className='flex items-center gap-2'>
-                                <AlertCircle className='h-4 w-4 text-orange-500' />
-                                <span className='text-sm text-orange-600'>
-                                  {trafficData.incidents.length} incident(s)
+                                <Clock className='h-4 w-4 text-gray-500' />
+                                <span className='text-sm font-medium'>
+                                  {new Date(run.scheduledTime).toLocaleString()}
                                 </span>
                               </div>
+                              <div className='flex items-center gap-2'>
+                                <MapPin className='h-4 w-4 text-gray-500' />
+                                <span className='text-sm'>
+                                  {run.type === 'pickup' ? 'Pickup' : 'Dropoff'}{' '}
+                                  • {run.pickupLocation} → {run.dropoffLocation}
+                                </span>
+                              </div>
+                              {run.notes && (
+                                <div className='flex items-center gap-2'>
+                                  <FileText className='h-4 w-4 text-gray-500' />
+                                  <span className='text-sm text-gray-600'>
+                                    {run.notes}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className='space-y-2'>
+                              {flightStatus && (
+                                <div className='flex items-center gap-2'>
+                                  <Plane className='h-4 w-4 text-gray-500' />
+                                  <span className='text-sm'>
+                                    Flight: {flightStatus.status}
+                                    {flightStatus.delay &&
+                                      flightStatus.delay > 0 && (
+                                        <span className='text-red-600 ml-1'>
+                                          (+{flightStatus.delay} min)
+                                        </span>
+                                      )}
+                                  </span>
+                                </div>
+                              )}
+                              {trafficData && (
+                                <div className='flex items-center gap-2'>
+                                  <Navigation className='h-4 w-4 text-gray-500' />
+                                  <span className='text-sm'>
+                                    Traffic: {trafficData.duration} min •{' '}
+                                    {trafficData.distance} •{' '}
+                                    <span
+                                      className={
+                                        trafficData.status === 'heavy'
+                                          ? 'text-red-600'
+                                          : trafficData.status === 'moderate'
+                                            ? 'text-yellow-600'
+                                            : 'text-green-600'
+                                      }
+                                    >
+                                      {trafficData.status}
+                                    </span>
+                                  </span>
+                                </div>
+                              )}
+                              {trafficData?.incidents &&
+                                trafficData.incidents.length > 0 && (
+                                  <div className='flex items-center gap-2'>
+                                    <AlertCircle className='h-4 w-4 text-orange-500' />
+                                    <span className='text-sm text-orange-600'>
+                                      {trafficData.incidents.length} incident(s)
+                                    </span>
+                                  </div>
+                                )}
+                            </div>
+                          </div>
+
+                          <div className='flex gap-2 mt-4'>
+                            <Button
+                              variant='outline'
+                              size='sm'
+                              onClick={() => refreshRunData(run)}
+                              disabled={isLoading}
+                            >
+                              {isLoading ? 'Loading...' : 'Refresh Data'}
+                            </Button>
+                            {run.status === 'scheduled' && (
+                              <Button
+                                size='sm'
+                                onClick={() =>
+                                  updateRunStatus(run.id, 'active')
+                                }
+                              >
+                                Start Run
+                              </Button>
+                            )}
+                            {run.status === 'active' && (
+                              <Button
+                                size='sm'
+                                variant='secondary'
+                                onClick={() =>
+                                  updateRunStatus(run.id, 'completed')
+                                }
+                              >
+                                Complete Run
+                              </Button>
+                            )}
+                            {run.status === 'active' && (
+                              <Button
+                                size='sm'
+                                variant='outline'
+                                onClick={() => pollingService.triggerPoll()}
+                              >
+                                Manual Poll
+                              </Button>
                             )}
                           </div>
-                        </div>
-
-                        <div className='flex gap-2 mt-4'>
-                          <Button
-                            variant='outline'
-                            size='sm'
-                            onClick={() => refreshRunData(run)}
-                            disabled={isLoading}
-                          >
-                            {isLoading ? 'Loading...' : 'Refresh Data'}
-                          </Button>
-                          {run.status === 'scheduled' && (
-                            <Button
-                              size='sm'
-                              onClick={() => updateRunStatus(run.id, 'active')}
-                            >
-                              Start Run
-                            </Button>
-                          )}
-                          {run.status === 'active' && (
-                            <Button
-                              size='sm'
-                              variant='secondary'
-                              onClick={() =>
-                                updateRunStatus(run.id, 'completed')
-                              }
-                            >
-                              Complete Run
-                            </Button>
-                          )}
-                          {run.status === 'active' && (
-                            <Button
-                              size='sm'
-                              variant='outline'
-                              onClick={() => pollingService.triggerPoll()}
-                            >
-                              Manual Poll
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+                )}
               </div>
             )}
           </TabsContent>
@@ -791,7 +853,8 @@ export default function App() {
                       Quick Import
                     </CardTitle>
                     <CardDescription>
-                      Paste your schedule message to import multiple runs at once
+                      Paste your schedule message to import multiple runs at
+                      once
                     </CardDescription>
                   </div>
                   <Button
