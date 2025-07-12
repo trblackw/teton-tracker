@@ -6,7 +6,7 @@
   "main": "src/index.tsx",
   "module": "src/index.tsx",
   "scripts": {
-    "dev": "bun run dev-script.ts",
+    "dev": "bun --hot index.html",
     "start": "NODE_ENV=production bun src/prod-server.ts",
     "build": "bun run build.ts",
     "format": "prettier --write .",
