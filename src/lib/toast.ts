@@ -122,6 +122,9 @@ export const toasts = {
         label: 'Undo',
         onClick: onUndo,
       },
+      actionButtonStyle: {
+        background: 'turquoise',
+      },
     });
   },
 

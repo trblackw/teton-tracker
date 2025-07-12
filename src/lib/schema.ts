@@ -22,6 +22,20 @@ export const LocationSchema = z
   .max(200, 'Location must be at most 200 characters')
   .trim();
 
+export const PriceSchema = z
+  .string()
+  .min(1, 'Price is required')
+  .regex(/^\$?\d+$/, 'Price must be in format like "$500" or "500"')
+  .transform(val => {
+    // Remove dollar sign if present and return as whole number string
+    const cleanValue = val.replace('$', '');
+    const numValue = parseInt(cleanValue, 10);
+    return numValue.toString();
+  })
+  .refine(val => parseInt(val, 10) > 0, {
+    message: 'Price must be greater than 0',
+  });
+
 export const DateTimeSchema = z
   .string()
   .datetime({ message: 'Invalid datetime format' })
@@ -85,6 +99,7 @@ export const RunSchema = z.object({
   scheduledTime: DateTimeSchema,
   type: RunTypeSchema,
   status: RunStatusSchema,
+  price: PriceSchema,
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
   notes: z.string().max(500, 'Notes must be at most 500 characters').optional(),
@@ -163,6 +178,7 @@ export const NewRunFormSchema = z
     dropoffLocation: LocationSchema,
     scheduledTime: DateTimeSchema,
     type: RunTypeSchema,
+    price: PriceSchema,
     notes: z
       .string()
       .max(500, 'Notes must be at most 500 characters')

@@ -2,7 +2,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { createRootRoute, Link, Outlet } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/router-devtools';
-import { Activity, Home, Plane, Plus, Settings } from 'lucide-react';
+import { Activity, Plane, Plus, Settings } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '../components/theme-provider';
 import { Button } from '../components/ui/button';
@@ -32,22 +32,6 @@ export const Route = createRootRoute({
                       </h1>
                     </div>
                     <nav className='space-y-2'>
-                      <Button
-                        asChild
-                        variant='ghost'
-                        className='w-full justify-start'
-                      >
-                        <Link
-                          to='/'
-                          className='flex items-center gap-2'
-                          activeProps={{
-                            className: activeNavClass,
-                          }}
-                        >
-                          <Home className='h-4 w-4' />
-                          Home
-                        </Link>
-                      </Button>
                       <Button
                         asChild
                         variant='ghost'
@@ -127,23 +111,6 @@ export const Route = createRootRoute({
           {/* Mobile Navigation */}
           <div className='lg:hidden fixed bottom-0 left-0 right-0 border-t border-border bg-card'>
             <nav className='flex items-center justify-center gap-1 p-2'>
-              <Button
-                asChild
-                variant='ghost'
-                size='sm'
-                className='flex-col h-auto p-3 min-w-[60px]'
-              >
-                <Link
-                  to='/'
-                  className='flex flex-col items-center gap-1'
-                  activeProps={{
-                    className: activeNavClass,
-                  }}
-                >
-                  <Home className='h-4 w-4' />
-                  <span className='text-xs'>Home</span>
-                </Link>
-              </Button>
               <Button
                 asChild
                 variant='ghost'

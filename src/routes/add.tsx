@@ -4,6 +4,7 @@ import { createFileRoute, useRouter } from '@tanstack/react-router';
 import {
   AlertTriangle,
   Clock,
+  DollarSign,
   Info,
   Loader2,
   MapPin,
@@ -142,6 +143,7 @@ function AddRun() {
       dropoffLocation: '',
       scheduledTime: '',
       type: 'pickup',
+      price: '',
       notes: '',
     },
   });
@@ -156,6 +158,7 @@ function AddRun() {
     dropoffLocation: '',
     scheduledTime: '',
     type: 'pickup',
+    price: '',
     notes: '',
   };
 
@@ -323,6 +326,82 @@ function AddRun() {
     createRunMutation.mutate(data);
   };
 
+  // Handle paste from clipboard button
+  const handlePasteFromClipboard = async () => {
+    try {
+      // Check if clipboard API is available
+      if (!navigator.clipboard) {
+        toasts.error(
+          'Clipboard not available',
+          'Your browser does not support clipboard access. Try using Ctrl+V instead.'
+        );
+        return;
+      }
+
+      // Read text from clipboard
+      const clipboardText = await navigator.clipboard.readText();
+
+      if (!clipboardText) {
+        toasts.error(
+          'No text in clipboard',
+          'Please copy a schedule message to your clipboard first.'
+        );
+        return;
+      }
+
+      // Check if the text looks like a schedule message
+      if (isScheduleMessage(clipboardText)) {
+        // Parse the schedule message
+        const result = parseScheduleMessage(clipboardText);
+
+        if (result.success && result.runs.length > 0) {
+          // Auto-fill the form fields with the first run's data
+          const today = new Date().toISOString().split('T')[0];
+          const firstRun = result.runs[0];
+          const formData = convertParsedRunToForm(firstRun, today);
+
+          // Set form values
+          form.reset(formData);
+
+          // Create undo function that resets form to defaults
+          const handleUndo = () => {
+            form.reset(defaultFormValues);
+          };
+
+          // Show enhanced toast with undo action
+          toasts.scheduleDetected(result.runs.length, handleUndo);
+
+          if (result.runs.length > 1) {
+            toasts.info(
+              'Multiple runs detected',
+              `${result.runs.length} runs found. Only the first run was auto-filled. You can manually add the others.`
+            );
+          }
+        } else {
+          // Show error toast
+          toasts.error(
+            'Unable to parse schedule message',
+            result.errors.length > 0
+              ? result.errors[0]
+              : 'The pasted content does not appear to be a valid schedule message.'
+          );
+        }
+      } else {
+        toasts.error(
+          'Invalid schedule format',
+          'The clipboard content does not appear to be a schedule message. Please check the format and try again.'
+        );
+      }
+    } catch (error) {
+      // Handle clipboard access errors
+      toasts.error(
+        'Clipboard access failed',
+        'Unable to read from clipboard. You may need to grant permission or use Ctrl+V instead.'
+      );
+      console.error('Clipboard access error:', error);
+    }
+  };
+
   return (
     <div className='space-y-6'>
       <div>
@@ -340,18 +419,28 @@ function AddRun() {
               <div className='flex items-center gap-2'>
                 <Plane className='size-12 text-blue-600 dark:text-blue-400' />
                 <p className='text-sm text-blue-800 dark:text-blue-200'>
-                  <strong>Snake River employee?</strong> Copy & paste scheduled
+                  <strong>Snake River employee?</strong> <br />Copy & paste scheduled
                   run messages directly
                 </p>
               </div>
-              <Button
-                variant='ghost'
-                size='sm'
-                onClick={dismissInfoMessage}
-                className='h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900'
-              >
-                <X className='h-4 w-4' />
-              </Button>
+              <div className='flex items-center gap-2'>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={handlePasteFromClipboard}
+                  className='text-xs m-0 bg-blue-100 border-blue-300 text-blue-700 hover:bg-blue-200 hover:border-blue-400 dark:bg-blue-900 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-800'
+                >
+                  Paste
+                </Button>
+                <Button
+                  variant='ghost'
+                  size='sm'
+                  onClick={dismissInfoMessage}
+                  className='h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900'
+                >
+                  <X className='h-4 w-4' />
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -394,7 +483,7 @@ function AddRun() {
                       <FormLabel className='flex items-center gap-2'>
                         <Plane className='h-4 w-4' />
                         Flight Number
-                        <small className="text-destructive">*</small>
+                        <small className='text-destructive'>*</small>
                       </FormLabel>
                       <FormControl>
                         <Input placeholder='e.g., UA123' {...field} />
@@ -426,7 +515,7 @@ function AddRun() {
                     <FormItem>
                       <FormLabel>
                         Departure Airport
-                        <small className="text-destructive">*</small>
+                        <small className='text-destructive'>*</small>
                       </FormLabel>
                       <FormControl>
                         <Input placeholder='e.g., DEN' {...field} />
@@ -442,7 +531,7 @@ function AddRun() {
                     <FormItem>
                       <FormLabel>
                         Arrival Airport
-                        <small className="text-destructive">*</small>
+                        <small className='text-destructive'>*</small>
                       </FormLabel>
                       <FormControl>
                         <Input placeholder='e.g., JAC' {...field} />
@@ -462,7 +551,7 @@ function AddRun() {
                       <FormLabel className='flex items-center gap-2'>
                         <MapPin className='h-4 w-4' />
                         Pickup Location
-                        <small className="text-destructive">*</small>
+                        <small className='text-destructive'>*</small>
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -482,7 +571,7 @@ function AddRun() {
                       <FormLabel className='flex items-center gap-2'>
                         <MapPin className='h-4 w-4' />
                         Dropoff Location
-                        <small className="text-destructive">*</small>
+                        <small className='text-destructive'>*</small>
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -505,7 +594,7 @@ function AddRun() {
                       <FormLabel className='flex items-center gap-2'>
                         <Clock className='h-4 w-4' />
                         Scheduled Time
-                        <small className="text-destructive">*</small>
+                        <small className='text-destructive'>*</small>
                         {flightStatusState.isLoading && (
                           <Loader2 className='h-4 w-4 animate-spin text-blue-500' />
                         )}
@@ -602,7 +691,7 @@ function AddRun() {
                     <FormItem>
                       <FormLabel>
                         Run Type
-                        <small className="text-destructive">*</small>
+                        <small className='text-destructive'>*</small>
                       </FormLabel>
                       <Select
                         onValueChange={field.onChange}
@@ -623,6 +712,24 @@ function AddRun() {
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name='price'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className='flex items-center gap-2'>
+                      <DollarSign className='h-4 w-4' />
+                      Price
+                      <small className='text-destructive'>*</small>
+                    </FormLabel>
+                    <FormControl>
+                      <Input placeholder='e.g., $100 or 176' {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}

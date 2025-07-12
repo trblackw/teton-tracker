@@ -24,6 +24,7 @@ export async function createRun(
     const run: Run = {
       id: runId,
       ...runData,
+      airline: runData.airline || '',
       status: 'scheduled',
       createdAt: new Date(now),
       updatedAt: new Date(now),
@@ -34,8 +35,8 @@ export async function createRun(
         INSERT INTO runs (
           id, flight_number, airline, departure_airport, arrival_airport,
           pickup_location, dropoff_location, scheduled_time, status, type,
-          notes, user_id, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          price, notes, user_id, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       args: [
         run.id,
@@ -48,6 +49,7 @@ export async function createRun(
         run.scheduledTime,
         run.status,
         run.type,
+        run.price,
         run.notes || null,
         currentUserId,
         now,
@@ -88,7 +90,7 @@ export async function getRuns(query: RunsQuery = {}): Promise<Run[]> {
       SELECT 
         id, flight_number, airline, departure_airport, arrival_airport,
         pickup_location, dropoff_location, scheduled_time, status, type,
-        notes, user_id, created_at, updated_at, completed_at
+        price, notes, user_id, created_at, updated_at, completed_at
       FROM runs
     `;
 
@@ -122,7 +124,7 @@ export async function getRuns(query: RunsQuery = {}): Promise<Run[]> {
     const runs: Run[] = result.rows.map(row => ({
       id: row.id as string,
       flightNumber: row.flight_number as string,
-      airline: row.airline as string,
+      airline: (row.airline as string) || '',
       departure: row.departure_airport as string,
       arrival: row.arrival_airport as string,
       pickupLocation: row.pickup_location as string,
@@ -130,6 +132,7 @@ export async function getRuns(query: RunsQuery = {}): Promise<Run[]> {
       scheduledTime: row.scheduled_time as string,
       status: row.status as RunStatus,
       type: row.type as 'pickup' | 'dropoff',
+      price: (row.price as string) || '0',
       notes: row.notes as string | undefined,
       createdAt: new Date(row.created_at as string),
       updatedAt: new Date(row.updated_at as string),
@@ -155,7 +158,7 @@ export async function getRunById(
       SELECT 
         id, flight_number, airline, departure_airport, arrival_airport,
         pickup_location, dropoff_location, scheduled_time, status, type,
-        notes, user_id, created_at, updated_at, completed_at
+        price, notes, user_id, created_at, updated_at, completed_at
       FROM runs 
       WHERE id = ?
     `;
@@ -176,7 +179,7 @@ export async function getRunById(
     return {
       id: row.id as string,
       flightNumber: row.flight_number as string,
-      airline: row.airline as string,
+      airline: (row.airline as string) || '',
       departure: row.departure_airport as string,
       arrival: row.arrival_airport as string,
       pickupLocation: row.pickup_location as string,
@@ -184,6 +187,7 @@ export async function getRunById(
       scheduledTime: row.scheduled_time as string,
       status: row.status as RunStatus,
       type: row.type as 'pickup' | 'dropoff',
+      price: (row.price as string) || '0',
       notes: row.notes as string | undefined,
       createdAt: new Date(row.created_at as string),
       updatedAt: new Date(row.updated_at as string),
@@ -341,6 +345,7 @@ export async function createRunsBatch(
         const run: Run = {
           id: runId,
           ...runData,
+          airline: runData.airline || '',
           status: 'scheduled',
           createdAt: new Date(now),
           updatedAt: new Date(now),
@@ -351,8 +356,8 @@ export async function createRunsBatch(
             INSERT INTO runs (
               id, flight_number, airline, departure_airport, arrival_airport,
               pickup_location, dropoff_location, scheduled_time, status, type,
-              notes, user_id, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              price, notes, user_id, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
           args: [
             run.id,
@@ -365,6 +370,7 @@ export async function createRunsBatch(
             run.scheduledTime,
             run.status,
             run.type,
+            run.price,
             run.notes || null,
             currentUserId,
             now,

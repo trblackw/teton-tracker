@@ -74,6 +74,7 @@ export async function initializeSchema(): Promise<void> {
         scheduled_time DATETIME NOT NULL,
         status TEXT NOT NULL DEFAULT 'scheduled',
         type TEXT NOT NULL CHECK (type IN ('pickup', 'dropoff')),
+        price TEXT NOT NULL DEFAULT '0',
         notes TEXT,
         user_id TEXT,
         metadata TEXT DEFAULT '{}',
@@ -109,6 +110,17 @@ export async function initializeSchema(): Promise<void> {
     await db.execute(`
       CREATE INDEX IF NOT EXISTS idx_flight_cache_expires ON flight_cache(expires_at)
     `);
+
+    // Migration: Add price column to existing runs table
+    try {
+      await db.execute(`
+        ALTER TABLE runs ADD COLUMN price TEXT NOT NULL DEFAULT '0'
+      `);
+      console.log('✅ Added price column to runs table');
+    } catch (error) {
+      // Column might already exist, which is fine
+      console.log('💡 Price column already exists or could not be added');
+    }
 
     console.log('✅ Database schema initialized successfully');
   } catch (error) {

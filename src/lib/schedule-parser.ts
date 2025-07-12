@@ -134,6 +134,17 @@ function extractPhoneNumber(text: string): string | null {
   return phoneMatch ? phoneMatch[0] : null;
 }
 
+function extractPrice(lines: string[]): string {
+  // Search through all lines for a price pattern
+  for (const line of lines) {
+    const priceMatch = line.match(/\$\d+(?:\.\d{2})?/);
+    if (priceMatch) {
+      return priceMatch[0];
+    }
+  }
+  return '';
+}
+
 function parseScheduleBlock(
   lines: string[],
   blockIndex: number
@@ -152,7 +163,9 @@ function parseScheduleBlock(
     let passengerInfo: string;
     let locationInfo: string;
     let passengerCount: string;
-    let price: string;
+
+    // Extract price by searching all lines for price pattern
+    const price = extractPrice(lines);
 
     if (isTimeFirst) {
       // Format: Time, Flight, Airport, Passenger, etc.
@@ -163,7 +176,6 @@ function parseScheduleBlock(
       passengerInfo = lines[3]?.trim() || '';
       locationInfo = lines[4]?.trim() || '';
       passengerCount = lines[5]?.trim() || '';
-      price = lines[6]?.trim() || '';
     } else {
       // Original format: ID, Time, Flight, Airport, etc.
       id = lines[0]?.trim() || `run-${blockIndex}`;
@@ -173,7 +185,6 @@ function parseScheduleBlock(
       passengerInfo = lines[4]?.trim() || '';
       locationInfo = lines[5]?.trim() || '';
       passengerCount = lines[6]?.trim() || '';
-      price = lines[7]?.trim() || '';
     }
 
     const time = normalizeTime(rawTime);
@@ -384,7 +395,16 @@ export function convertParsedRunToForm(
     }
   }
 
-  return {
+  // Clean price: remove $ sign and decimal places to get whole number
+  let cleanPrice = '';
+  if (parsedRun.price) {
+    const priceMatch = parsedRun.price.match(/\$?(\d+)(?:\.\d{2})?/);
+    if (priceMatch) {
+      cleanPrice = priceMatch[1]; // Just the whole number part
+    }
+  }
+
+    return {
     flightNumber: parsedRun.flightNumber,
     airline: parsedRun.airline,
     departure: parsedRun.departure,
@@ -393,6 +413,7 @@ export function convertParsedRunToForm(
     dropoffLocation: parsedRun.dropoffLocation,
     scheduledTime,
     type: parsedRun.type,
+    price: cleanPrice,
     notes: parsedRun.notes,
   };
 }

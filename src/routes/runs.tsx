@@ -1,14 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import {
-  Activity,
   AlertCircle,
   Clock,
   FileText,
   MapPin,
   Navigation,
   Plane,
-  Trash2,
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -149,20 +149,28 @@ function Runs() {
 
   if (runs.length === 0) {
     return (
-      <Card className='bg-accent/50 border rounded-md'>
-        <CardContent className='p-8 text-center'>
-          <Plane className='h-16 w-16 text-muted-foreground mx-auto mb-6' />
-          <p className='text-muted-foreground text-lg mb-4'>
-            No runs scheduled. Add your first run to get started!
+      <div className='space-y-6'>
+        <div>
+          <h2 className='text-2xl font-bold text-foreground'>Current Runs</h2>
+          <p className='text-muted-foreground mt-1'>
+            Manage your pickup & dropoff runs
           </p>
-          <Link to='/add'>
-            <Button className='mt-2'>
-              <Activity className='h-4 w-4 mr-2' />
-              Add Your First Run
-            </Button>
-          </Link>
-        </CardContent>
-      </Card>
+        </div>
+        <Card className='bg-accent/50 border rounded-md'>
+          <CardContent className='p-8 text-center'>
+            <Plane className='h-16 w-16 text-muted-foreground mx-auto mb-6' />
+            <p className='text-muted-foreground text-lg mb-4'>
+              No runs scheduled. Add your first run to get started!
+            </p>
+            <Link to='/add'>
+              <Button className='mt-2'>
+                <Plus className='h-4 w-4' />
+                Add Your First Run
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
