@@ -1,5 +1,6 @@
 import { Check, ChevronsUpDown, Search } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { imageCache } from '../../lib/image-cache';
 import { Button } from './button';
 import {
   Command,
@@ -38,6 +39,24 @@ export function AirlineCombobox({
   const [searchValue, setSearchValue] = useState('');
 
   const selectedAirline = airlines.find(airline => airline.id === value);
+
+  // Preload airline logos when component mounts
+  useEffect(() => {
+    const logoUrls = airlines
+      .filter(airline => airline.logo && airline.logo.trim())
+      .map(airline => airline.logo);
+
+    if (logoUrls.length > 0) {
+      imageCache
+        .preloadImages(logoUrls)
+        .then(() => {
+          console.log(`📸 Preloaded ${imageCache.size()} airline logos`);
+        })
+        .catch(error => {
+          console.warn('Some airline logos failed to preload:', error);
+        });
+    }
+  }, [airlines]);
 
   // Filter airlines based on search term
   const filteredAirlines = airlines
@@ -88,6 +107,22 @@ export function AirlineCombobox({
     .sort((a, b) => a.name.localeCompare(b.name))
     .slice(0, maxResults);
 
+  const AirlineImage = ({ airline }: { airline: Airline }) => {
+    if (!airline.logo) return null;
+
+    return (
+      <img
+        src={airline.logo}
+        alt={airline.name}
+        className='h-6 w-6 rounded shrink-0'
+        onError={e => {
+          e.currentTarget.style.display = 'none';
+        }}
+        loading='lazy'
+      />
+    );
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -99,14 +134,7 @@ export function AirlineCombobox({
         >
           {selectedAirline ? (
             <div className='flex items-center gap-2'>
-              <img
-                src={selectedAirline.logo}
-                alt={selectedAirline.name}
-                className='h-5 w-5 rounded'
-                onError={e => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
+              <AirlineImage airline={selectedAirline} />
               <span className='font-mono text-sm bg-primary/10 text-primary px-2 py-0.5 rounded'>
                 {selectedAirline.id}
               </span>
@@ -148,14 +176,7 @@ export function AirlineCombobox({
                   className='cursor-pointer'
                 >
                   <div className='flex items-center gap-3 flex-1 min-w-0'>
-                    <img
-                      src={airline.logo}
-                      alt={airline.name}
-                      className='h-6 w-6 rounded shrink-0'
-                      onError={e => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
+                    <AirlineImage airline={airline} />
                     <span className='font-mono text-sm bg-primary/10 text-primary px-2 py-0.5 rounded shrink-0'>
                       {airline.id}
                     </span>

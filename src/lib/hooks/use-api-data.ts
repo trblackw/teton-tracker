@@ -1,35 +1,24 @@
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../react-query-client';
 import type { Run } from '../schema';
-import { getFlightStatusWithRateLimit } from '../services/opensky-service';
+import { getFlightService } from '../services/flight-service';
 import { getTrafficData } from '../services/tomtom-service';
 
 // Hook for fetching flight status
 export function useFlightStatus(flightNumber: string, enabled: boolean = true) {
   return useQuery({
-    queryKey: queryKeys.flightStatus(flightNumber),
-    queryFn: () => getFlightStatusWithRateLimit(flightNumber),
+    queryKey: ['flight-status', flightNumber],
+    queryFn: () => getFlightService().getFlightStatus({ flightNumber }),
     enabled: enabled && !!flightNumber,
     staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-    retry: (failureCount, error) => {
-      // Don't retry if it's a rate limit error
-      if (error instanceof Error && error.message.includes('rate limit')) {
-        return false;
-      }
-      return failureCount < 2;
-    },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
-    meta: {
-      errorMessage: `Failed to fetch flight status for ${flightNumber}`,
-    },
+    retry: 2,
   });
 }
 
 // Hook for fetching traffic data
 export function useTrafficData(
-  origin: string, 
-  destination: string, 
+  origin: string,
+  destination: string,
   enabled: boolean = true
 ) {
   return useQuery({
@@ -45,7 +34,7 @@ export function useTrafficData(
       }
       return failureCount < 2;
     },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 10000),
     meta: {
       errorMessage: `Failed to fetch traffic data for ${origin} → ${destination}`,
     },
@@ -57,7 +46,7 @@ export function useMultipleFlightStatuses(flightNumbers: string[]) {
   return useQueries({
     queries: flightNumbers.map(flightNumber => ({
       queryKey: queryKeys.flightStatus(flightNumber),
-      queryFn: () => getFlightStatusWithRateLimit(flightNumber),
+      queryFn: () => getFlightService().getFlightStatus({ flightNumber }),
       enabled: !!flightNumber,
       staleTime: 2 * 60 * 1000,
       gcTime: 10 * 60 * 1000,
@@ -67,13 +56,16 @@ export function useMultipleFlightStatuses(flightNumbers: string[]) {
         }
         return failureCount < 2;
       },
-      retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 10000),
+      retryDelay: (attemptIndex: number) =>
+        Math.min(1000 * 2 ** attemptIndex, 10000),
     })),
   });
 }
 
 // Hook for fetching multiple traffic data
-export function useMultipleTrafficData(routes: Array<{ origin: string; destination: string }>) {
+export function useMultipleTrafficData(
+  routes: Array<{ origin: string; destination: string }>
+) {
   return useQueries({
     queries: routes.map(({ origin, destination }) => ({
       queryKey: queryKeys.trafficData(origin, destination),
@@ -87,7 +79,8 @@ export function useMultipleTrafficData(routes: Array<{ origin: string; destinati
         }
         return failureCount < 2;
       },
-      retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 10000),
+      retryDelay: (attemptIndex: number) =>
+        Math.min(1000 * 2 ** attemptIndex, 10000),
     })),
   });
 }
@@ -95,7 +88,11 @@ export function useMultipleTrafficData(routes: Array<{ origin: string; destinati
 // Hook for fetching data for a specific run
 export function useRunData(run: Run, enabled: boolean = true) {
   const flightQuery = useFlightStatus(run.flightNumber, enabled);
-  const trafficQuery = useTrafficData(run.pickupLocation, run.dropoffLocation, enabled);
+  const trafficQuery = useTrafficData(
+    run.pickupLocation,
+    run.dropoffLocation,
+    enabled
+  );
 
   return {
     flightStatus: flightQuery.data,
@@ -114,9 +111,9 @@ export function useRunData(run: Run, enabled: boolean = true) {
 // Hook for fetching data for multiple runs
 export function useMultipleRunsData(runs: Run[]) {
   const flightNumbers = runs.map(run => run.flightNumber);
-  const routes = runs.map(run => ({ 
-    origin: run.pickupLocation, 
-    destination: run.dropoffLocation 
+  const routes = runs.map(run => ({
+    origin: run.pickupLocation,
+    destination: run.dropoffLocation,
   }));
 
   const flightQueries = useMultipleFlightStatuses(flightNumbers);
@@ -127,17 +124,24 @@ export function useMultipleRunsData(runs: Run[]) {
     run,
     flightStatus: flightQueries[index]?.data,
     trafficData: trafficQueries[index]?.data,
-    isLoading: flightQueries[index]?.isLoading || trafficQueries[index]?.isLoading,
-    isFetching: flightQueries[index]?.isFetching || trafficQueries[index]?.isFetching,
+    isLoading:
+      flightQueries[index]?.isLoading || trafficQueries[index]?.isLoading,
+    isFetching:
+      flightQueries[index]?.isFetching || trafficQueries[index]?.isFetching,
     isError: flightQueries[index]?.isError || trafficQueries[index]?.isError,
     error: flightQueries[index]?.error || trafficQueries[index]?.error,
   }));
 
   return {
     data: combinedData,
-    isLoading: flightQueries.some(q => q.isLoading) || trafficQueries.some(q => q.isLoading),
-    isFetching: flightQueries.some(q => q.isFetching) || trafficQueries.some(q => q.isFetching),
-    isError: flightQueries.some(q => q.isError) || trafficQueries.some(q => q.isError),
+    isLoading:
+      flightQueries.some(q => q.isLoading) ||
+      trafficQueries.some(q => q.isLoading),
+    isFetching:
+      flightQueries.some(q => q.isFetching) ||
+      trafficQueries.some(q => q.isFetching),
+    isError:
+      flightQueries.some(q => q.isError) || trafficQueries.some(q => q.isError),
     refetchAll: () => {
       flightQueries.forEach(q => q.refetch());
       trafficQueries.forEach(q => q.refetch());
@@ -164,15 +168,19 @@ export function usePrefetchRunData() {
 // Hook for managing active runs with automatic refetching
 export function useActiveRunsData(runs: Run[]) {
   const activeRuns = runs.filter(run => run.status === 'active');
-  
+
   return useMultipleRunsData(activeRuns);
 }
 
 // Hook for getting cached data without triggering fetch
-export function useCachedApiData(flightNumber: string, origin: string, destination: string) {
+export function useCachedApiData(
+  flightNumber: string,
+  origin: string,
+  destination: string
+) {
   const flightQuery = useQuery({
     queryKey: queryKeys.flightStatus(flightNumber),
-    queryFn: () => getFlightStatusWithRateLimit(flightNumber),
+    queryFn: () => getFlightService().getFlightStatus({ flightNumber }),
     enabled: false, // Don't fetch, just get cached data
   });
 
@@ -188,4 +196,4 @@ export function useCachedApiData(flightNumber: string, origin: string, destinati
     hasCachedFlightData: !!flightQuery.data,
     hasCachedTrafficData: !!trafficQuery.data,
   };
-} 
+}

@@ -20,7 +20,7 @@ import {
   CardTitle,
 } from '../components/ui/card';
 import { Toggle } from '../components/ui/toggle';
-import airportsData from '../data/airports-full.json';
+import airportsData from '../data/airports-comprehensive.json';
 import { preferencesApi } from '../lib/api/client';
 import { type UpdatePreferencesData } from '../lib/db/preferences';
 import { toasts } from '../lib/toast';

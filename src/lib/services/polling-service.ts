@@ -1,6 +1,5 @@
- 
 import type { FlightStatus, Run, TrafficData } from '../schema';
-import { getFlightStatusWithRateLimit } from './opensky-service';
+import { getFlightService } from './flight-service';
 import { getTrafficData } from './tomtom-service';
 
 export interface PollingConfig {
@@ -29,7 +28,7 @@ export class IntelligentPollingService {
   private isPolling = false;
   private debugInfo: PollingDebugInfo;
   private currentRuns: Run[] = [];
-  
+
   constructor(config: Partial<PollingConfig> = {}) {
     this.config = {
       intervalMs: 5 * 60 * 1000, // 5 minutes
@@ -37,7 +36,7 @@ export class IntelligentPollingService {
       enablePolling: true,
       ...config,
     };
-    
+
     this.debugInfo = {
       lastPolled: null,
       pollCount: 0,
@@ -46,7 +45,7 @@ export class IntelligentPollingService {
       lastApiCallTime: null,
       errors: [],
     };
-    
+
     this.logDebug('🔧 Intelligent Polling Service initialized', {
       intervalMs: this.config.intervalMs,
       debugMode: this.config.enableDebugMode,
@@ -59,29 +58,34 @@ export class IntelligentPollingService {
    */
   private isDebugMode(): boolean {
     // Check multiple indicators of development mode
-    const isDev = 
+    const isDev =
       // Hot reloading indicators
       !!(globalThis as any).__webpack_require__ ||
       !!(globalThis as any).__webpack_hot_module_replacement__ ||
       !!(globalThis as any).__vite_hot_module_replacement__ ||
       // Development server indicators
-      (typeof window !== 'undefined' && window.location.hostname === 'localhost') ||
-      (typeof window !== 'undefined' && window.location.hostname === '127.0.0.1') ||
+      (typeof window !== 'undefined' &&
+        window.location.hostname === 'localhost') ||
+      (typeof window !== 'undefined' &&
+        window.location.hostname === '127.0.0.1') ||
       (typeof window !== 'undefined' && window.location.port !== '') ||
       // Build environment indicators
-      (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') ||
+      (typeof process !== 'undefined' &&
+        process.env?.NODE_ENV === 'development') ||
       // Manual debug flag
       (typeof window !== 'undefined' && (window as any).DEBUG_MODE === true);
-    
+
     this.logDebug('🔍 Debug mode detection', {
       isDev,
-      hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown',
+      hostname:
+        typeof window !== 'undefined' ? window.location.hostname : 'unknown',
       port: typeof window !== 'undefined' ? window.location.port : 'unknown',
-      nodeEnv: typeof process !== 'undefined' ? process.env?.NODE_ENV : 'unknown',
+      nodeEnv:
+        typeof process !== 'undefined' ? process.env?.NODE_ENV : 'unknown',
       hasWebpack: !!(globalThis as any).__webpack_require__,
       hasViteHMR: !!(globalThis as any).__vite_hot_module_replacement__,
     });
-    
+
     return isDev;
   }
 
@@ -123,7 +127,7 @@ export class IntelligentPollingService {
     }
 
     this.logDebug('🛑 Stopping intelligent polling');
-    
+
     this.isPolling = false;
     if (this.intervalId !== null) {
       window.clearInterval(this.intervalId);
@@ -138,14 +142,17 @@ export class IntelligentPollingService {
     this.currentRuns = runs;
     const activeRuns = runs.filter(run => run.status === 'active');
     this.debugInfo.activeRuns = activeRuns.length;
-    
+
     this.logDebug('📋 Updated runs list', {
       totalRuns: runs.length,
       activeRuns: activeRuns.length,
-      statuses: runs.reduce((acc, run) => {
-        acc[run.status] = (acc[run.status] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>),
+      statuses: runs.reduce(
+        (acc, run) => {
+          acc[run.status] = (acc[run.status] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>
+      ),
     });
   }
 
@@ -169,7 +176,7 @@ export class IntelligentPollingService {
    */
   private async pollActiveRuns(): Promise<void> {
     const activeRuns = this.currentRuns.filter(run => run.status === 'active');
-    
+
     if (activeRuns.length === 0) {
       this.logDebug('⏸️ No active runs to poll');
       return;
@@ -197,10 +204,10 @@ export class IntelligentPollingService {
       try {
         // Fetch flight status
         await this.pollFlightStatus(run);
-        
+
         // Fetch traffic data
         await this.pollTrafficData(run);
-        
+
         // Small delay between runs to be respectful to APIs
         await this.delay(1000);
       } catch (error) {
@@ -221,13 +228,15 @@ export class IntelligentPollingService {
         flightNumber: run.flightNumber,
       });
 
-      const flightStatus = await getFlightStatusWithRateLimit(run.flightNumber);
-      
+      const flightStatus = await getFlightService().getFlightStatus({
+        flightNumber: run.flightNumber,
+      });
+
       // Use React Query cache invalidation instead of direct updates
       if (this.config.onDataInvalidation) {
         this.config.onDataInvalidation('flight', run.flightNumber);
       }
-      
+
       // Keep legacy callback for backward compatibility
       if (this.config.onFlightStatusUpdate) {
         this.config.onFlightStatusUpdate(run.flightNumber, flightStatus);
@@ -253,14 +262,20 @@ export class IntelligentPollingService {
         route: `${run.pickupLocation} → ${run.dropoffLocation}`,
       });
 
-      const trafficData = await getTrafficData(run.pickupLocation, run.dropoffLocation);
+      const trafficData = await getTrafficData(
+        run.pickupLocation,
+        run.dropoffLocation
+      );
       const routeKey = `${run.pickupLocation}-${run.dropoffLocation}`;
-      
+
       // Use React Query cache invalidation instead of direct updates
       if (this.config.onDataInvalidation) {
-        this.config.onDataInvalidation('traffic', `${run.pickupLocation}-${run.dropoffLocation}`);
+        this.config.onDataInvalidation(
+          'traffic',
+          `${run.pickupLocation}-${run.dropoffLocation}`
+        );
       }
-      
+
       // Keep legacy callback for backward compatibility
       if (this.config.onTrafficDataUpdate) {
         this.config.onTrafficDataUpdate(routeKey, trafficData);
@@ -272,7 +287,10 @@ export class IntelligentPollingService {
         status: trafficData.status,
       });
     } catch (error) {
-      this.handleError(error, `Traffic data for ${run.pickupLocation} → ${run.dropoffLocation}`);
+      this.handleError(
+        error,
+        `Traffic data for ${run.pickupLocation} → ${run.dropoffLocation}`
+      );
     }
   }
 
@@ -281,7 +299,7 @@ export class IntelligentPollingService {
    */
   private handleError(error: unknown, context: string): void {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    
+
     this.debugInfo.errors.push({
       time: new Date(),
       message: errorMessage,
@@ -299,7 +317,10 @@ export class IntelligentPollingService {
     });
 
     if (this.config.onError) {
-      this.config.onError(error instanceof Error ? error : new Error(errorMessage), context);
+      this.config.onError(
+        error instanceof Error ? error : new Error(errorMessage),
+        context
+      );
     }
   }
 

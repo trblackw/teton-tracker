@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { Clock, Filter, MapPin, Plane, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AirlineCombobox } from '../components/ui/airline-combobox';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -13,9 +13,10 @@ import {
   CardTitle,
 } from '../components/ui/card';
 import airlinesData from '../data/airlines.json';
-import airportsData from '../data/airports-full.json';
+import airportsData from '../data/airports-comprehensive.json';
 import { preferencesApi } from '../lib/api/client';
-import { openskyService } from '../lib/services/opensky-service';
+import { imageCache } from '../lib/image-cache';
+import { getFlightService } from '../lib/services/flight-service';
 
 interface Airline {
   id: string;
@@ -39,6 +40,19 @@ function UpcomingFlights() {
 
   const homeAirport = preferences?.homeAirport || '';
 
+  // Preload airline logos when component mounts
+  useEffect(() => {
+    const logoUrls = airlines
+      .filter(airline => airline.logo && airline.logo.trim())
+      .map(airline => airline.logo);
+
+    if (logoUrls.length > 0) {
+      imageCache.preloadImages(logoUrls).catch(error => {
+        console.warn('Some airline logos failed to preload:', error);
+      });
+    }
+  }, []);
+
   // Query for upcoming flights
   const {
     data: upcomingFlights = [],
@@ -50,7 +64,8 @@ function UpcomingFlights() {
     queryFn: async () => {
       if (!homeAirport) return [];
 
-      return openskyService.getUpcomingDepartures({
+      const flightService = getFlightService();
+      return flightService.getUpcomingDepartures({
         airport: homeAirport,
         airline: selectedAirline || undefined,
         limit: 5,
@@ -170,7 +185,11 @@ function UpcomingFlights() {
           <p className='text-muted-foreground mt-1'>
             Next 5 departures from{' '}
             <span className='font-bold text-foreground'>{homeAirport}</span>
-            {selectedAirline && ` • ${getAirlineName(selectedAirline)}`}
+            {selectedAirline && (
+              <span className='text-blue-500 block'>
+                {getAirlineName(selectedAirline)}
+              </span>
+            )}
           </p>
         </div>
         <Button
@@ -208,9 +227,6 @@ function UpcomingFlights() {
           />
           {selectedAirline && (
             <div className='mt-3 flex items-center justify-between'>
-              <span className='text-sm text-muted-foreground'>
-                Showing flights for {getAirlineName(selectedAirline)}
-              </span>
               <Button
                 variant='ghost'
                 size='sm'
@@ -279,6 +295,7 @@ function UpcomingFlights() {
                         onError={e => {
                           e.currentTarget.style.display = 'none';
                         }}
+                        loading='lazy'
                       />
                     )}
                     <div>

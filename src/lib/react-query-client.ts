@@ -6,10 +6,10 @@ export const queryClient = new QueryClient({
     queries: {
       // How long data stays fresh before being considered stale
       staleTime: 2 * 60 * 1000, // 2 minutes
-      
+
       // How long data stays in cache
       gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
-      
+
       // Retry configuration
       retry: (failureCount, error) => {
         // Don't retry on 4xx errors (client errors)
@@ -19,25 +19,25 @@ export const queryClient = new QueryClient({
         // Retry up to 3 times for other errors
         return failureCount < 3;
       },
-      
+
       // Retry delay - exponential backoff
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-      
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+
       // Refetch configuration
       refetchOnWindowFocus: false, // Don't refetch on window focus
       refetchOnReconnect: true, // Refetch when network reconnects
       refetchOnMount: true, // Refetch when component mounts
-      
+
       // Background refetch interval (5 minutes)
       refetchInterval: 5 * 60 * 1000, // 5 minutes
-      
+
       // Only refetch in background if window is focused
       refetchIntervalInBackground: false,
     },
     mutations: {
       // Retry mutations once
       retry: 1,
-      
+
       // Retry delay for mutations
       retryDelay: 1000,
     },
@@ -47,18 +47,19 @@ export const queryClient = new QueryClient({
 // Query keys for consistent cache management
 export const queryKeys = {
   // Flight status queries
-  flightStatus: (flightNumber: string) => ['flight-status', flightNumber] as const,
-  
+  flightStatus: (flightNumber: string) =>
+    ['flight-status', flightNumber] as const,
+
   // Traffic data queries
-  trafficData: (origin: string, destination: string) => 
+  trafficData: (origin: string, destination: string) =>
     ['traffic-data', origin, destination] as const,
-  
+
   // Combined data for a run
   runData: (runId: string) => ['run-data', runId] as const,
-  
+
   // All flight statuses
   allFlightStatuses: () => ['flight-statuses'] as const,
-  
+
   // All traffic data
   allTrafficData: () => ['traffic-data'] as const,
 } as const;
@@ -88,7 +89,11 @@ export const setCachedFlightStatus = (flightNumber: string, data: any) => {
   queryClient.setQueryData(queryKeys.flightStatus(flightNumber), data);
 };
 
-export const setCachedTrafficData = (origin: string, destination: string, data: any) => {
+export const setCachedTrafficData = (
+  origin: string,
+  destination: string,
+  data: any
+) => {
   queryClient.setQueryData(queryKeys.trafficData(origin, destination), data);
 };
 
@@ -96,17 +101,19 @@ export const setCachedTrafficData = (origin: string, destination: string, data: 
 export const prefetchFlightStatus = (flightNumber: string) => {
   return queryClient.prefetchQuery({
     queryKey: queryKeys.flightStatus(flightNumber),
-    queryFn: () => import('./services/opensky-service').then(({ getFlightStatusWithRateLimit }) => 
-      getFlightStatusWithRateLimit(flightNumber)
-    ),
+    queryFn: () =>
+      import('./services/flight-service').then(({ getFlightService }) =>
+        getFlightService().getFlightStatus({ flightNumber })
+      ),
   });
 };
 
 export const prefetchTrafficData = (origin: string, destination: string) => {
   return queryClient.prefetchQuery({
     queryKey: queryKeys.trafficData(origin, destination),
-    queryFn: () => import('./services/tomtom-service').then(({ getTrafficData }) => 
-      getTrafficData(origin, destination)
-    ),
+    queryFn: () =>
+      import('./services/tomtom-service').then(({ getTrafficData }) =>
+        getTrafficData(origin, destination)
+      ),
   });
-}; 
+};
