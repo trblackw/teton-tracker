@@ -15,6 +15,19 @@ async function initializeServer() {
   }
 }
 
+// Configuration endpoint
+async function handleConfigRequest(request: Request): Promise<Response> {
+  const config = {
+    hasApiKey: !!process.env.AVIATIONSTACK_API_KEY,
+    apiKey: process.env.AVIATIONSTACK_API_KEY || null,
+    environment: process.env.NODE_ENV || 'development',
+  };
+
+  return new Response(JSON.stringify(config), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
 // API-only server
 async function startApiServer() {
   await initializeServer();
@@ -34,6 +47,23 @@ async function startApiServer() {
 
       if (request.method === 'OPTIONS') {
         return new Response(null, { headers: corsHeaders });
+      }
+
+      // Configuration endpoint
+      if (url.pathname === '/api/config') {
+        const response = await handleConfigRequest(request);
+
+        // Add CORS headers to response
+        const headers = new Headers(response.headers);
+        Object.entries(corsHeaders).forEach(([key, value]) => {
+          headers.set(key, value);
+        });
+
+        return new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers,
+        });
       }
 
       // API routes only
@@ -125,6 +155,9 @@ async function startApiServer() {
 
   console.log(`🌐 API server running at http://localhost:${server.port}`);
   console.log('📊 Database initialized and API routes available');
+  console.log(
+    `🔑 AviationStack API key: ${process.env.AVIATIONSTACK_API_KEY ? '✅ Configured' : '❌ Not found'}`
+  );
 }
 
 startApiServer().catch(console.error);

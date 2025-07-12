@@ -34,7 +34,7 @@ import airlinesData from '../data/airlines.json';
 import airportsData from '../data/airports-comprehensive.json';
 import { preferencesApi } from '../lib/api/client';
 import { imageCache } from '../lib/image-cache';
-import { getFlightService } from '../lib/services/flight-service';
+import { getFlightServiceWithConfig } from '../lib/services/flight-service';
 
 interface Airline {
   id: string;
@@ -93,7 +93,7 @@ function UpcomingFlights() {
     queryFn: async () => {
       if (!homeAirport) return [];
 
-      const flightService = getFlightService();
+      const flightService = await getFlightServiceWithConfig();
       return flightService.getUpcomingDepartures({
         airport: homeAirport,
         airline: selectedAirline || undefined,
@@ -277,7 +277,7 @@ function UpcomingFlights() {
 
       {/* Collapsible Flight Search */}
       <Card>
-        <CardHeader 
+        <CardHeader
           className='cursor-pointer hover:bg-muted/50 transition-colors'
           onClick={() => setIsSearchExpanded(!isSearchExpanded)}
         >
@@ -317,7 +317,9 @@ function UpcomingFlights() {
                 </div>
                 <Select
                   value={searchMode}
-                  onValueChange={(value: 'selected' | 'all') => setSearchMode(value)}
+                  onValueChange={(value: 'selected' | 'all') =>
+                    setSearchMode(value)
+                  }
                 >
                   <SelectTrigger className='w-30'>
                     <SelectValue />
@@ -345,7 +347,7 @@ function UpcomingFlights() {
 
       {/* Collapsible Airline Filter */}
       <Card>
-        <CardHeader 
+        <CardHeader
           className='cursor-pointer hover:bg-muted/50 transition-colors'
           onClick={() => setIsFilterExpanded(!isFilterExpanded)}
         >

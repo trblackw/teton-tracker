@@ -4,6 +4,19 @@ import { type FlightStatus } from '../schema';
 // AviationStack API configuration
 const AVIATIONSTACK_BASE_URL = 'https://api.aviationstack.com/v1';
 
+// Development mode configuration
+const DEV_MODE = {
+  // Set to true to force mock data in development (easy toggle)
+  FORCE_MOCK_DATA: true,
+  // Set to true to enable debug logging
+  DEBUG_LOGGING: true,
+  // Set to true to test API key loading
+  TEST_API_KEY_LOADING: true,
+};
+
+// Log development mode status
+console.log('🔧 Flight Service Development Mode:', DEV_MODE);
+
 export interface FlightRequest {
   flightNumber: string;
   timeframe?: {
@@ -102,14 +115,27 @@ export interface UpcomingFlight {
 export class FlightService {
   private timeout: number = 15000;
   private apiKey: string | null = null;
+  private forceMockData: boolean = false;
 
-  constructor(apiKey?: string, timeout?: number) {
+  constructor(apiKey?: string, timeout?: number, forceMockData?: boolean) {
     this.apiKey = apiKey || null;
     this.timeout = timeout || 15000;
+    this.forceMockData = forceMockData || DEV_MODE.FORCE_MOCK_DATA;
+
+    if (DEV_MODE.DEBUG_LOGGING) {
+      console.log('🔧 FlightService initialized:', {
+        hasApiKey: !!this.apiKey,
+        forceMockData: this.forceMockData,
+        apiKeyLength: this.apiKey?.length || 0,
+      });
+    }
   }
 
   setApiKey(apiKey: string): void {
     this.apiKey = apiKey;
+    if (DEV_MODE.DEBUG_LOGGING) {
+      console.log('🔧 API key set, length:', apiKey?.length || 0);
+    }
   }
 
   /**
@@ -122,6 +148,14 @@ export class FlightService {
       console.log(
         `🛫 Fetching upcoming departures from ${request.airport}${request.airline ? ` for airline ${request.airline}` : ''}${request.flightNumber ? ` with flight number ${request.flightNumber}` : ''}`
       );
+
+      // Check if we should use mock data
+      if (this.forceMockData) {
+        console.log(
+          '🎭 Development mode: Using mock data (DEV_MODE.FORCE_MOCK_DATA = true)'
+        );
+        return this.getMockUpcomingFlights(request);
+      }
 
       if (!this.apiKey) {
         console.warn('⚠️ No AviationStack API key provided, using mock data');
@@ -328,7 +362,10 @@ export class FlightService {
       });
     }
 
-    console.log(`🎭 Generated ${mockFlights.length} mock departures`);
+    const mockDataLabel = this.forceMockData ? '🎭 [DEV MODE]' : '🎭';
+    console.log(
+      `${mockDataLabel} Generated ${mockFlights.length} mock departures`
+    );
     return mockFlights;
   }
 
@@ -373,7 +410,7 @@ export class FlightService {
    * Test API connectivity
    */
   async testConnection(): Promise<boolean> {
-    if (!this.apiKey) {
+    if (!this.apiKey || this.forceMockData) {
       return false;
     }
 
@@ -401,27 +438,152 @@ export class FlightService {
 
 // Default service instance
 let flightService: FlightService | null = null;
+let configPromise: Promise<any> | null = null;
+
+// Fetch configuration from server
+async function fetchConfig(): Promise<{
+  hasApiKey: boolean;
+  apiKey: string | null;
+  environment: string;
+}> {
+  try {
+    if (DEV_MODE.DEBUG_LOGGING) {
+      console.log('🔧 Fetching config from server...');
+    }
+
+    const response = await fetch('http://localhost:3001/api/config');
+
+    if (DEV_MODE.DEBUG_LOGGING) {
+      console.log('🔧 Config response status:', response.status);
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        `Config fetch failed: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const config = await response.json();
+
+    if (DEV_MODE.DEBUG_LOGGING) {
+      console.log('🔧 Config fetched from server:', {
+        hasApiKey: config.hasApiKey,
+        environment: config.environment,
+        apiKeyLength: config.apiKey?.length || 0,
+        first4: config.apiKey?.substring(0, 4) || 'none',
+      });
+    }
+
+    return config;
+  } catch (error) {
+    console.warn('⚠️ Failed to fetch config from server:', error);
+    if (DEV_MODE.DEBUG_LOGGING) {
+      console.log('🔧 Falling back to no API key configuration');
+    }
+    return { hasApiKey: false, apiKey: null, environment: 'development' };
+  }
+}
 
 export function getFlightService(apiKey?: string): FlightService {
   if (!flightService) {
-    // Try to get API key from environment variables if not provided
-    const envApiKey =
-      apiKey ||
-      (typeof process !== 'undefined' && process.env?.AVIATIONSTACK_API_KEY) ||
-      (typeof globalThis !== 'undefined' &&
-        (globalThis as any).AVIATIONSTACK_API_KEY);
+    // Get API key from multiple sources with better error handling
+    let envApiKey = apiKey;
+
+    // Try to get from environment in different contexts
+    if (!envApiKey) {
+      try {
+        // In Node.js/Bun server context
+        if (typeof process !== 'undefined' && process.env) {
+          envApiKey = process.env.AVIATIONSTACK_API_KEY;
+          if (DEV_MODE.DEBUG_LOGGING) {
+            console.log('🔧 Server context - API key from process.env:', {
+              hasApiKey: !!envApiKey,
+              length: envApiKey?.length || 0,
+              first4: envApiKey?.substring(0, 4) || 'none',
+            });
+          }
+        }
+
+        // In browser context, we'll need to fetch from server
+        if (!envApiKey && typeof window !== 'undefined') {
+          // For browser context, we'll handle this asynchronously
+          if (DEV_MODE.DEBUG_LOGGING) {
+            console.log(
+              '🔧 Browser context detected, will fetch API key from server'
+            );
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Error accessing environment variables:', error);
+      }
+    }
 
     flightService = new FlightService(envApiKey);
 
-    if (!envApiKey) {
+    if (!envApiKey && !DEV_MODE.FORCE_MOCK_DATA) {
       console.warn(
         '⚠️ No AviationStack API key found. Set AVIATIONSTACK_API_KEY environment variable or pass apiKey parameter. Using mock data.'
       );
+    }
+
+    if (DEV_MODE.DEBUG_LOGGING) {
+      console.log('🔧 FlightService instance created:', {
+        hasApiKey: !!envApiKey,
+        forceMockData: DEV_MODE.FORCE_MOCK_DATA,
+        isConfigured: flightService.isConfigured(),
+      });
     }
   } else if (apiKey && !flightService.isConfigured()) {
     flightService.setApiKey(apiKey);
   }
   return flightService;
+}
+
+// Enhanced function to get flight service with server config
+export async function getFlightServiceWithConfig(
+  apiKey?: string
+): Promise<FlightService> {
+  // If we already have a configured service, return it
+  if (flightService && flightService.isConfigured()) {
+    return flightService;
+  }
+
+  // If an API key is provided, use it directly
+  if (apiKey) {
+    if (!flightService) {
+      flightService = new FlightService(apiKey);
+    } else {
+      flightService.setApiKey(apiKey);
+    }
+    return flightService;
+  }
+
+  // Try to get API key from server config (for browser context)
+  if (
+    typeof window !== 'undefined' &&
+    (!flightService || !flightService.isConfigured())
+  ) {
+    try {
+      if (!configPromise) {
+        configPromise = fetchConfig();
+      }
+      const config = await configPromise;
+
+      if (config.apiKey) {
+        if (!flightService) {
+          flightService = new FlightService(config.apiKey);
+        } else {
+          flightService.setApiKey(config.apiKey);
+        }
+        return flightService;
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to get API key from server config:', error);
+    }
+  }
+
+  // Fallback to regular initialization
+  return getFlightService();
 }
 
 // Legacy compatibility functions
