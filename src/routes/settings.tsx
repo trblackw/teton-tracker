@@ -6,11 +6,11 @@ import { useEffect, useState } from 'react';
 import { AirportCombobox } from '../components/ui/airport-combobox';
 import { Button } from '../components/ui/button';
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from '../components/ui/card';
 import { Toggle } from '../components/ui/toggle';
 import airportsData from '../data/airports-full.json';
@@ -28,8 +28,9 @@ interface Airport {
 }
 
 // Convert the airports object to an array for compatibility
-const airports: Airport[] = Object.values(airportsData).filter(airport => 
-  airport.iata && airport.iata.trim() !== '' && airport.iata !== 'N/A'
+const airports: Airport[] = Object.values(airportsData).filter(
+  airport =>
+    airport.iata && airport.iata.trim() !== '' && airport.iata !== 'N/A'
 );
 
 function Settings() {
@@ -63,7 +64,9 @@ function Settings() {
     return null;
   }
 
-  const selectedAirport = airports.find(airport => airport.iata === homeAirport);
+  const selectedAirport = airports.find(
+    airport => airport.iata === homeAirport
+  );
 
   return (
     <div className='space-y-6'>
@@ -111,7 +114,7 @@ function Settings() {
               )}
             </Toggle>
           </div>
-          
+
           <div className='grid grid-cols-3 gap-2'>
             <Button
               variant={theme === 'light' ? 'default' : 'outline'}
@@ -152,7 +155,8 @@ function Settings() {
             Home Base Airport
           </CardTitle>
           <CardDescription>
-            Set your primary airport for quick access and defaults ({airports.length} airports available)
+            Set your primary airport for quick access and defaults (
+            {airports.length} airports available)
           </CardDescription>
         </CardHeader>
         <CardContent className='space-y-4'>
@@ -185,7 +189,8 @@ function Settings() {
                     {selectedAirport.name}
                   </p>
                   <p className='text-xs text-muted-foreground'>
-                    {selectedAirport.city}, {selectedAirport.state} • {selectedAirport.elevation}ft elevation
+                    {selectedAirport.city}, {selectedAirport.state} •{' '}
+                    {selectedAirport.elevation}ft elevation
                   </p>
                   <p className='text-xs text-muted-foreground'>
                     Timezone: {selectedAirport.tz}
@@ -226,6 +231,6 @@ function Settings() {
   );
 }
 
-export const Route = createFileRoute()({
+export const Route = createFileRoute('/settings')({
   component: Settings,
 });

@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router';
 
-export const Route = createFileRoute()({
+export const Route = createFileRoute('/')({
   loader: () => redirect({ to: '/runs' }),
 });

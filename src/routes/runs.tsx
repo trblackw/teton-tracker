@@ -304,6 +304,6 @@ function Runs() {
   );
 }
 
-export const Route = createFileRoute()({
+export const Route = createFileRoute('/runs')({
   component: Runs,
 });

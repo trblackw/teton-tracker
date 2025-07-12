@@ -1,6 +1,6 @@
 import { createRootRoute, Link, Outlet } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/router-devtools';
-import { Activity, Plus, Settings } from 'lucide-react';
+import { Activity, Plane, Plus, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ThemeProvider } from '../components/theme-provider';
 import { Button } from '../components/ui/button';
@@ -87,6 +87,13 @@ function RootComponent() {
                   Current Runs
                 </Link>
                 <Link
+                  to='/flights'
+                  className='text-muted-foreground hover:text-foreground px-3 py-2 rounded-md text-sm font-medium'
+                  activeProps={{ className: 'text-primary bg-primary/10' }}
+                >
+                  Upcoming Flights
+                </Link>
+                <Link
                   to='/add'
                   className='text-muted-foreground hover:text-foreground px-3 py-2 rounded-md text-sm font-medium'
                   activeProps={{ className: 'text-primary bg-primary/10' }}
@@ -171,7 +178,7 @@ function RootComponent() {
 
         {/* Bottom Navigation - Mobile Only */}
         <nav className='md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50'>
-          <div className='grid grid-cols-2 h-16'>
+          <div className='grid grid-cols-3 h-16'>
             <Link
               to='/runs'
               className='flex flex-col items-center justify-center text-muted-foreground hover:text-foreground'
@@ -179,6 +186,14 @@ function RootComponent() {
             >
               <Activity className='h-5 w-5' />
               <span className='text-xs mt-1'>Runs</span>
+            </Link>
+            <Link
+              to='/flights'
+              className='flex flex-col items-center justify-center text-muted-foreground hover:text-foreground'
+              activeProps={{ className: 'text-primary bg-primary/10' }}
+            >
+              <Plane className='h-5 w-5' />
+              <span className='text-xs mt-1'>Flights</span>
             </Link>
             <Link
               to='/add'

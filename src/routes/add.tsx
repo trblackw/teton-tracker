@@ -546,6 +546,6 @@ function Add() {
   );
 }
 
-export const Route = createFileRoute()({
+export const Route = createFileRoute('/add')({
   component: Add,
 });
