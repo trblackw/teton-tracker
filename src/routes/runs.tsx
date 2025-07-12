@@ -1,3 +1,4 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import {
   Activity,
@@ -9,7 +10,6 @@ import {
   Plane,
   Trash2,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import {
@@ -19,63 +19,66 @@ import {
   CardHeader,
   CardTitle,
 } from '../components/ui/card';
+import { runsApi } from '../lib/api/client';
 import { useMultipleRunsData } from '../lib/hooks/use-api-data';
-import { queryClient } from '../lib/react-query-client';
+import { invalidateAllApiData } from '../lib/react-query-client';
 import { type Run, type RunStatus } from '../lib/schema';
 import { pollingService } from '../lib/services/polling-service';
 
 function Runs() {
-  const [runs, setRuns] = useState<Run[]>([]);
+  const queryClient = useQueryClient();
+
+  // Query for runs from API
+  const {
+    data: runs = [],
+    isLoading: runsLoading,
+    isError: runsError,
+    refetch: refetchRuns,
+  } = useQuery({
+    queryKey: ['runs'],
+    queryFn: () => runsApi.getRuns(),
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  });
+
   const runsApiData = useMultipleRunsData(runs);
 
-  // Load runs from localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedRuns = window.localStorage.getItem('airport-runs');
-      if (savedRuns) {
-        try {
-          const parsedRuns = JSON.parse(savedRuns);
-          const validatedRuns = parsedRuns.filter(
-            (run: any) =>
-              run &&
-              typeof run.id === 'string' &&
-              typeof run.flightNumber === 'string' &&
-              typeof run.airline === 'string' &&
-              typeof run.departure === 'string' &&
-              typeof run.arrival === 'string' &&
-              typeof run.pickupLocation === 'string' &&
-              typeof run.dropoffLocation === 'string' &&
-              typeof run.scheduledTime === 'string' &&
-              ['pickup', 'dropoff'].includes(run.type) &&
-              ['scheduled', 'active', 'completed', 'cancelled'].includes(
-                run.status
-              )
-          );
-          setRuns(validatedRuns);
-        } catch (error) {
-          console.error('Error parsing runs from localStorage:', error);
-        }
-      }
-    }
-  }, []);
+  // Mutation for updating run status
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: RunStatus }) =>
+      runsApi.updateRunStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['runs'] });
+    },
+    onError: error => {
+      console.error('Failed to update run status:', error);
+    },
+  });
 
-  // Save runs to localStorage whenever runs change
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('airport-runs', JSON.stringify(runs));
-    }
-  }, [runs]);
+  // Mutation for deleting run
+  const deleteRunMutation = useMutation({
+    mutationFn: (id: string) => runsApi.deleteRun(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['runs'] });
+    },
+    onError: error => {
+      console.error('Failed to delete run:', error);
+    },
+  });
 
-  const deleteRun = (id: string) => {
-    setRuns(prev => prev.filter(run => run.id !== id));
+  const refreshAllData = () => {
+    invalidateAllApiData();
+    runsApiData.refetchAll();
+    refetchRuns();
   };
 
-  const updateRunStatus = (id: string, status: RunStatus) => {
-    setRuns(prev =>
-      prev.map(run =>
-        run.id === id ? { ...run, status, updatedAt: new Date() } : run
-      )
-    );
+  const handleUpdateStatus = (id: string, status: RunStatus) => {
+    updateStatusMutation.mutate({ id, status });
+  };
+
+  const handleDeleteRun = (id: string) => {
+    if (window.confirm('Are you sure you want to delete this run?')) {
+      deleteRunMutation.mutate(id);
+    }
   };
 
   const refreshRunData = (run: Run) => {
@@ -104,6 +107,45 @@ function Runs() {
         return 'bg-muted text-muted-foreground';
     }
   };
+
+  if (runsLoading) {
+    return (
+      <div className='space-y-6'>
+        <div>
+          <h2 className='text-2xl font-bold text-foreground'>Current Runs</h2>
+          <p className='text-muted-foreground mt-1'>Loading your runs...</p>
+        </div>
+        <Card>
+          <CardContent className='p-8 text-center'>
+            <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4'></div>
+            <p className='text-muted-foreground'>
+              Loading runs from database...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (runsError) {
+    return (
+      <div className='space-y-6'>
+        <div>
+          <h2 className='text-2xl font-bold text-foreground'>Current Runs</h2>
+          <p className='text-muted-foreground mt-1'>Failed to load runs</p>
+        </div>
+        <Card className='border-destructive'>
+          <CardContent className='p-8 text-center'>
+            <AlertCircle className='h-16 w-16 text-destructive mx-auto mb-6' />
+            <p className='text-destructive text-lg mb-4'>
+              Failed to load runs from database
+            </p>
+            <Button onClick={() => refetchRuns()}>Retry</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (runs.length === 0) {
     return (
@@ -157,7 +199,7 @@ function Runs() {
                     <CardTitle className='text-lg'>
                       {run.flightNumber}
                       {isLoading && (
-                        <span className='ml-2 inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600'></span>
+                        <span className='ml-2 inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-primary'></span>
                       )}
                       {isError && (
                         <span className='ml-2 text-destructive text-sm'>
@@ -176,7 +218,8 @@ function Runs() {
                     <Button
                       variant='ghost'
                       size='sm'
-                      onClick={() => deleteRun(run.id)}
+                      onClick={() => handleDeleteRun(run.id)}
+                      disabled={deleteRunMutation.isPending}
                     >
                       <Trash2 className='h-4 w-4' />
                     </Button>
@@ -268,7 +311,8 @@ function Runs() {
                   {run.status === 'scheduled' && (
                     <Button
                       size='sm'
-                      onClick={() => updateRunStatus(run.id, 'active')}
+                      onClick={() => handleUpdateStatus(run.id, 'active')}
+                      disabled={updateStatusMutation.isPending}
                       className='min-w-0'
                     >
                       Start Run
@@ -278,7 +322,8 @@ function Runs() {
                     <Button
                       size='sm'
                       variant='secondary'
-                      onClick={() => updateRunStatus(run.id, 'completed')}
+                      onClick={() => handleUpdateStatus(run.id, 'completed')}
+                      disabled={updateStatusMutation.isPending}
                       className='min-w-0'
                     >
                       Complete Run

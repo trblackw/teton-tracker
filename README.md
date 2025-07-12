@@ -183,3 +183,66 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ---
 
 **Made with ❤️ for efficient airport shuttle operations**
+
+## 🗄️ Database Setup
+
+Teton Tracker uses [Turso](https://turso.tech/) (libSQL) for data persistence, providing a modern SQLite-compatible database with edge distribution and serverless scaling.
+
+### Development Setup
+
+For local development, the application automatically uses a local SQLite database (`local.db`). No additional setup is required - the database schema is initialized automatically when the application starts.
+
+### Production Setup with Turso
+
+1. **Create a Turso Account**
+
+   ```bash
+   # Install Turso CLI
+   curl -sSfL https://get.tur.so/install.sh | bash
+
+   # Sign up for Turso
+   turso auth signup
+   ```
+
+2. **Create a Database**
+
+   ```bash
+   # Create a new database
+   turso db create teton-tracker
+
+   # Get the database URL
+   turso db show teton-tracker
+
+   # Create an auth token
+   turso db tokens create teton-tracker
+   ```
+
+3. **Configure Environment Variables**
+
+   ```bash
+   # Set environment variables
+   export TURSO_DATABASE_URL="libsql://your-database-name.turso.io"
+   export TURSO_AUTH_TOKEN="your-auth-token-here"
+   ```
+
+4. **Database Schema**
+   The application automatically initializes the required tables:
+   - `user_preferences` - User settings and preferences
+   - `runs` - Historical shuttle runs and schedules
+   - `flight_cache` - Cached flight data to reduce API calls
+
+### Database Features
+
+- **Automatic Schema Migration**: Database tables are created automatically on first run
+- **User Data Isolation**: Each user gets their own data space using generated user IDs
+- **Data Persistence**: Runs and preferences are stored permanently
+- **Performance Optimization**: Built-in caching and indexing for fast queries
+- **Backup & Recovery**: Turso provides automatic backups and point-in-time recovery
+
+### Local Database File
+
+During development, you'll see a `local.db` file created in your project root. This is your local SQLite database and can be safely deleted to reset all data.
+
+### Data Migration
+
+Since this is a new database implementation, no data migration is required. The application will start with a fresh database state.

@@ -1,9 +1,14 @@
-import { Label } from '@radix-ui/react-label';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
-import { Moon, Plane, Sun } from 'lucide-react';
+import {
+  Building,
+  Monitor,
+  Moon,
+  Palette,
+  SettingsIcon,
+  Sun,
+} from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { useEffect, useState } from 'react';
-import { AirportCombobox } from '../components/ui/airport-combobox';
 import { Button } from '../components/ui/button';
 import {
   Card,
@@ -12,221 +17,268 @@ import {
   CardHeader,
   CardTitle,
 } from '../components/ui/card';
+import { Input } from '../components/ui/input';
 import { Toggle } from '../components/ui/toggle';
-import airportsData from '../data/airports-full.json';
-
-interface Airport {
-  icao: string;
-  iata: string;
-  name: string;
-  city: string;
-  state: string;
-  elevation: number;
-  lat: number;
-  lon: number;
-  tz: string;
-}
-
-// Convert the airports object to an array for compatibility
-const airports: Airport[] = Object.values(airportsData).filter(
-  airport =>
-    airport.iata && airport.iata.trim() !== '' && airport.iata !== 'N/A'
-);
+import { preferencesApi } from '../lib/api/client';
+import { type UpdatePreferencesData } from '../lib/db/preferences';
 
 function Settings() {
   const { theme, setTheme } = useTheme();
-  const [homeAirport, setHomeAirport] = useState<string>('');
-  const [mounted, setMounted] = useState(false);
+  const queryClient = useQueryClient();
 
-  // Ensure component is mounted before accessing theme
-  useEffect(() => {
-    setMounted(true);
-    if (typeof window !== 'undefined') {
-      const savedAirport = window.localStorage.getItem('home-airport');
-      if (savedAirport) {
-        setHomeAirport(savedAirport);
-      }
-    }
-  }, []);
+  // Query for user preferences from API
+  const {
+    data: preferences,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['preferences'],
+    queryFn: () => preferencesApi.getPreferences(),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
-  const handleAirportChange = (airportCode: string) => {
-    setHomeAirport(airportCode);
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('home-airport', airportCode);
-    }
+  // Mutation for updating preferences
+  const updatePreferencesMutation = useMutation({
+    mutationFn: (data: UpdatePreferencesData) =>
+      preferencesApi.updatePreferences(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['preferences'] });
+    },
+    onError: error => {
+      console.error('Failed to update preferences:', error);
+    },
+  });
+
+  const handleHomeAirportChange = (airport: string) => {
+    updatePreferencesMutation.mutate({ homeAirport: airport });
   };
 
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
+  const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
+    setTheme(newTheme);
+    updatePreferencesMutation.mutate({ theme: newTheme });
   };
 
-  if (!mounted) {
-    return null;
+  const handleNotificationToggle = (key: string, value: boolean) => {
+    if (!preferences?.notificationPreferences) return;
+
+    updatePreferencesMutation.mutate({
+      notificationPreferences: {
+        ...preferences.notificationPreferences,
+        [key]: value,
+      },
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className='space-y-6'>
+        <div>
+          <h2 className='text-2xl font-bold text-foreground'>Settings</h2>
+          <p className='text-muted-foreground mt-1'>
+            Loading your preferences...
+          </p>
+        </div>
+        <Card>
+          <CardContent className='p-8 text-center'>
+            <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4'></div>
+            <p className='text-muted-foreground'>Loading settings...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
-  const selectedAirport = airports.find(
-    airport => airport.iata === homeAirport
-  );
+  if (isError) {
+    return (
+      <div className='space-y-6'>
+        <div>
+          <h2 className='text-2xl font-bold text-foreground'>Settings</h2>
+          <p className='text-muted-foreground mt-1'>
+            Failed to load preferences
+          </p>
+        </div>
+        <Card className='border-destructive'>
+          <CardContent className='p-8 text-center'>
+            <SettingsIcon className='h-16 w-16 text-destructive mx-auto mb-6' />
+            <p className='text-destructive text-lg mb-4'>
+              Failed to load settings from database
+            </p>
+            <Button onClick={() => refetch()}>Retry</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className='space-y-6'>
       <div>
         <h2 className='text-2xl font-bold text-foreground'>Settings</h2>
         <p className='text-muted-foreground mt-1'>
-          Configure your preferences and default options
+          Configure your preferences and settings
         </p>
       </div>
+
+      {/* Home Airport */}
+      <Card>
+        <CardHeader>
+          <CardTitle className='flex items-center gap-2'>
+            <Building className='h-5 w-5' />
+            Home Airport
+          </CardTitle>
+          <CardDescription>
+            Set your primary airport for flight tracking
+          </CardDescription>
+        </CardHeader>
+        <CardContent className='space-y-4'>
+          <div className='flex flex-col gap-2'>
+            <Input
+              value={preferences?.homeAirport || ''}
+              onChange={e => handleHomeAirportChange(e.target.value)}
+              placeholder='Enter your home airport code (e.g., LAX, JFK)'
+              disabled={updatePreferencesMutation.isPending}
+            />
+            {preferences?.homeAirport && (
+              <p className='text-sm text-muted-foreground'>
+                Current home airport: {preferences.homeAirport}
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Theme Settings */}
       <Card>
         <CardHeader>
           <CardTitle className='flex items-center gap-2'>
-            {theme === 'dark' ? (
-              <Moon className='h-5 w-5' />
-            ) : (
-              <Sun className='h-5 w-5' />
-            )}
-            Appearance
+            <Palette className='h-5 w-5' />
+            Theme
           </CardTitle>
           <CardDescription>
-            Choose between light and dark mode, or use your system preference
+            Choose your preferred theme appearance
           </CardDescription>
         </CardHeader>
         <CardContent className='space-y-4'>
-          <div className='flex items-center justify-between'>
-            <div className='space-y-1'>
-              <Label htmlFor='theme-toggle'>Dark Mode</Label>
-              <p className='text-sm text-muted-foreground'>
-                Toggle between light and dark appearance
-              </p>
-            </div>
-            <Toggle
-              id='theme-toggle'
-              pressed={theme === 'dark'}
-              onPressedChange={toggleTheme}
-              aria-label='Toggle dark mode'
-              className='data-[state=on]:bg-foreground data-[state=on]:text-background'
-            >
-              {theme === 'dark' ? (
-                <Moon className='h-4 w-4' />
-              ) : (
+          <div className='flex flex-col gap-3'>
+            <div className='flex items-center gap-3'>
+              <Button
+                variant={theme === 'light' ? 'default' : 'outline'}
+                size='sm'
+                onClick={() => handleThemeChange('light')}
+                disabled={updatePreferencesMutation.isPending}
+                className='flex items-center gap-2'
+              >
                 <Sun className='h-4 w-4' />
-              )}
-            </Toggle>
-          </div>
-
-          <div className='grid grid-cols-3 gap-2'>
-            <Button
-              variant={theme === 'light' ? 'default' : 'outline'}
-              size='sm'
-              onClick={() => setTheme('light')}
-              className='justify-start'
-            >
-              <Sun className='h-4 w-4 mr-2' />
-              Light
-            </Button>
-            <Button
-              variant={theme === 'dark' ? 'default' : 'outline'}
-              size='sm'
-              onClick={() => setTheme('dark')}
-              className='justify-start'
-            >
-              <Moon className='h-4 w-4 mr-2' />
-              Dark
-            </Button>
-            <Button
-              variant={theme === 'system' ? 'default' : 'outline'}
-              size='sm'
-              onClick={() => setTheme('system')}
-              className='justify-start'
-            >
-              <div className='h-4 w-4 mr-2 rounded-full bg-gradient-to-r from-muted-foreground to-foreground' />
-              System
-            </Button>
+                Light
+              </Button>
+              <Button
+                variant={theme === 'dark' ? 'default' : 'outline'}
+                size='sm'
+                onClick={() => handleThemeChange('dark')}
+                disabled={updatePreferencesMutation.isPending}
+                className='flex items-center gap-2'
+              >
+                <Moon className='h-4 w-4' />
+                Dark
+              </Button>
+              <Button
+                variant={theme === 'system' ? 'default' : 'outline'}
+                size='sm'
+                onClick={() => handleThemeChange('system')}
+                disabled={updatePreferencesMutation.isPending}
+                className='flex items-center gap-2'
+              >
+                <Monitor className='h-4 w-4' />
+                System
+              </Button>
+            </div>
+            <p className='text-sm text-muted-foreground'>
+              Current theme: {theme}
+            </p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Airport Settings */}
+      {/* Notification Settings */}
       <Card>
         <CardHeader>
           <CardTitle className='flex items-center gap-2'>
-            <Plane className='h-5 w-5' />
-            Home Base Airport
+            <SettingsIcon className='h-5 w-5' />
+            Notifications
           </CardTitle>
           <CardDescription>
-            Set your primary airport for quick access and defaults (
-            {airports.length} airports available)
+            Configure what notifications you want to receive
           </CardDescription>
         </CardHeader>
         <CardContent className='space-y-4'>
-          <div className='space-y-3'>
-            <Label htmlFor='home-airport'>Select Airport</Label>
-            <AirportCombobox
-              airports={airports}
-              value={homeAirport}
-              onValueChange={handleAirportChange}
-              placeholder='Choose your home airport...'
-              emptyMessage='No airports found'
-              maxResults={100}
-            />
-
-            {selectedAirport && (
-              <div className='mt-3 p-4 bg-primary/5 rounded-lg border border-primary/20'>
-                <p className='text-sm font-medium text-primary mb-2'>
-                  Selected Home Airport
+          <div className='space-y-4'>
+            <div className='flex items-center justify-between'>
+              <div>
+                <p className='font-medium'>Flight Updates</p>
+                <p className='text-sm text-muted-foreground'>
+                  Get notified about flight status changes
                 </p>
-                <div className='space-y-2'>
-                  <div className='flex items-center gap-2'>
-                    <span className='font-mono bg-primary/10 text-primary px-2 py-1 rounded text-sm font-bold'>
-                      {selectedAirport.iata}
-                    </span>
-                    <span className='font-mono bg-muted text-muted-foreground px-2 py-1 rounded text-xs'>
-                      {selectedAirport.icao}
-                    </span>
-                  </div>
-                  <p className='text-sm text-primary font-medium'>
-                    {selectedAirport.name}
-                  </p>
-                  <p className='text-xs text-muted-foreground'>
-                    {selectedAirport.city}, {selectedAirport.state} •{' '}
-                    {selectedAirport.elevation}ft elevation
-                  </p>
-                  <p className='text-xs text-muted-foreground'>
-                    Timezone: {selectedAirport.tz}
-                  </p>
-                </div>
               </div>
-            )}
+              <Toggle
+                pressed={
+                  preferences?.notificationPreferences?.flightUpdates ?? true
+                }
+                onPressedChange={value =>
+                  handleNotificationToggle('flightUpdates', value)
+                }
+                disabled={updatePreferencesMutation.isPending}
+              />
+            </div>
+            <div className='flex items-center justify-between'>
+              <div>
+                <p className='font-medium'>Traffic Alerts</p>
+                <p className='text-sm text-muted-foreground'>
+                  Get notified about traffic conditions
+                </p>
+              </div>
+              <Toggle
+                pressed={
+                  preferences?.notificationPreferences?.trafficAlerts ?? true
+                }
+                onPressedChange={value =>
+                  handleNotificationToggle('trafficAlerts', value)
+                }
+                disabled={updatePreferencesMutation.isPending}
+              />
+            </div>
+            <div className='flex items-center justify-between'>
+              <div>
+                <p className='font-medium'>Run Reminders</p>
+                <p className='text-sm text-muted-foreground'>
+                  Get reminded about upcoming runs
+                </p>
+              </div>
+              <Toggle
+                pressed={
+                  preferences?.notificationPreferences?.runReminders ?? true
+                }
+                onPressedChange={value =>
+                  handleNotificationToggle('runReminders', value)
+                }
+                disabled={updatePreferencesMutation.isPending}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Additional Settings Placeholder */}
-      <Card className='opacity-60'>
-        <CardHeader>
-          <CardTitle>Additional Settings</CardTitle>
-          <CardDescription>
-            More configuration options coming soon...
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className='space-y-3 text-sm text-muted-foreground'>
+      {/* Status */}
+      {updatePreferencesMutation.isPending && (
+        <Card className='border-primary/20 bg-primary/5'>
+          <CardContent className='p-4'>
             <div className='flex items-center gap-2'>
-              <div className='w-2 h-2 bg-muted rounded-full' />
-              Notification preferences
+              <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-primary'></div>
+              <p className='text-primary text-sm'>Saving preferences...</p>
             </div>
-            <div className='flex items-center gap-2'>
-              <div className='w-2 h-2 bg-muted rounded-full' />
-              Default time zones
-            </div>
-            <div className='flex items-center gap-2'>
-              <div className='w-2 h-2 bg-muted rounded-full' />
-              API refresh intervals
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

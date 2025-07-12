@@ -1,14 +1,18 @@
 {
-  "name": "bun-react-template",
+  "name": "teton-tracker",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "src/index.tsx",
   "module": "src/index.tsx",
   "scripts": {
-    "dev": "bun --hot index.html",
-    "start": "NODE_ENV=production bun src/prod-server.ts",
+    "dev": "bun run src/api-server.ts & bun --hot index.html",
+    "dev:api": "bun run src/api-server.ts",
+    "dev:frontend": "bun --hot index.html",
     "build": "bun run build.ts",
+    "start": "bun run src/prod-server.ts",
+    "preview": "bun run src/prod-server.ts",
+    "typecheck": "bunx tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky"
@@ -23,6 +27,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^4.1.0",
+    "@libsql/client": "^0.15.9",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-popover": "^1.1.14",

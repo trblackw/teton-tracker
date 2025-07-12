@@ -1,218 +1,136 @@
 import { createRootRoute, Link, Outlet } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/router-devtools';
-import { Activity, Plane, Plus, Settings } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Activity, Home, Plane, Plus, Settings } from 'lucide-react';
 import { ThemeProvider } from '../components/theme-provider';
 import { Button } from '../components/ui/button';
-import { useMultipleRunsData } from '../lib/hooks/use-api-data';
-import IconLogo from '../lib/icons/icon-logo';
-import { invalidateAllApiData } from '../lib/react-query-client';
-import { pollingService } from '../lib/services/polling-service';
-import { initializeTomTomService } from '../lib/services/tomtom-service';
-
-function RootComponent() {
-  const [pollingEnabled, setPollingEnabled] = useState(true);
-
-  // Get runs from localStorage for polling service
-  const [runs, setRuns] = useState<any[]>([]);
-  const runsApiData = useMultipleRunsData(runs);
-
-  // Initialize services
-  useEffect(() => {
-    initializeTomTomService();
-
-    // Load runs from localStorage
-    if (typeof window !== 'undefined') {
-      const savedRuns = window.localStorage.getItem('airport-runs');
-      if (savedRuns) {
-        try {
-          const parsedRuns = JSON.parse(savedRuns);
-          setRuns(parsedRuns);
-        } catch (error) {
-          console.error('Error parsing runs from localStorage:', error);
-        }
-      }
-    }
-
-    // Configure polling service
-    pollingService.config = {
-      ...pollingService.config,
-      onDataInvalidation: type => {
-        if (type === 'flight') {
-          invalidateAllApiData();
-        }
-      },
-    };
-
-    if (pollingEnabled) {
-      pollingService.start();
-    }
-
-    return () => {
-      pollingService.stop();
-    };
-  }, [pollingEnabled]);
-
-  // Update polling service with current runs
-  useEffect(() => {
-    pollingService.updateRuns(runs);
-  }, [runs]);
-
-  const refreshAllData = () => {
-    invalidateAllApiData();
-    runsApiData.refetchAll();
-  };
-
-  return (
-    <ThemeProvider>
-      <div className='min-h-screen bg-background'>
-        {/* Header - Desktop */}
-        <header className='hidden md:block bg-background shadow-sm border-b border-border sticky top-0 z-50'>
-          <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-            <div className='flex justify-between items-center h-16'>
-              <div className='flex items-center gap-4'>
-                <IconLogo className='h-8 w-8' />
-                <h1 className='text-xl font-bold text-foreground'>
-                  Teton Tracker
-                </h1>
-              </div>
-
-              {/* Desktop Navigation */}
-              <nav className='flex items-center gap-6'>
-                <Link
-                  to='/runs'
-                  className='text-muted-foreground hover:text-foreground px-3 py-2 rounded-md text-sm font-medium'
-                  activeProps={{ className: 'text-primary bg-primary/10' }}
-                >
-                  Current Runs
-                </Link>
-                <Link
-                  to='/flights'
-                  className='text-muted-foreground hover:text-foreground px-3 py-2 rounded-md text-sm font-medium'
-                  activeProps={{ className: 'text-primary bg-primary/10' }}
-                >
-                  Upcoming Flights
-                </Link>
-                <Link
-                  to='/add'
-                  className='text-muted-foreground hover:text-foreground px-3 py-2 rounded-md text-sm font-medium'
-                  activeProps={{ className: 'text-primary bg-primary/10' }}
-                >
-                  Add Run
-                </Link>
-              </nav>
-
-              {/* Action Buttons */}
-              <div className='flex items-center gap-2'>
-                <Link to='/settings'>
-                  <Button variant='outline' size='sm'>
-                    <Settings className='h-4 w-4 mr-2' />
-                    Settings
-                  </Button>
-                </Link>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() => {
-                    setPollingEnabled(!pollingEnabled);
-                    if (!pollingEnabled) {
-                      pollingService.start();
-                    } else {
-                      pollingService.stop();
-                    }
-                  }}
-                >
-                  <Activity className='h-4 w-4 mr-2' />
-                  {pollingEnabled ? 'Disable' : 'Enable'} Polling
-                </Button>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={refreshAllData}
-                  disabled={runsApiData.isFetching}
-                >
-                  <Activity className='h-4 w-4 mr-2' />
-                  {runsApiData.isFetching ? 'Refreshing...' : 'Refresh All'}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Mobile Header */}
-        <header className='md:hidden bg-background shadow-sm border-b border-border'>
-          <div className='px-4 py-3'>
-            <div className='flex items-center justify-between'>
-              <div className='flex items-center gap-2'>
-                <IconLogo className='h-6 w-6' />
-                <h1 className='text-lg font-bold text-foreground'>
-                  Teton Tracker
-                </h1>
-              </div>
-              <div className='flex items-center gap-1'>
-                <Link to='/settings'>
-                  <Button variant='outline' size='sm' className='p-2'>
-                    <Settings className='h-4 w-4' />
-                  </Button>
-                </Link>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={refreshAllData}
-                  disabled={runsApiData.isFetching}
-                  className='p-2'
-                >
-                  <Activity className='h-4 w-4' />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Main Content */}
-        <main className='pb-20 md:pb-4'>
-          <div className='max-w-3xl mx-auto px-4 py-6'>
-            <Outlet />
-          </div>
-        </main>
-
-        {/* Bottom Navigation - Mobile Only */}
-        <nav className='md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50'>
-          <div className='grid grid-cols-3 h-16'>
-            <Link
-              to='/runs'
-              className='flex flex-col items-center justify-center text-muted-foreground hover:text-foreground'
-              activeProps={{ className: 'text-primary bg-primary/10' }}
-            >
-              <Activity className='h-5 w-5' />
-              <span className='text-xs mt-1'>Runs</span>
-            </Link>
-            <Link
-              to='/flights'
-              className='flex flex-col items-center justify-center text-muted-foreground hover:text-foreground'
-              activeProps={{ className: 'text-primary bg-primary/10' }}
-            >
-              <Plane className='h-5 w-5' />
-              <span className='text-xs mt-1'>Flights</span>
-            </Link>
-            <Link
-              to='/add'
-              className='flex flex-col items-center justify-center text-muted-foreground hover:text-foreground'
-              activeProps={{ className: 'text-primary bg-primary/10' }}
-            >
-              <Plus className='h-5 w-5' />
-              <span className='text-xs mt-1'>Add Run</span>
-            </Link>
-          </div>
-        </nav>
-
-        {/* Development Tools */}
-        {process.env.NODE_ENV === 'development' && <TanStackRouterDevtools />}
-      </div>
-    </ThemeProvider>
-  );
-}
+import { Card, CardContent } from '../components/ui/card';
 
 export const Route = createRootRoute({
-  component: RootComponent,
+  component: () => (
+    <ThemeProvider>
+      <div className='min-h-screen bg-background'>
+        <div className='container mx-auto px-4 py-4'>
+          <div className='flex flex-col lg:flex-row lg:gap-8'>
+            {/* Desktop Navigation */}
+            <aside className='hidden lg:block w-64 shrink-0'>
+              <Card className='sticky top-4 bg-card'>
+                <CardContent className='p-4'>
+                  <div className='flex items-center gap-2 mb-6'>
+                    <div className='p-2 bg-primary rounded-lg'>
+                      <Plane className='h-5 w-5 text-primary-foreground' />
+                    </div>
+                    <h1 className='text-xl font-bold text-foreground'>
+                      Teton Tracker
+                    </h1>
+                  </div>
+                  <nav className='space-y-2'>
+                    <Button
+                      asChild
+                      variant='ghost'
+                      className='w-full justify-start'
+                    >
+                      <Link to='/' className='flex items-center gap-2'>
+                        <Home className='h-4 w-4' />
+                        Home
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant='ghost'
+                      className='w-full justify-start'
+                    >
+                      <Link to='/runs' className='flex items-center gap-2'>
+                        <Activity className='h-4 w-4' />
+                        Current Runs
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant='ghost'
+                      className='w-full justify-start'
+                    >
+                      <Link to='/flights' className='flex items-center gap-2'>
+                        <Plane className='h-4 w-4' />
+                        Upcoming Flights
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant='ghost'
+                      className='w-full justify-start'
+                    >
+                      <Link to='/add' className='flex items-center gap-2'>
+                        <Plus className='h-4 w-4' />
+                        Add Run
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant='ghost'
+                      className='w-full justify-start'
+                    >
+                      <Link to='/settings' className='flex items-center gap-2'>
+                        <Settings className='h-4 w-4' />
+                        Settings
+                      </Link>
+                    </Button>
+                  </nav>
+                </CardContent>
+              </Card>
+            </aside>
+
+            {/* Main Content */}
+            <main className='flex-1 lg:max-w-4xl'>
+              <Outlet />
+            </main>
+          </div>
+        </div>
+
+        {/* Mobile Navigation */}
+        <div className='lg:hidden fixed bottom-0 left-0 right-0 border-t border-border bg-card'>
+          <nav className='flex items-center justify-around p-2'>
+            <Button
+              asChild
+              variant='ghost'
+              size='sm'
+              className='flex-col h-auto p-2'
+            >
+              <Link to='/' className='flex flex-col items-center gap-1'>
+                <Home className='h-4 w-4' />
+                <span className='text-xs'>Home</span>
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant='ghost'
+              size='sm'
+              className='flex-col h-auto p-2'
+            >
+              <Link to='/runs' className='flex flex-col items-center gap-1'>
+                <Activity className='h-4 w-4' />
+                <span className='text-xs'>Runs</span>
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant='ghost'
+              size='sm'
+              className='flex-col h-auto p-2'
+            >
+              <Link to='/flights' className='flex flex-col items-center gap-1'>
+                <Plane className='h-4 w-4' />
+                <span className='text-xs'>Flights</span>
+              </Link>
+            </Button>
+          </nav>
+        </div>
+
+        {/* Add bottom padding for mobile navigation */}
+        <div className='lg:hidden h-16' />
+
+        {/* Router Devtools */}
+        <TanStackRouterDevtools />
+      </div>
+    </ThemeProvider>
+  ),
 });
