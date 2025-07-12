@@ -9,7 +9,7 @@ export default [
   js.configs.recommended,
   {
     files: ['**/*.{ts,tsx,js,jsx}'],
-    ignores: ['public/**/*.js'], // Ignore service worker files for this config
+    ignores: ['public/**/*'], // Ignore all files in public directory (generated/bundled code)
     languageOptions: {
       parser: typescriptParser,
       parserOptions: {
@@ -87,55 +87,7 @@ export default [
       'no-unused-vars': 'off',
     },
   },
-  // Specific configuration for service worker files
   {
-    files: ['public/**/*.js'],
-    languageOptions: {
-      ecmaVersion: 'latest',
-      sourceType: 'script', // Service workers don't use modules
-      globals: {
-        // Service Worker globals
-        self: 'readonly',
-        caches: 'readonly',
-        clients: 'readonly',
-        registration: 'readonly',
-        skipWaiting: 'readonly',
-        // Web APIs available in service workers
-        console: 'readonly',
-        fetch: 'readonly',
-        Request: 'readonly',
-        Response: 'readonly',
-        URL: 'readonly',
-        URLPattern: 'readonly',
-        Headers: 'readonly',
-        // Events
-        ExtendableEvent: 'readonly',
-        FetchEvent: 'readonly',
-        InstallEvent: 'readonly',
-        ActivateEvent: 'readonly',
-        // Timers
-        setTimeout: 'readonly',
-        clearTimeout: 'readonly',
-        setInterval: 'readonly',
-        clearInterval: 'readonly',
-        // Other globals
-        importScripts: 'readonly',
-        performance: 'readonly',
-        crypto: 'readonly',
-      },
-    },
-    rules: {
-      // Relax some rules for service workers
-      'no-unused-vars': ['warn', { 
-        vars: 'all', 
-        args: 'after-used',
-        varsIgnorePattern: '^_',
-        argsIgnorePattern: '^_'
-      }],
-      'no-console': 'off', // Allow console logs in service workers for debugging
-    },
-  },
-  {
-    ignores: ['dist/', 'build/', 'node_modules/', '*.min.js'],
+    ignores: ['dist/', 'build/', 'node_modules/', '*.min.js', 'public/**/*'],
   },
 ];
