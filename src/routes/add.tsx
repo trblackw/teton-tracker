@@ -29,6 +29,7 @@ import {
 } from '../components/ui/select';
 import { runsApi } from '../lib/api/client';
 import { NewRunFormSchema, type NewRunForm } from '../lib/schema';
+import { toasts } from '../lib/toast';
 
 function AddRun() {
   const router = useRouter();
@@ -52,9 +53,15 @@ function AddRun() {
   // Mutation for creating a new run
   const createRunMutation = useMutation({
     mutationFn: (data: NewRunForm) => runsApi.createRun(data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       // Invalidate and refetch runs
       queryClient.invalidateQueries({ queryKey: ['runs'] });
+
+      // Show success toast
+      toasts.success(
+        'Run created successfully',
+        `${variables.type === 'pickup' ? 'Pickup' : 'Dropoff'} run for flight ${variables.flightNumber} has been scheduled.`
+      );
 
       // Reset form
       form.reset();
@@ -64,7 +71,10 @@ function AddRun() {
     },
     onError: error => {
       console.error('Failed to create run:', error);
-      // You could show a toast notification here
+      toasts.error(
+        'Failed to create run',
+        'Please check your information and try again.'
+      );
     },
   });
 

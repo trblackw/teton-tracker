@@ -1,28 +1,29 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import {
-    Building,
-    Monitor,
-    Moon,
-    Palette,
-    SettingsIcon,
-    Sun,
-    X,
+  Building,
+  Monitor,
+  Moon,
+  Palette,
+  SettingsIcon,
+  Sun,
+  X,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { AirportCombobox } from '../components/ui/airport-combobox';
 import { Button } from '../components/ui/button';
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from '../components/ui/card';
 import { Toggle } from '../components/ui/toggle';
 import airportsData from '../data/airports-full.json';
 import { preferencesApi } from '../lib/api/client';
 import { type UpdatePreferencesData } from '../lib/db/preferences';
+import { toasts } from '../lib/toast';
 
 // Convert airport data from object to array format expected by AirportCombobox
 const airports = Object.entries(airportsData)
@@ -59,11 +60,43 @@ function Settings() {
   const updatePreferencesMutation = useMutation({
     mutationFn: (data: UpdatePreferencesData) =>
       preferencesApi.updatePreferences(data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['preferences'] });
+
+      // Show success toast based on what was updated
+      if (variables.homeAirport !== undefined) {
+        if (variables.homeAirport === '') {
+          toasts.success(
+            'Home airport cleared',
+            'Your home airport has been removed from your preferences.'
+          );
+        } else {
+          const selectedAirport = airports.find(
+            a => a.iata === variables.homeAirport
+          );
+          toasts.success(
+            'Home airport updated',
+            selectedAirport
+              ? `Set to ${selectedAirport.name} (${selectedAirport.iata})`
+              : `Set to ${variables.homeAirport}`
+          );
+        }
+      }
+
+      if (variables.theme !== undefined) {
+        toasts.settingsUpdated('Theme', variables.theme);
+      }
+
+      if (variables.notificationPreferences !== undefined) {
+        toasts.settingsUpdated('Notification preferences');
+      }
     },
     onError: error => {
       console.error('Failed to update preferences:', error);
+      toasts.error(
+        'Failed to update settings',
+        'Please try again or contact support if the problem persists.'
+      );
     },
   });
 
@@ -133,7 +166,7 @@ function Settings() {
       <div>
         <h2 className='text-2xl font-bold text-foreground'>Settings</h2>
         <p className='text-muted-foreground mt-1'>
-          Configure your preferences and settings
+          Configure your preferences & settings
         </p>
       </div>
 
@@ -174,7 +207,10 @@ function Settings() {
             </div>
             {preferences?.homeAirport && (
               <p className='text-sm text-muted-foreground'>
-                Current home airport: {preferences.homeAirport}
+                Current home airport:{' '}
+                <span className='font-bold text-foreground'>
+                  {preferences.homeAirport}
+                </span>
               </p>
             )}
           </div>

@@ -5,3 +5,26 @@
     @apply font-mono;
   }
 }
+
+/* Fix toast positioning to prevent layout shifts */
+@layer utilities {
+  [data-sonner-toaster] {
+    position: fixed !important;
+    z-index: 9999 !important;
+    pointer-events: none !important;
+  }
+
+  [data-sonner-toaster] [data-sonner-toast] {
+    pointer-events: auto !important;
+  }
+
+  /* Ensure toasts don't affect document flow */
+  [data-sonner-toaster][data-theme] {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: auto !important;
+    max-width: calc(100vw - 2rem) !important;
+  }
+}
