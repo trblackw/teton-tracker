@@ -149,7 +149,7 @@ function Runs() {
 
   if (runs.length === 0) {
     return (
-      <Card>
+      <Card className='bg-accent/50 border rounded-md'>
         <CardContent className='p-8 text-center'>
           <Plane className='h-16 w-16 text-muted-foreground mx-auto mb-6' />
           <p className='text-muted-foreground text-lg mb-4'>

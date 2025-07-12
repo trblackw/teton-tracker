@@ -681,7 +681,7 @@ export default function App() {
 
           <TabsContent value='runs' className='mt-6'>
             {runs.length === 0 ? (
-              <Card>
+              <Card className='bg-accent/50 border rounded-md'>
                 <CardContent className='p-8 text-center'>
                   <Plane className='h-16 w-16 text-gray-400 mx-auto mb-6' />
                   <p className='text-gray-500 text-lg mb-4'>

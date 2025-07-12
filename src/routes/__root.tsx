@@ -89,12 +89,12 @@ export const Route = createRootRoute({
 
         {/* Mobile Navigation */}
         <div className='lg:hidden fixed bottom-0 left-0 right-0 border-t border-border bg-card'>
-          <nav className='flex items-center justify-around p-2'>
+          <nav className='flex items-center justify-center gap-1 p-2'>
             <Button
               asChild
               variant='ghost'
               size='sm'
-              className='flex-col h-auto p-2'
+              className='flex-col h-auto p-3 min-w-[60px]'
             >
               <Link to='/' className='flex flex-col items-center gap-1'>
                 <Home className='h-4 w-4' />
@@ -105,7 +105,7 @@ export const Route = createRootRoute({
               asChild
               variant='ghost'
               size='sm'
-              className='flex-col h-auto p-2'
+              className='flex-col h-auto p-3 min-w-[60px]'
             >
               <Link to='/runs' className='flex flex-col items-center gap-1'>
                 <Activity className='h-4 w-4' />
@@ -116,11 +116,33 @@ export const Route = createRootRoute({
               asChild
               variant='ghost'
               size='sm'
-              className='flex-col h-auto p-2'
+              className='flex-col h-auto p-3 min-w-[60px]'
+            >
+              <Link to='/add' className='flex flex-col items-center gap-1'>
+                <Plus className='h-4 w-4' />
+                <span className='text-xs'>Add</span>
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant='ghost'
+              size='sm'
+              className='flex-col h-auto p-3 min-w-[60px]'
             >
               <Link to='/flights' className='flex flex-col items-center gap-1'>
                 <Plane className='h-4 w-4' />
                 <span className='text-xs'>Flights</span>
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant='ghost'
+              size='sm'
+              className='flex-col h-auto p-3 min-w-[60px]'
+            >
+              <Link to='/settings' className='flex flex-col items-center gap-1'>
+                <Settings className='h-4 w-4' />
+                <span className='text-xs'>Settings</span>
               </Link>
             </Button>
           </nav>

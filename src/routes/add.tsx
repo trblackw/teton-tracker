@@ -203,7 +203,7 @@ function AddRun() {
                       </FormLabel>
                       <FormControl>
                         <Input
-                          placeholder='e.g., Jackson Hole Resort'
+                          placeholder='e.g., Snow King Resort'
                           {...field}
                           className='bg-background'
                         />
