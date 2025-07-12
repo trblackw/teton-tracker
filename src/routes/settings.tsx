@@ -201,7 +201,7 @@ function Settings() {
                   disabled={updatePreferencesMutation.isPending}
                   title='Clear home airport'
                 >
-                  <X className='h-4 w-4' />
+                  <X className='h-4 w-4 text-destructive hover:text-destructive/80' />
                 </Button>
               )}
             </div>

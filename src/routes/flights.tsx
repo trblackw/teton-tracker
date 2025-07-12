@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
-import { Clock, Filter, MapPin, Plane, RefreshCw } from 'lucide-react';
+import { Clock, Filter, MapPin, Plane, RefreshCw, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AirlineCombobox } from '../components/ui/airline-combobox';
 import { Badge } from '../components/ui/badge';
@@ -184,9 +184,11 @@ function UpcomingFlights() {
           </h2>
           <p className='text-muted-foreground mt-1'>
             Next 5 departures from{' '}
-            <span className='font-bold text-foreground'>{homeAirport}</span>
+            <Button variant='link' className='font-bold text-foreground px-0 underline hover:text-blue-500'>
+              <a href='/settings'>{homeAirport}</a>
+            </Button>
             {selectedAirline && (
-              <span className='text-blue-500 block'>
+              <span className='text-foreground/90 block'>
                 {getAirlineName(selectedAirline)}
               </span>
             )}
@@ -217,25 +219,28 @@ function UpcomingFlights() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <AirlineCombobox
-            airlines={airlines}
-            value={selectedAirline}
-            onValueChange={setSelectedAirline}
-            placeholder='All airlines'
-            emptyMessage='No airlines found'
-            maxResults={100}
-          />
-          {selectedAirline && (
-            <div className='mt-3 flex items-center justify-between'>
-              <Button
-                variant='ghost'
-                size='sm'
-                onClick={() => setSelectedAirline('')}
-              >
-                Clear Filter
-              </Button>
+          <div className='flex gap-2'>
+            <div className='flex-1'>
+              <AirlineCombobox
+                airlines={airlines}
+                value={selectedAirline}
+                onValueChange={setSelectedAirline}
+                placeholder='All airlines'
+                emptyMessage='No airlines found'
+                maxResults={100}
+              />
             </div>
-          )}
+            {selectedAirline && (
+              <Button
+                variant='outline'
+                size='icon'
+                onClick={() => setSelectedAirline('')}
+                title='Clear airline filter'
+              >
+                <X className='h-4 w-4 text-destructive hover:text-destructive/80' />
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 
