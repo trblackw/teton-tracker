@@ -43,6 +43,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
+import { Textarea } from '../components/ui/textarea';
 import { runsApi } from '../lib/api/client';
 import { isDebugMode } from '../lib/debug';
 import {
@@ -393,6 +394,7 @@ function AddRun() {
                       <FormLabel className='flex items-center gap-2'>
                         <Plane className='h-4 w-4' />
                         Flight Number
+                        <small className="text-destructive">*</small>
                       </FormLabel>
                       <FormControl>
                         <Input placeholder='e.g., UA123' {...field} />
@@ -422,7 +424,10 @@ function AddRun() {
                   name='departure'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Departure Airport</FormLabel>
+                      <FormLabel>
+                        Departure Airport
+                        <small className="text-destructive">*</small>
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder='e.g., DEN' {...field} />
                       </FormControl>
@@ -435,7 +440,10 @@ function AddRun() {
                   name='arrival'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Arrival Airport</FormLabel>
+                      <FormLabel>
+                        Arrival Airport
+                        <small className="text-destructive">*</small>
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder='e.g., JAC' {...field} />
                       </FormControl>
@@ -454,6 +462,7 @@ function AddRun() {
                       <FormLabel className='flex items-center gap-2'>
                         <MapPin className='h-4 w-4' />
                         Pickup Location
+                        <small className="text-destructive">*</small>
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -473,6 +482,7 @@ function AddRun() {
                       <FormLabel className='flex items-center gap-2'>
                         <MapPin className='h-4 w-4' />
                         Dropoff Location
+                        <small className="text-destructive">*</small>
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -495,6 +505,7 @@ function AddRun() {
                       <FormLabel className='flex items-center gap-2'>
                         <Clock className='h-4 w-4' />
                         Scheduled Time
+                        <small className="text-destructive">*</small>
                         {flightStatusState.isLoading && (
                           <Loader2 className='h-4 w-4 animate-spin text-blue-500' />
                         )}
@@ -589,7 +600,10 @@ function AddRun() {
                   name='type'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Run Type</FormLabel>
+                      <FormLabel>
+                        Run Type
+                        <small className="text-destructive">*</small>
+                      </FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
@@ -615,11 +629,12 @@ function AddRun() {
                 name='notes'
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Notes (Optional)</FormLabel>
+                    <FormLabel>Notes</FormLabel>
                     <FormControl>
-                      <Input
+                      <Textarea
                         placeholder='e.g., VIP guest, special instructions'
                         {...field}
+                        rows={3}
                       />
                     </FormControl>
                     <FormMessage />
@@ -627,10 +642,18 @@ function AddRun() {
                 )}
               />
 
-              <div className='flex gap-3'>
+              <div className='flex flex-col gap-3'>
+                <Button
+                  type='button'
+                  variant='outline'
+                  onClick={() => router.navigate({ to: '/runs' })}
+                  disabled={createRunMutation.isPending}
+                >
+                  Cancel
+                </Button>
                 <Button
                   type='submit'
-                  className='flex-1'
+                  className='bg-green-500/40 text-white hover:bg-green-600/60'
                   disabled={createRunMutation.isPending}
                 >
                   {createRunMutation.isPending ? (
@@ -639,19 +662,11 @@ function AddRun() {
                       Creating Run...
                     </>
                   ) : (
-                    <>
-                      <Plus className='h-4 w-4 mr-2' />
+                    <span className='flex items-center gap-2'>
+                      <Plus className='h-4 w-4' />
                       Add Run
-                    </>
+                    </span>
                   )}
-                </Button>
-                <Button
-                  type='button'
-                  variant='outline'
-                  onClick={() => router.navigate({ to: '/runs' })}
-                  disabled={createRunMutation.isPending}
-                >
-                  Cancel
                 </Button>
               </div>
             </form>
