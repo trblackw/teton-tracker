@@ -14,6 +14,7 @@ import { createRouter, RouterProvider } from '@tanstack/react-router';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ThemeProvider } from './components/theme-provider';
+import { isDebugMode } from './lib/debug';
 import { routeTree } from './routeTree.gen';
 
 // Create a new query client instance
@@ -38,7 +39,7 @@ if (rootElement && !rootElement.innerHTML) {
       <ThemeProvider>
         <QueryClientProvider client={queryClient}>
           <RouterProvider router={router} />
-          <ReactQueryDevtools initialIsOpen={false} />
+          {isDebugMode() && <ReactQueryDevtools initialIsOpen={false} />}
         </QueryClientProvider>
       </ThemeProvider>
     </StrictMode>

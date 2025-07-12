@@ -4,6 +4,7 @@ import { Activity, Home, Plane, Plus, Settings } from 'lucide-react';
 import { ThemeProvider } from '../components/theme-provider';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
+import { isDebugMode } from '../lib/debug';
 
 export const Route = createRootRoute({
   component: () => (
@@ -128,8 +129,8 @@ export const Route = createRootRoute({
         {/* Add bottom padding for mobile navigation */}
         <div className='lg:hidden h-16' />
 
-        {/* Router Devtools */}
-        <TanStackRouterDevtools />
+        {/* Router Devtools - only show in debug mode */}
+        {isDebugMode() && <TanStackRouterDevtools />}
       </div>
     </ThemeProvider>
   ),
