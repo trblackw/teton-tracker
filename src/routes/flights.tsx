@@ -12,6 +12,13 @@ import {
   CardHeader,
   CardTitle,
 } from '../components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 import airlinesData from '../data/airlines.json';
 import airportsData from '../data/airports-comprehensive.json';
 import { preferencesApi } from '../lib/api/client';
@@ -30,6 +37,7 @@ const airlines: Airline[] = airlinesData;
 
 function UpcomingFlights() {
   const [selectedAirline, setSelectedAirline] = useState<string>('');
+  const [flightLimit, setFlightLimit] = useState<number>(5);
 
   // Query for user preferences to get home airport
   const { data: preferences, isLoading: isLoadingPreferences } = useQuery({
@@ -60,7 +68,7 @@ function UpcomingFlights() {
     isError,
     refetch,
   } = useQuery({
-    queryKey: ['upcoming-flights', homeAirport, selectedAirline],
+    queryKey: ['upcoming-flights', homeAirport, selectedAirline, flightLimit],
     queryFn: async () => {
       if (!homeAirport) return [];
 
@@ -68,7 +76,7 @@ function UpcomingFlights() {
       return flightService.getUpcomingDepartures({
         airport: homeAirport,
         airline: selectedAirline || undefined,
-        limit: 5,
+        limit: flightLimit,
       });
     },
     enabled: !!homeAirport,
@@ -183,8 +191,25 @@ function UpcomingFlights() {
             Upcoming Flights
           </h2>
           <p className='text-muted-foreground mt-1'>
-            Next 5 departures from{' '}
-            <Button variant='link' className='font-bold text-foreground px-0 underline hover:text-blue-500'>
+            Next{' '}
+            <Select
+              value={flightLimit.toString()}
+              onValueChange={value => setFlightLimit(parseInt(value))}
+            >
+              <SelectTrigger className='inline-flex h-auto w-auto border-0 bg-transparent p-0 font-bold text-foreground underline hover:text-blue-500'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='5'>5</SelectItem>
+                <SelectItem value='10'>10</SelectItem>
+                <SelectItem value='20'>20</SelectItem>
+              </SelectContent>
+            </Select>{' '}
+            departures from{' '}
+            <Button
+              variant='link'
+              className='font-bold text-foreground px-0 underline hover:text-blue-500'
+            >
               <a href='/settings'>{homeAirport}</a>
             </Button>
             {selectedAirline && (
