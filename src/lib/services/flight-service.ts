@@ -15,6 +15,7 @@ export interface FlightRequest {
 export interface UpcomingFlightsRequest {
   airport: string; // IATA airport code (AviationStack prefers IATA)
   airline?: string; // Optional airline filter (IATA airline code)
+  flightNumber?: string; // Optional flight number filter
   limit?: number; // Number of flights to return (default 5)
 }
 
@@ -119,7 +120,7 @@ export class FlightService {
   ): Promise<UpcomingFlight[]> {
     try {
       console.log(
-        `🛫 Fetching upcoming departures from ${request.airport}${request.airline ? ` for airline ${request.airline}` : ''}`
+        `🛫 Fetching upcoming departures from ${request.airport}${request.airline ? ` for airline ${request.airline}` : ''}${request.flightNumber ? ` with flight number ${request.flightNumber}` : ''}`
       );
 
       if (!this.apiKey) {
@@ -138,6 +139,11 @@ export class FlightService {
       // Add airline filter if specified
       if (request.airline && request.airline.trim()) {
         params.append('airline_iata', request.airline.toUpperCase());
+      }
+
+      // Add flight number filter if specified
+      if (request.flightNumber && request.flightNumber.trim()) {
+        params.append('flight_iata', request.flightNumber.toUpperCase());
       }
 
       const url = `${AVIATIONSTACK_BASE_URL}/flights?${params.toString()}`;
@@ -296,8 +302,21 @@ export class FlightService {
         now.getTime() + (i * 30 + Math.random() * 60) * 60 * 1000
       );
 
+      const generatedFlightNumber = `${airline}${flightNum}`;
+
+      // If searching for a specific flight number, only include it if it matches
+      if (request.flightNumber && request.flightNumber.trim()) {
+        if (
+          !generatedFlightNumber
+            .toLowerCase()
+            .includes(request.flightNumber.toLowerCase())
+        ) {
+          continue;
+        }
+      }
+
       mockFlights.push({
-        flightNumber: `${airline}${flightNum}`,
+        flightNumber: generatedFlightNumber,
         airline: this.getAirlineName(airline),
         destination: getAirportDisplayName(
           destinations[Math.floor(Math.random() * destinations.length)]

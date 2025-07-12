@@ -1,6 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
-import { Clock, Filter, MapPin, Plane, RefreshCw, X } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  Filter,
+  MapPin,
+  Plane,
+  RefreshCw,
+  Search,
+  X,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AirlineCombobox } from '../components/ui/airline-combobox';
 import { Badge } from '../components/ui/badge';
@@ -12,6 +22,7 @@ import {
   CardHeader,
   CardTitle,
 } from '../components/ui/card';
+import { Input } from '../components/ui/input';
 import {
   Select,
   SelectContent,
@@ -38,6 +49,10 @@ const airlines: Airline[] = airlinesData;
 function UpcomingFlights() {
   const [selectedAirline, setSelectedAirline] = useState<string>('');
   const [flightLimit, setFlightLimit] = useState<number>(5);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [searchMode, setSearchMode] = useState<'selected' | 'all'>('selected');
+  const [isSearchExpanded, setIsSearchExpanded] = useState<boolean>(false);
+  const [isFilterExpanded, setIsFilterExpanded] = useState<boolean>(false);
 
   // Query for user preferences to get home airport
   const { data: preferences, isLoading: isLoadingPreferences } = useQuery({
@@ -68,7 +83,13 @@ function UpcomingFlights() {
     isError,
     refetch,
   } = useQuery({
-    queryKey: ['upcoming-flights', homeAirport, selectedAirline, flightLimit],
+    queryKey: [
+      'upcoming-flights',
+      homeAirport,
+      selectedAirline,
+      flightLimit,
+      searchMode === 'all' ? searchTerm : '',
+    ],
     queryFn: async () => {
       if (!homeAirport) return [];
 
@@ -76,6 +97,8 @@ function UpcomingFlights() {
       return flightService.getUpcomingDepartures({
         airport: homeAirport,
         airline: selectedAirline || undefined,
+        flightNumber:
+          searchMode === 'all' ? searchTerm || undefined : undefined,
         limit: flightLimit,
       });
     },
@@ -83,6 +106,18 @@ function UpcomingFlights() {
     refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
     staleTime: 2 * 60 * 1000, // Consider data stale after 2 minutes
   });
+
+  // Filter flights client-side when in "selected" mode
+  const filteredFlights =
+    searchMode === 'selected' && searchTerm
+      ? upcomingFlights.filter(
+          flight =>
+            flight.flightNumber
+              .toLowerCase()
+              .includes(searchTerm.toLowerCase()) ||
+            flight.airline.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      : upcomingFlights;
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -185,6 +220,7 @@ function UpcomingFlights() {
 
   return (
     <div className='space-y-6'>
+      {/* Header section stays the same */}
       <div className='flex items-center justify-between'>
         <div>
           <h2 className='text-2xl font-bold text-foreground'>
@@ -217,6 +253,13 @@ function UpcomingFlights() {
                 {getAirlineName(selectedAirline)}
               </span>
             )}
+            {searchTerm && (
+              <span className='text-foreground/90 block'>
+                Searching{' '}
+                {searchMode === 'selected' ? 'selected flights' : 'all flights'}{' '}
+                for: {searchTerm}
+              </span>
+            )}
           </p>
         </div>
         <Button
@@ -232,41 +275,130 @@ function UpcomingFlights() {
         </Button>
       </div>
 
-      {/* Airline Filter */}
+      {/* Collapsible Flight Search */}
       <Card>
-        <CardHeader>
-          <CardTitle className='flex items-center gap-2'>
-            <Filter className='h-5 w-5' />
-            Filter by Airline
-          </CardTitle>
-          <CardDescription>
-            Filter flights by a specific airline or show all departures
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className='flex gap-2'>
-            <div className='flex-1'>
-              <AirlineCombobox
-                airlines={airlines}
-                value={selectedAirline}
-                onValueChange={setSelectedAirline}
-                placeholder='All airlines'
-                emptyMessage='No airlines found'
-                maxResults={100}
-              />
+        <CardHeader 
+          className='cursor-pointer hover:bg-muted/50 transition-colors'
+          onClick={() => setIsSearchExpanded(!isSearchExpanded)}
+        >
+          <div className='flex items-center justify-between'>
+            <div>
+              <CardTitle className='flex items-center gap-2'>
+                <Search className='h-5 w-5' />
+                Search Flights
+                {searchTerm && (
+                  <span className='text-sm font-normal text-muted-foreground'>
+                    ({searchTerm})
+                  </span>
+                )}
+              </CardTitle>
+              <CardDescription>
+                Search selected flights or query all flights from the airport
+              </CardDescription>
             </div>
-            {selectedAirline && (
-              <Button
-                variant='outline'
-                size='icon'
-                onClick={() => setSelectedAirline('')}
-                title='Clear airline filter'
-              >
-                <X className='h-4 w-4 text-destructive hover:text-destructive/80' />
-              </Button>
+            {isSearchExpanded ? (
+              <ChevronUp className='h-5 w-5 text-muted-foreground' />
+            ) : (
+              <ChevronDown className='h-5 w-5 text-muted-foreground' />
             )}
           </div>
-        </CardContent>
+        </CardHeader>
+        {isSearchExpanded && (
+          <div className='animate-in slide-in-from-top-2 duration-300'>
+            <CardContent className='pt-0'>
+              <div className='flex gap-2'>
+                <div className='flex-1'>
+                  <Input
+                    placeholder='Enter flight number or airline...'
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className='w-full'
+                  />
+                </div>
+                <Select
+                  value={searchMode}
+                  onValueChange={(value: 'selected' | 'all') => setSearchMode(value)}
+                >
+                  <SelectTrigger className='w-30'>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='selected'>Selected</SelectItem>
+                    <SelectItem value='all'>All</SelectItem>
+                  </SelectContent>
+                </Select>
+                {searchTerm && (
+                  <Button
+                    variant='outline'
+                    size='icon'
+                    onClick={() => setSearchTerm('')}
+                    title='Clear search'
+                  >
+                    <X className='h-4 w-4 text-destructive hover:text-destructive/80' />
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </div>
+        )}
+      </Card>
+
+      {/* Collapsible Airline Filter */}
+      <Card>
+        <CardHeader 
+          className='cursor-pointer hover:bg-muted/50 transition-colors'
+          onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+        >
+          <div className='flex items-center justify-between'>
+            <div>
+              <CardTitle className='flex items-center gap-2'>
+                <Filter className='h-5 w-5' />
+                Filter by Airline
+                {selectedAirline && (
+                  <span className='text-sm font-normal text-muted-foreground'>
+                    ({getAirlineName(selectedAirline)})
+                  </span>
+                )}
+              </CardTitle>
+              <CardDescription>
+                Filter flights by a specific airline or show all departures
+              </CardDescription>
+            </div>
+            {isFilterExpanded ? (
+              <ChevronUp className='h-5 w-5 text-muted-foreground' />
+            ) : (
+              <ChevronDown className='h-5 w-5 text-muted-foreground' />
+            )}
+          </div>
+        </CardHeader>
+        {isFilterExpanded && (
+          <div className='animate-in slide-in-from-top-2 duration-300'>
+            <CardContent className='pt-0'>
+              <div className='flex gap-2'>
+                <div className='flex-1'>
+                  <AirlineCombobox
+                    airlines={airlines}
+                    value={selectedAirline}
+                    onValueChange={setSelectedAirline}
+                    placeholder='All airlines'
+                    emptyMessage='No airlines found'
+                    maxResults={100}
+                  />
+                </div>
+                {selectedAirline && (
+                  <Button
+                    variant='outline'
+                    size='icon'
+                    onClick={() => setSelectedAirline('')}
+                    title='Clear airline filter'
+                  >
+                    <X className='h-4 w-4 text-destructive hover:text-destructive/80' />
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </div>
+        )}
       </Card>
 
       {/* Loading State */}
@@ -293,26 +425,10 @@ function UpcomingFlights() {
         </Card>
       )}
 
-      {/* Flights List */}
-      {!isLoading && !isError && upcomingFlights.length === 0 && (
-        <Card>
-          <CardContent className='p-8 text-center'>
-            <Plane className='h-16 w-16 text-muted-foreground mx-auto mb-6' />
-            <p className='text-muted-foreground text-lg mb-4'>
-              No upcoming flights found
-              {selectedAirline && ` for ${getAirlineName(selectedAirline)}`}
-            </p>
-            <p className='text-sm text-muted-foreground'>
-              Try refreshing or selecting a different airline filter
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Flights Grid */}
-      {!isLoading && !isError && upcomingFlights.length > 0 && (
+      {!isLoading && !isError && filteredFlights.length > 0 && (
         <div className='grid gap-4'>
-          {upcomingFlights.map((flight, index) => (
+          {filteredFlights.map((flight, index) => (
             <Card key={`${flight.flightNumber}-${index}`} className='w-full'>
               <CardHeader className='pb-3'>
                 <div className='flex items-start justify-between'>
@@ -387,6 +503,52 @@ function UpcomingFlights() {
             </Card>
           ))}
         </div>
+      )}
+
+      {/* No flights found state */}
+      {!isLoading &&
+        !isError &&
+        filteredFlights.length === 0 &&
+        upcomingFlights.length > 0 &&
+        searchTerm && (
+          <Card>
+            <CardContent className='p-8 text-center'>
+              <Search className='h-16 w-16 text-muted-foreground mx-auto mb-6' />
+              <p className='text-muted-foreground text-lg mb-4'>
+                No flights found matching "{searchTerm}"
+              </p>
+              <p className='text-sm text-muted-foreground mb-4'>
+                Try searching{' '}
+                {searchMode === 'selected' ? 'all flights' : 'selected flights'}{' '}
+                or adjusting your search term
+              </p>
+              <Button
+                variant='outline'
+                onClick={() =>
+                  setSearchMode(searchMode === 'selected' ? 'all' : 'selected')
+                }
+              >
+                Search{' '}
+                {searchMode === 'selected' ? 'all flights' : 'selected flights'}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+      {/* Original no flights state */}
+      {!isLoading && !isError && upcomingFlights.length === 0 && (
+        <Card>
+          <CardContent className='p-8 text-center'>
+            <Plane className='h-16 w-16 text-muted-foreground mx-auto mb-6' />
+            <p className='text-muted-foreground text-lg mb-4'>
+              No upcoming flights found
+              {selectedAirline && ` for ${getAirlineName(selectedAirline)}`}
+            </p>
+            <p className='text-sm text-muted-foreground'>
+              Try refreshing or selecting a different airline filter
+            </p>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
