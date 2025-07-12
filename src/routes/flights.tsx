@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { Clock, Filter, MapPin, Plane, RefreshCw } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { AirlineCombobox } from '../components/ui/airline-combobox';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from '../components/ui/card';
 import airlinesData from '../data/airlines.json';
+import { preferencesApi } from '../lib/api/client';
 import { openskyService } from '../lib/services/opensky-service';
 
 interface Airline {
@@ -26,20 +27,16 @@ interface Airline {
 const airlines: Airline[] = airlinesData;
 
 function UpcomingFlights() {
-  const [homeAirport, setHomeAirport] = useState<string>('');
   const [selectedAirline, setSelectedAirline] = useState<string>('');
-  const [mounted, setMounted] = useState(false);
 
-  // Load home airport from localStorage
-  useEffect(() => {
-    setMounted(true);
-    if (typeof window !== 'undefined') {
-      const savedAirport = window.localStorage.getItem('home-airport');
-      if (savedAirport) {
-        setHomeAirport(savedAirport);
-      }
-    }
-  }, []);
+  // Query for user preferences to get home airport
+  const { data: preferences, isLoading: isLoadingPreferences } = useQuery({
+    queryKey: ['preferences'],
+    queryFn: () => preferencesApi.getPreferences(),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  const homeAirport = preferences?.homeAirport || '';
 
   // Query for upcoming flights
   const {
@@ -58,7 +55,7 @@ function UpcomingFlights() {
         limit: 5,
       });
     },
-    enabled: !!homeAirport && mounted,
+    enabled: !!homeAirport,
     refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
     staleTime: 2 * 60 * 1000, // Consider data stale after 2 minutes
   });
@@ -89,8 +86,26 @@ function UpcomingFlights() {
     return airline?.logo;
   };
 
-  if (!mounted) {
-    return null;
+  if (isLoadingPreferences) {
+    return (
+      <div className='space-y-6'>
+        <div>
+          <h2 className='text-2xl font-bold text-foreground'>
+            Upcoming Flights
+          </h2>
+          <p className='text-muted-foreground mt-1'>
+            View upcoming departures from your home base airport
+          </p>
+        </div>
+
+        <Card>
+          <CardContent className='p-8 text-center'>
+            <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4'></div>
+            <p className='text-muted-foreground'>Loading preferences...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   if (!homeAirport) {
