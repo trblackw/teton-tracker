@@ -168,7 +168,8 @@ function UpcomingFlights() {
             Upcoming Flights
           </h2>
           <p className='text-muted-foreground mt-1'>
-            Next 5 departures from {homeAirport}
+            Next 5 departures from{' '}
+            <span className='font-bold text-foreground'>{homeAirport}</span>
             {selectedAirline && ` • ${getAirlineName(selectedAirline)}`}
           </p>
         </div>
@@ -179,7 +180,7 @@ function UpcomingFlights() {
           disabled={isLoading}
         >
           <RefreshCw
-            className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`}
+            className={`h-4 w-4 border-2 border-primary/20 rounded-full mr-2 ${isLoading ? 'animate-spin' : ''}`}
           />
           Refresh
         </Button>

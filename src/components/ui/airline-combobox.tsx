@@ -85,6 +85,7 @@ export function AirlineCombobox({
         airline.name.toLowerCase().includes(term)
       );
     })
+    .sort((a, b) => a.name.localeCompare(b.name))
     .slice(0, maxResults);
 
   return (

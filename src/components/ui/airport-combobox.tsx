@@ -2,11 +2,11 @@ import { Check, ChevronsUpDown, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from './button';
 import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandItem,
-    CommandList,
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
 } from './command';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
 
@@ -50,15 +50,57 @@ export function AirportCombobox({
       if (!searchValue.trim()) {
         // Show major airports when no search term
         const majorCities = [
-          'New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia',
-          'San Antonio', 'San Diego', 'Dallas', 'San Jose', 'Austin', 'Jacksonville',
-          'Fort Worth', 'Columbus', 'Charlotte', 'Seattle', 'Denver', 'Boston',
-          'Nashville', 'Baltimore', 'Louisville', 'Portland', 'Oklahoma City',
-          'Milwaukee', 'Las Vegas', 'Albuquerque', 'Tucson', 'Atlanta', 'Colorado Springs',
-          'Raleigh', 'Miami', 'Oakland', 'Minneapolis', 'Tulsa', 'Cleveland', 'Wichita',
-          'Arlington', 'Tampa', 'Bakersfield', 'New Orleans', 'Honolulu', 'Anaheim',
-          'Santa Ana', 'Corpus Christi', 'Riverside', 'Saint Paul', 'Lexington',
-          'Anchorage', 'Stockton', 'Cincinnati', 'Pittsburgh'
+          'New York',
+          'Los Angeles',
+          'Chicago',
+          'Houston',
+          'Phoenix',
+          'Philadelphia',
+          'San Antonio',
+          'San Diego',
+          'Dallas',
+          'San Jose',
+          'Austin',
+          'Jacksonville',
+          'Fort Worth',
+          'Columbus',
+          'Charlotte',
+          'Seattle',
+          'Denver',
+          'Boston',
+          'Nashville',
+          'Baltimore',
+          'Louisville',
+          'Portland',
+          'Oklahoma City',
+          'Milwaukee',
+          'Las Vegas',
+          'Albuquerque',
+          'Tucson',
+          'Atlanta',
+          'Colorado Springs',
+          'Raleigh',
+          'Miami',
+          'Oakland',
+          'Minneapolis',
+          'Tulsa',
+          'Cleveland',
+          'Wichita',
+          'Arlington',
+          'Tampa',
+          'Bakersfield',
+          'New Orleans',
+          'Honolulu',
+          'Anaheim',
+          'Santa Ana',
+          'Corpus Christi',
+          'Riverside',
+          'Saint Paul',
+          'Lexington',
+          'Anchorage',
+          'Stockton',
+          'Cincinnati',
+          'Pittsburgh',
         ];
         return majorCities.some(city => airport.city.includes(city));
       }
@@ -71,6 +113,7 @@ export function AirportCombobox({
         airport.state.toLowerCase().includes(term)
       );
     })
+    .sort((a, b) => a.name.localeCompare(b.name))
     .slice(0, maxResults);
 
   return (
@@ -95,7 +138,10 @@ export function AirportCombobox({
           <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className='w-full p-0' style={{ width: 'var(--radix-popover-trigger-width)' }}>
+      <PopoverContent
+        className='w-full p-0'
+        style={{ width: 'var(--radix-popover-trigger-width)' }}
+      >
         <Command>
           <div className='flex items-center border-b px-3'>
             <Search className='mr-2 h-4 w-4 shrink-0 opacity-50' />
@@ -103,17 +149,17 @@ export function AirportCombobox({
               className='flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50'
               placeholder='Search by code, name, city, or state...'
               value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
+              onChange={e => setSearchValue(e.target.value)}
             />
           </div>
           <CommandList className='max-h-60'>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
-              {filteredAirports.map((airport) => (
+              {filteredAirports.map(airport => (
                 <CommandItem
                   key={airport.iata}
                   value={airport.iata}
-                  onSelect={(currentValue) => {
+                  onSelect={currentValue => {
                     const newValue = currentValue === value ? '' : currentValue;
                     onValueChange(newValue);
                     setOpen(false);
@@ -147,4 +193,4 @@ export function AirportCombobox({
       </PopoverContent>
     </Popover>
   );
-} 
+}
