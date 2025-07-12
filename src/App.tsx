@@ -1,5 +1,6 @@
 import { Label } from '@radix-ui/react-label';
 import {
+  Activity,
   AlertCircle,
   Badge,
   Clock,
@@ -8,6 +9,7 @@ import {
   Navigation,
   Plane,
   Plus,
+  Settings,
   Trash2,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -22,29 +24,25 @@ import {
 import { Input } from './components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import './index.css';
+import { useMultipleRunsData } from './lib/hooks/use-api-data';
 import IconLogo from './lib/icons/icon-logo';
+import { invalidateAllApiData, queryClient } from './lib/react-query-client';
 import {
   convertParsedRunToForm,
   parseScheduleMessage,
   type ParseResult,
 } from './lib/schedule-parser';
 import {
-  type FlightStatus,
   type NewRunForm,
   type Run,
   type RunStatus,
   type RunType,
-  type TrafficData,
 } from './lib/schema';
+import { pollingService } from './lib/services/polling-service';
+import { initializeTomTomService } from './lib/services/tomtom-service';
 
 export default function App() {
   const [runs, setRuns] = useState<Run[]>([]);
-  const [flightStatuses, setFlightStatuses] = useState<{
-    [key: string]: FlightStatus;
-  }>({});
-  const [trafficData, setTrafficData] = useState<{
-    [key: string]: TrafficData;
-  }>({});
   const [newRun, setNewRun] = useState<Partial<NewRunForm>>({
     flightNumber: '',
     airline: '',
@@ -57,7 +55,6 @@ export default function App() {
     notes: '',
   });
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
-  const [isLoading, setIsLoading] = useState(false);
 
   // Bulk import state
   const [scheduleText, setScheduleText] = useState('');
@@ -65,6 +62,56 @@ export default function App() {
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [showPasteDetected, setShowPasteDetected] = useState(false);
   const [currentTab, setCurrentTab] = useState('runs');
+
+  // Polling and debug state
+  const [pollingEnabled, setPollingEnabled] = useState(true);
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
+  const [debugInfo, setDebugInfo] = useState(pollingService.getDebugInfo());
+
+  // Use React Query hooks for API data
+  const runsApiData = useMultipleRunsData(runs);
+
+  // Initialize services on component mount
+  useEffect(() => {
+    initializeTomTomService();
+    
+    // Configure polling service to work with React Query
+    pollingService.config = {
+      ...pollingService.config,
+      onDataInvalidation: (type, key) => {
+        // Invalidate React Query cache to trigger refetch
+        if (type === 'flight') {
+          queryClient.invalidateQueries({ queryKey: ['flight-status', key] });
+        } else if (type === 'traffic') {
+          const [origin, destination] = key.split('-');
+          queryClient.invalidateQueries({ queryKey: ['traffic-data', origin, destination] });
+        }
+      },
+      onError: (error, context) => {
+        console.error(`[PollingService] Error in ${context}:`, error);
+      },
+    };
+    
+    // Start polling if enabled
+    if (pollingEnabled) {
+      pollingService.start();
+    }
+    
+    // Update debug info every second
+    const debugInterval = window.setInterval(() => {
+      setDebugInfo(pollingService.getDebugInfo());
+    }, 1000);
+    
+    return () => {
+      pollingService.stop();
+      window.clearInterval(debugInterval);
+    };
+  }, [pollingEnabled]);
+
+  // Update polling service with current runs
+  useEffect(() => {
+    pollingService.updateRuns(runs);
+  }, [runs]);
 
   // Load runs from localStorage on component mount with basic validation
   useEffect(() => {
@@ -251,79 +298,10 @@ export default function App() {
     return isSchedule;
   };
 
-  // Mock flight status API call
-  const fetchFlightStatus = async (flightNumber: string) => {
-    try {
-      setIsLoading(true);
-      // This would be replaced with actual OpenSky Network API call
-      // const response = await fetch(`https://opensky-network.org/api/flights/departure?airport=KJFK&begin=${beginTime}&end=${endTime}`);
-
-      // Mock data for demo
-      const mockStatus: FlightStatus = {
-        flightNumber,
-        status: Math.random() > 0.5 ? 'On Time' : 'Delayed',
-        scheduledDeparture: '14:30',
-        actualDeparture: '14:35',
-        scheduledArrival: '18:45',
-        actualArrival: '18:50',
-        delay: Math.random() > 0.5 ? 0 : Math.floor(Math.random() * 60),
-        lastUpdated: new Date(),
-      };
-
-      setFlightStatuses(prev => ({
-        ...prev,
-        [flightNumber]: mockStatus,
-      }));
-    } catch (error) {
-      console.error('Error fetching flight status:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Mock traffic data API call
-  const fetchTrafficData = async (origin: string, destination: string) => {
-    try {
-      setIsLoading(true);
-      // This would be replaced with actual TomTom Traffic API call
-      // const response = await fetch(`https://api.tomtom.com/routing/1/calculateRoute/${origin}:${destination}/json?key=${API_KEY}&traffic=true`);
-
-      // Mock data for demo
-      const routeKey = `${origin}-${destination}`;
-      const baseTime = 30 + Math.random() * 60;
-      const trafficMultiplier = 1 + Math.random() * 0.8;
-
-      const mockTraffic: TrafficData = {
-        route: routeKey,
-        duration: Math.floor(baseTime),
-        durationInTraffic: Math.floor(baseTime * trafficMultiplier),
-        distance: `${(Math.random() * 50 + 10).toFixed(1)} miles`,
-        status:
-          trafficMultiplier > 1.4
-            ? 'heavy'
-            : trafficMultiplier > 1.2
-              ? 'moderate'
-              : 'good',
-        lastUpdated: new Date(),
-      };
-
-      setTrafficData(prev => ({
-        ...prev,
-        [routeKey]: mockTraffic,
-      }));
-    } catch (error) {
-      console.error('Error fetching traffic data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const addRun = () => {
     try {
       // Clear previous errors
       setFormErrors({});
-
-      // Note: Form validation is available via validateNewRunForm if needed
 
       // Create the run with additional required fields
       const run: Run = {
@@ -336,9 +314,8 @@ export default function App() {
 
       setRuns(prev => [...prev, run]);
 
-      // Fetch initial data for this run
-      fetchFlightStatus(run.flightNumber);
-      fetchTrafficData(run.pickupLocation, run.dropoffLocation);
+      // React Query will automatically fetch data for the new run
+      // No need for manual API calls anymore
 
       // Reset form
       setNewRun({
@@ -394,13 +371,12 @@ export default function App() {
           updatedAt: new Date(),
         };
         newRuns.push(run);
-
-        // Fetch initial data for each run
-        fetchFlightStatus(run.flightNumber);
-        fetchTrafficData(run.pickupLocation, run.dropoffLocation);
       });
 
       setRuns(prev => [...prev, ...newRuns]);
+
+      // React Query will automatically fetch data for the new runs
+      // No need for manual API calls anymore
 
       // Reset bulk import state
       setScheduleText('');
@@ -426,12 +402,43 @@ export default function App() {
     );
   };
 
-  const refreshData = (run: Run) => {
-    fetchFlightStatus(run.flightNumber);
-    fetchTrafficData(run.pickupLocation, run.dropoffLocation);
+  const refreshAllData = () => {
+    // Invalidate all API data to force refetch
+    invalidateAllApiData();
+    runsApiData.refetchAll();
   };
 
-  const getStatusColor = (status: string) => {
+  const refreshRunData = (run: Run) => {
+    // Find the specific run data and refetch it
+    const runData = runsApiData.data.find(data => data.run.id === run.id);
+    if (runData) {
+      // Invalidate specific queries for this run
+      queryClient.invalidateQueries({ queryKey: ['flight-status', run.flightNumber] });
+      queryClient.invalidateQueries({ queryKey: ['traffic-data', run.pickupLocation, run.dropoffLocation] });
+    }
+  };
+
+  // Format debug info for display
+  const formatDebugInfo = () => {
+    if (!debugInfo) return null;
+
+    const activeRunsCount = runs.filter(run => run.status === 'active').length;
+    const isDebugMode = debugInfo.apiCallsBlocked > 0;
+    const lastPollTime = debugInfo.lastPolled 
+      ? new Date(debugInfo.lastPolled).toLocaleTimeString()
+      : 'Never';
+
+    return {
+      status: pollingEnabled ? (isDebugMode ? 'Debug Mode' : 'Active') : 'Disabled',
+      activeRuns: activeRunsCount,
+      lastPoll: lastPollTime,
+      pollCount: debugInfo.pollCount,
+      apiCallsBlocked: debugInfo.apiCallsBlocked,
+      errors: debugInfo.errors.slice(-3), // Show last 3 errors
+    };
+  };
+
+  const getStatusColor = (status: RunStatus) => {
     switch (status) {
       case 'scheduled':
         return 'bg-blue-100 text-blue-800';
@@ -446,44 +453,172 @@ export default function App() {
     }
   };
 
-  const getTrafficColor = (status: string) => {
-    switch (status) {
-      case 'good':
-        return 'bg-green-100 text-green-800';
-      case 'moderate':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'heavy':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   return (
     <div className='min-h-screen bg-gray-50 p-4'>
-      <div className='max-w-4xl mx-auto'>
+      <div className='max-w-6xl mx-auto'>
         <div className='mb-8'>
-          <h1 className='text-3xl font-bold text-gray-900 mb-2 flex items-center gap-2'>
-            <IconLogo className='w-8 h-8 mr-1 text-blue-500' />
-            Teton Tracker
-          </h1>
-          <p className='text-gray-600'>
-            Manage your airport pickups and dropoffs with real-time traffic and
-            flight data
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center gap-4'>
+              <IconLogo className='h-8 w-8' />
+              <h1 className='text-3xl font-bold text-gray-900'>
+                Teton Tracker
+              </h1>
+            </div>
+            <div className='flex items-center gap-2'>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => setShowDebugInfo(!showDebugInfo)}
+              >
+                <Settings className='h-4 w-4' />
+                Debug
+              </Button>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => {
+                  setPollingEnabled(!pollingEnabled);
+                  if (!pollingEnabled) {
+                    pollingService.start();
+                  } else {
+                    pollingService.stop();
+                  }
+                }}
+              >
+                <Activity className='h-4 w-4' />
+                {pollingEnabled ? 'Disable' : 'Enable'} Polling
+              </Button>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={refreshAllData}
+                disabled={runsApiData.isFetching}
+              >
+                <Settings className='h-4 w-4' />
+                {runsApiData.isFetching ? 'Refreshing...' : 'Refresh All'}
+              </Button>
+            </div>
+          </div>
+          <p className='text-gray-600 mt-2'>
+            Track airport runs with real-time flight and traffic data
           </p>
         </div>
 
-        <Tabs
-          value={currentTab}
-          onValueChange={setCurrentTab}
-          className='w-full'
-        >
+        {/* API Loading Indicator */}
+        {runsApiData.isFetching && (
+          <div className='mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4'>
+            <div className='flex items-center gap-2'>
+              <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600'></div>
+              <p className='text-blue-800 text-sm'>
+                Fetching latest flight and traffic data...
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Debug Info Panel */}
+        {showDebugInfo && (
+          <Card className='mb-6 border-yellow-200 bg-yellow-50'>
+            <CardHeader>
+              <CardTitle className='text-lg flex items-center gap-2'>
+                <Settings className='h-5 w-5' />
+                Debug Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const debugDisplay = formatDebugInfo();
+                if (!debugDisplay) return <p>No debug info available</p>;
+                
+                return (
+                  <div className='grid grid-cols-2 md:grid-cols-4 gap-4 text-sm'>
+                    <div>
+                      <p className='font-medium'>Polling Status</p>
+                      <p className={`${debugDisplay.status === 'Active' ? 'text-green-600' : 
+                        debugDisplay.status === 'Debug Mode' ? 'text-yellow-600' : 'text-gray-600'}`}>
+                        {debugDisplay.status}
+                      </p>
+                    </div>
+                    <div>
+                      <p className='font-medium'>Active Runs</p>
+                      <p>{debugDisplay.activeRuns}</p>
+                    </div>
+                    <div>
+                      <p className='font-medium'>Last Poll</p>
+                      <p>{debugDisplay.lastPoll}</p>
+                    </div>
+                    <div>
+                      <p className='font-medium'>Poll Count</p>
+                      <p>{debugDisplay.pollCount}</p>
+                    </div>
+                    <div>
+                      <p className='font-medium'>React Query Status</p>
+                      <p className={runsApiData.isFetching ? 'text-blue-600' : 'text-green-600'}>
+                        {runsApiData.isFetching ? 'Fetching' : 'Idle'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className='font-medium'>Cached Queries</p>
+                      <p>{queryClient.getQueryCache().getAll().length}</p>
+                    </div>
+                    {debugDisplay.apiCallsBlocked > 0 && (
+                      <div className='col-span-2'>
+                        <p className='font-medium'>API Calls Blocked</p>
+                        <p className='text-yellow-600'>{debugDisplay.apiCallsBlocked} (Debug Mode)</p>
+                      </div>
+                    )}
+                    {debugDisplay.errors.length > 0 && (
+                      <div className='col-span-4'>
+                        <p className='font-medium'>Recent Errors</p>
+                        <div className='text-xs text-red-600 mt-1'>
+                          {debugDisplay.errors.map((error, index) => (
+                            <div key={index} className='mb-1'>
+                              {error.time.toLocaleTimeString()}: {error.message}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+              <div className='mt-4 pt-4 border-t border-yellow-200'>
+                <p className='text-xs text-gray-600'>
+                  <strong>Debug Mode:</strong> {pollingService.config.enableDebugMode ? 'ON' : 'OFF'} - 
+                  {pollingService.config.enableDebugMode 
+                    ? ' API calls are blocked to prevent unnecessary requests during development.'
+                    : ' API calls are enabled for active runs every 5 minutes.'}
+                </p>
+                <p className='text-xs text-gray-600 mt-1'>
+                  <strong>React Query:</strong> Automatic background refetching every 5 minutes for stale data. 
+                  Data is cached for 10 minutes and considered fresh for 2-3 minutes.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Paste Detection Notification */}
+        {showPasteDetected && (
+          <Card className='mb-6 border-green-200 bg-green-50 animate-pulse'>
+            <CardContent className='p-4'>
+              <div className='flex items-center gap-2'>
+                <FileText className='h-5 w-5 text-green-600' />
+                <p className='text-green-800 font-medium'>
+                  Schedule detected! Found {parseResult?.runs.length || 0} runs
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <Tabs value={currentTab} onValueChange={setCurrentTab} className='w-full'>
           <TabsList className='grid w-full grid-cols-2'>
-            <TabsTrigger value='runs'>Active Runs</TabsTrigger>
-            <TabsTrigger value='add'>Add New Run</TabsTrigger>
+            <TabsTrigger className='cursor-pointer' value='runs'>Current Runs</TabsTrigger>
+            <TabsTrigger className='cursor-pointer' value='add'>Add New Run</TabsTrigger>
           </TabsList>
 
-          <TabsContent value='runs' className='space-y-4'>
+          <TabsContent value='runs' className='mt-6'>
             {runs.length === 0 ? (
               <Card>
                 <CardContent className='p-6 text-center'>
@@ -495,11 +630,7 @@ export default function App() {
               </Card>
             ) : (
               <div className='grid gap-4'>
-                {runs.map(run => {
-                  const flightStatus = flightStatuses[run.flightNumber];
-                  const trafficInfo =
-                    trafficData[`${run.pickupLocation}-${run.dropoffLocation}`];
-
+                {runsApiData.data.map(({ run, flightStatus, trafficData, isLoading, isError }) => {
                   return (
                     <Card key={run.id} className='w-full'>
                       <CardHeader className='pb-3'>
@@ -507,6 +638,12 @@ export default function App() {
                           <div>
                             <CardTitle className='text-lg'>
                               {run.flightNumber}
+                              {isLoading && (
+                                <span className='ml-2 inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600'></span>
+                              )}
+                              {isError && (
+                                <span className='ml-2 text-red-500 text-sm'>⚠️</span>
+                              )}
                             </CardTitle>
                             <CardDescription>
                               {run.airline} • {run.departure} → {run.arrival}
@@ -526,108 +663,82 @@ export default function App() {
                           </div>
                         </div>
                       </CardHeader>
-                      <CardContent className='space-y-4'>
+                      <CardContent>
                         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                          {/* Flight Status */}
                           <div className='space-y-2'>
-                            <h4 className='font-medium flex items-center gap-2'>
-                              <Plane className='h-4 w-4' />
-                              Flight Status
-                            </h4>
-                            {flightStatus ? (
-                              <div className='bg-gray-50 p-3 rounded-lg'>
-                                <div className='flex items-center justify-between mb-2'>
-                                  <span className='font-medium'>
-                                    {flightStatus.status}
-                                  </span>
-                                  {flightStatus.delay &&
-                                    flightStatus.delay > 0 && (
-                                      <Badge className='bg-red-500 text-white'>
-                                        +{flightStatus.delay}m delay
-                                      </Badge>
-                                    )}
-                                </div>
-                                <div className='text-sm text-gray-600'>
-                                  <div>
-                                    Scheduled: {flightStatus.scheduledArrival}
-                                  </div>
-                                  <div>
-                                    Actual: {flightStatus.actualArrival}
-                                  </div>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className='bg-gray-50 p-3 rounded-lg text-sm text-gray-500'>
-                                No flight data available
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Traffic Status */}
-                          <div className='space-y-2'>
-                            <h4 className='font-medium flex items-center gap-2'>
-                              <Navigation className='h-4 w-4' />
-                              Traffic Status
-                            </h4>
-                            {trafficInfo ? (
-                              <div className='bg-gray-50 p-3 rounded-lg'>
-                                <div className='flex items-center justify-between mb-2'>
-                                  <Badge
-                                    className={getTrafficColor(
-                                      trafficInfo.status
-                                    )}
-                                  >
-                                    {trafficInfo.status} traffic
-                                  </Badge>
-                                  <span className='text-sm font-medium'>
-                                    {trafficInfo.durationInTraffic}m
-                                  </span>
-                                </div>
-                                <div className='text-sm text-gray-600'>
-                                  <div>Distance: {trafficInfo.distance}</div>
-                                  <div>
-                                    Normal time: {trafficInfo.duration}m
-                                  </div>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className='bg-gray-50 p-3 rounded-lg text-sm text-gray-500'>
-                                No traffic data available
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Route Information */}
-                        <div className='space-y-2'>
-                          <h4 className='font-medium flex items-center gap-2'>
-                            <MapPin className='h-4 w-4' />
-                            Route
-                          </h4>
-                          <div className='bg-gray-50 p-3 rounded-lg'>
-                            <div className='flex items-center justify-between text-sm'>
-                              <span>From: {run.pickupLocation}</span>
-                              <Clock className='h-4 w-4 text-gray-400' />
-                              <span>To: {run.dropoffLocation}</span>
+                            <div className='flex items-center gap-2'>
+                              <Clock className='h-4 w-4 text-gray-500' />
+                              <span className='text-sm font-medium'>
+                                {new Date(run.scheduledTime).toLocaleString()}
+                              </span>
                             </div>
-                            <div className='mt-2 text-sm text-gray-600'>
-                              Scheduled:{' '}
-                              {new Date(run.scheduledTime).toLocaleString()}
+                            <div className='flex items-center gap-2'>
+                              <MapPin className='h-4 w-4 text-gray-500' />
+                              <span className='text-sm'>
+                                {run.type === 'pickup' ? 'Pickup' : 'Dropoff'} •{' '}
+                                {run.pickupLocation} → {run.dropoffLocation}
+                              </span>
                             </div>
                             {run.notes && (
-                              <div className='mt-2 text-sm text-gray-600'>
-                                Notes: {run.notes}
+                              <div className='flex items-center gap-2'>
+                                <FileText className='h-4 w-4 text-gray-500' />
+                                <span className='text-sm text-gray-600'>
+                                  {run.notes}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className='space-y-2'>
+                            {flightStatus && (
+                              <div className='flex items-center gap-2'>
+                                <Plane className='h-4 w-4 text-gray-500' />
+                                <span className='text-sm'>
+                                  Flight: {flightStatus.status}
+                                  {flightStatus.delay && flightStatus.delay > 0 && (
+                                    <span className='text-red-600 ml-1'>
+                                      (+{flightStatus.delay} min)
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
+                            )}
+                            {trafficData && (
+                              <div className='flex items-center gap-2'>
+                                <Navigation className='h-4 w-4 text-gray-500' />
+                                <span className='text-sm'>
+                                  Traffic: {trafficData.duration} min •{' '}
+                                  {trafficData.distance} •{' '}
+                                  <span
+                                    className={
+                                      trafficData.status === 'heavy'
+                                        ? 'text-red-600'
+                                        : trafficData.status === 'moderate'
+                                          ? 'text-yellow-600'
+                                          : 'text-green-600'
+                                    }
+                                  >
+                                    {trafficData.status}
+                                  </span>
+                                </span>
+                              </div>
+                            )}
+                            {trafficData?.incidents && trafficData.incidents.length > 0 && (
+                              <div className='flex items-center gap-2'>
+                                <AlertCircle className='h-4 w-4 text-orange-500' />
+                                <span className='text-sm text-orange-600'>
+                                  {trafficData.incidents.length} incident(s)
+                                </span>
                               </div>
                             )}
                           </div>
                         </div>
 
-                        {/* Action Buttons */}
-                        <div className='flex gap-2'>
+                        <div className='flex gap-2 mt-4'>
                           <Button
                             variant='outline'
                             size='sm'
-                            onClick={() => refreshData(run)}
+                            onClick={() => refreshRunData(run)}
                             disabled={isLoading}
                           >
                             {isLoading ? 'Loading...' : 'Refresh Data'}
@@ -651,6 +762,15 @@ export default function App() {
                               Complete Run
                             </Button>
                           )}
+                          {run.status === 'active' && (
+                            <Button
+                              size='sm'
+                              variant='outline'
+                              onClick={() => pollingService.triggerPoll()}
+                            >
+                              Manual Poll
+                            </Button>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -660,7 +780,7 @@ export default function App() {
             )}
           </TabsContent>
 
-          <TabsContent value='add' className='space-y-4'>
+          <TabsContent value='add' className='mt-6'>
             {/* Bulk Import Option */}
             <Card>
               <CardHeader>
@@ -671,8 +791,7 @@ export default function App() {
                       Quick Import
                     </CardTitle>
                     <CardDescription>
-                      Paste your schedule message to import multiple runs at
-                      once
+                      Paste your schedule message to import multiple runs at once
                     </CardDescription>
                   </div>
                   <Button
@@ -977,7 +1096,7 @@ export default function App() {
                 <Button
                   onClick={addRun}
                   className='w-full'
-                  disabled={isLoading}
+                  disabled={runsApiData.isLoading}
                 >
                   <Plus className='h-4 w-4 mr-2' />
                   Add Run

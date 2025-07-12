@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
-import { build, type BuildConfig } from 'bun';
+import { $, build, type BuildConfig } from 'bun';
 import plugin from 'bun-plugin-tailwind';
 import { existsSync } from 'fs';
-import { rm } from 'fs/promises';
+import { cp, rm } from 'fs/promises';
 import path from 'path';
 
 // Print help text if requested
@@ -158,6 +158,21 @@ const result = await build({
   },
   ...cliConfig, // Merge in any CLI-provided options
 });
+
+// Build frontend and copy all static files from public directory
+console.log('📦 Building frontend...');
+await $`bun build src/frontend.tsx --outdir=${outdir} --target=browser`;
+
+// Copy static files to output directory
+const staticFiles = ['manifest.json', 'sw.js', 'logo.svg', 'index.html'];
+for (const file of staticFiles) {
+  const srcPath = path.join('public', file);
+  const destPath = path.join(outdir, file);
+  if (existsSync(srcPath)) {
+    await cp(srcPath, destPath);
+    console.log(`📄 Copied ${file} to output directory`);
+  }
+}
 
 // Print the results
 const end = performance.now();
