@@ -138,17 +138,43 @@ function parseScheduleBlock(
   lines: string[],
   blockIndex: number
 ): ParsedScheduleRun | null {
-  if (lines.length < 6) return null;
+  if (lines.length < 5) return null; // Reduced from 6 to 5 for shorter format
 
   try {
-    const id = lines[0]?.trim() || `run-${blockIndex}`;
-    const rawTime = lines[1]?.trim() || '';
-    const thirdLine = lines[2]?.trim() || '';
-    const fourthLine = lines[3]?.trim() || '';
-    const passengerInfo = lines[4]?.trim() || '';
-    const locationInfo = lines[5]?.trim() || '';
-    const passengerCount = lines[6]?.trim() || '';
-    const price = lines[7]?.trim() || '';
+    // Detect if this is a message starting with time (no run ID) or with run ID
+    const firstLine = lines[0]?.trim() || '';
+    const isTimeFirst = /^\d{1,2}:?\d{0,2}\s*(AM|PM)$/i.test(firstLine);
+
+    let id: string;
+    let rawTime: string;
+    let thirdLine: string;
+    let fourthLine: string;
+    let passengerInfo: string;
+    let locationInfo: string;
+    let passengerCount: string;
+    let price: string;
+
+    if (isTimeFirst) {
+      // Format: Time, Flight, Airport, Passenger, etc.
+      id = `run-${blockIndex}`;
+      rawTime = lines[0]?.trim() || '';
+      thirdLine = lines[1]?.trim() || ''; // Flight number
+      fourthLine = lines[2]?.trim() || ''; // Airport code
+      passengerInfo = lines[3]?.trim() || '';
+      locationInfo = lines[4]?.trim() || '';
+      passengerCount = lines[5]?.trim() || '';
+      price = lines[6]?.trim() || '';
+    } else {
+      // Original format: ID, Time, Flight, Airport, etc.
+      id = lines[0]?.trim() || `run-${blockIndex}`;
+      rawTime = lines[1]?.trim() || '';
+      thirdLine = lines[2]?.trim() || '';
+      fourthLine = lines[3]?.trim() || '';
+      passengerInfo = lines[4]?.trim() || '';
+      locationInfo = lines[5]?.trim() || '';
+      passengerCount = lines[6]?.trim() || '';
+      price = lines[7]?.trim() || '';
+    }
 
     const time = normalizeTime(rawTime);
 
@@ -288,9 +314,9 @@ export function parseScheduleMessage(message: string): ParseResult {
 
     // Parse each block
     blocks.forEach((block, index) => {
-      if (block.length < 6) {
+      if (block.length < 5) {
         warnings.push(
-          `Block ${index + 1} has insufficient lines (${block.length} < 6)`
+          `Block ${index + 1} has insufficient lines (${block.length} < 5)`
         );
         return;
       }

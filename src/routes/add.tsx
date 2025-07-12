@@ -1,7 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, useRouter } from '@tanstack/react-router';
-import { Clock, MapPin, Plane, Plus, X } from 'lucide-react';
+import {
+  AlertTriangle,
+  Clock,
+  Info,
+  Loader2,
+  MapPin,
+  Plane,
+  Plus,
+  X,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '../components/ui/button';
@@ -22,6 +31,11 @@ import {
 } from '../components/ui/form';
 import { Input } from '../components/ui/input';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '../components/ui/popover';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -29,12 +43,23 @@ import {
   SelectValue,
 } from '../components/ui/select';
 import { runsApi } from '../lib/api/client';
+import { isDebugMode } from '../lib/debug';
 import {
   convertParsedRunToForm,
   parseScheduleMessage,
 } from '../lib/schedule-parser';
+import type { FlightStatus } from '../lib/schema';
 import { NewRunFormSchema, type NewRunForm } from '../lib/schema';
+import { getFlightServiceWithConfig } from '../lib/services/flight-service';
 import { toasts } from '../lib/toast';
+
+// Flight status state for the form
+interface FlightStatusState {
+  isLoading: boolean;
+  status: FlightStatus | null;
+  error: string | null;
+  isHistorical: boolean;
+}
 
 // Helper function to detect if pasted text looks like a schedule message
 function isScheduleMessage(text: string): boolean {
@@ -81,6 +106,14 @@ function AddRun() {
   const queryClient = useQueryClient();
   const [isInfoMessageDismissed, setIsInfoMessageDismissed] =
     useState<boolean>(false);
+  const [flightStatusState, setFlightStatusState] = useState<FlightStatusState>(
+    {
+      isLoading: false,
+      status: null,
+      error: null,
+      isHistorical: false,
+    }
+  );
 
   // Check sessionStorage for dismissed state on component mount
   useEffect(() => {
@@ -124,6 +157,66 @@ function AddRun() {
     notes: '',
   };
 
+  // Enhanced flight status checking function
+  const checkFlightStatus = async (
+    flightNumber: string,
+    scheduledTime: string
+  ) => {
+    if (!flightNumber || isDebugMode()) {
+      return;
+    }
+
+    setFlightStatusState(prev => ({ ...prev, isLoading: true, error: null }));
+
+    try {
+      const flightService = await getFlightServiceWithConfig();
+      const flightStatus = await flightService.getFlightStatus({
+        flightNumber,
+      });
+
+      // Determine if flight is historical based on scheduled time
+      const scheduledDate = new Date(scheduledTime);
+      const now = new Date();
+      const isHistorical = scheduledDate < now;
+
+      setFlightStatusState({
+        isLoading: false,
+        status: flightStatus,
+        error: null,
+        isHistorical,
+      });
+    } catch (error) {
+      setFlightStatusState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: 'Failed to fetch flight status',
+      }));
+      console.warn('Could not check flight status:', error);
+    }
+  };
+
+  // Watch flight number and scheduled time to trigger status checks
+  const watchedFlightNumber = form.watch('flightNumber');
+  const watchedScheduledTime = form.watch('scheduledTime');
+
+  useEffect(() => {
+    if (watchedFlightNumber && watchedScheduledTime) {
+      const timeoutId = setTimeout(() => {
+        checkFlightStatus(watchedFlightNumber, watchedScheduledTime);
+      }, 1000); // Debounce for 1 second
+
+      return () => clearTimeout(timeoutId);
+    } else {
+      // Reset flight status when flight number or time is cleared
+      setFlightStatusState({
+        isLoading: false,
+        status: null,
+        error: null,
+        isHistorical: false,
+      });
+    }
+  }, [watchedFlightNumber, watchedScheduledTime]);
+
   // Global paste event listener for schedule detection
   useEffect(() => {
     const handleGlobalPaste = (event: ClipboardEvent) => {
@@ -138,14 +231,14 @@ function AddRun() {
       }
 
       const pastedText = event.clipboardData?.getData('text') || '';
-      
+
       // Check if the pasted text looks like a schedule message
       if (isScheduleMessage(pastedText)) {
         event.preventDefault(); // Prevent default paste behavior
 
         // Parse the schedule message
         const result = parseScheduleMessage(pastedText);
-        
+
         if (result.success && result.runs.length > 0) {
           // Auto-fill the form fields with the first run's data
           const today = new Date().toISOString().split('T')[0];
@@ -173,8 +266,8 @@ function AddRun() {
           // Show error toast
           toasts.error(
             'Unable to parse schedule message',
-            result.errors.length > 0 
-              ? result.errors[0] 
+            result.errors.length > 0
+              ? result.errors[0]
               : 'The pasted content does not appear to be a valid schedule message.'
           );
         }
@@ -192,8 +285,8 @@ function AddRun() {
 
   // Watch form values to determine if any field has been filled
   const watchedValues = form.watch();
-  const hasFilledFields = Object.values(watchedValues).some(value => 
-    value !== '' && value !== defaultFormValues.type
+  const hasFilledFields = Object.values(watchedValues).some(
+    value => value !== '' && value !== defaultFormValues.type
   );
 
   // Mutation for creating a new run
@@ -419,14 +512,90 @@ function AddRun() {
                       <FormLabel className='flex items-center gap-2'>
                         <Clock className='h-4 w-4' />
                         Scheduled Time
+                        {flightStatusState.isLoading && (
+                          <Loader2 className='h-4 w-4 animate-spin text-blue-500' />
+                        )}
+                        {!flightStatusState.isLoading &&
+                          flightStatusState.status &&
+                          !flightStatusState.isHistorical && (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant='ghost'
+                                  size='sm'
+                                  className='h-4 w-4 p-0 hover:bg-transparent'
+                                >
+                                  <Info className='h-4 w-4 text-blue-500 hover:text-blue-600' />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className='w-64' side='top'>
+                                <div className='space-y-2'>
+                                  <div className='font-medium text-sm'>
+                                    Flight Status
+                                  </div>
+                                  <div className='text-sm space-y-1'>
+                                    <div>
+                                      <span className='text-muted-foreground'>
+                                        Flight:
+                                      </span>{' '}
+                                      {flightStatusState.status.flightNumber}
+                                    </div>
+                                    <div>
+                                      <span className='text-muted-foreground'>
+                                        Status:
+                                      </span>{' '}
+                                      <span
+                                        className={`font-medium ${
+                                          flightStatusState.status.status ===
+                                          'On Time'
+                                            ? 'text-green-600'
+                                            : flightStatusState.status
+                                                  .status === 'Delayed'
+                                              ? 'text-red-600'
+                                              : flightStatusState.status
+                                                    .status === 'Cancelled'
+                                                ? 'text-red-600'
+                                                : 'text-blue-600'
+                                        }`}
+                                      >
+                                        {flightStatusState.status.status}
+                                      </span>
+                                    </div>
+                                    {flightStatusState.status.lastUpdated && (
+                                      <div className='text-xs text-muted-foreground'>
+                                        Updated:{' '}
+                                        {flightStatusState.status.lastUpdated.toLocaleString()}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          )}
+                        {!flightStatusState.isLoading &&
+                          flightStatusState.isHistorical && (
+                            <div title='Historical flight detected'>
+                              <AlertTriangle className='h-4 w-4 text-orange-500' />
+                            </div>
+                          )}
                       </FormLabel>
                       <FormControl>
                         <Input
                           type='datetime-local'
                           {...field}
-                          className='bg-background'
+                          className={`bg-background ${
+                            flightStatusState.isHistorical
+                              ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20'
+                              : ''
+                          }`}
                         />
                       </FormControl>
+                      {flightStatusState.isHistorical && (
+                        <div className='text-sm text-orange-600 dark:text-orange-400 flex items-center gap-1'>
+                          <AlertTriangle className='h-3 w-3' />
+                          This flight has already occurred
+                        </div>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}

@@ -387,14 +387,160 @@ export class FlightService {
   }
 
   /**
-   * Get flight status for a specific flight number (simplified for now)
+   * Get flight status for a specific flight number (enhanced with mock data)
    */
   async getFlightStatus(request: FlightRequest): Promise<FlightStatus> {
-    // For now, return a basic implementation
-    // This could be expanded to use AviationStack's flight tracking features
+    try {
+      if (this.forceMockData) {
+        console.log('🎭 Development mode: Using mock flight status data');
+        return this.getMockFlightStatus(request.flightNumber);
+      }
+
+      if (!this.apiKey) {
+        console.warn(
+          '⚠️ No AviationStack API key provided, using mock flight status'
+        );
+        return this.getMockFlightStatus(request.flightNumber);
+      }
+
+      // Build API request for specific flight
+      const params = new URLSearchParams({
+        access_key: this.apiKey,
+        flight_iata: request.flightNumber,
+        limit: '1',
+      });
+
+      const url = `${AVIATIONSTACK_BASE_URL}/flights?${params.toString()}`;
+      console.log(
+        `🔍 Fetching flight status from AviationStack: ${url.replace(this.apiKey, '[API_KEY]')}`
+      );
+
+      const fetchOptions: RequestInit = {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+        },
+      };
+
+      if (typeof AbortController !== 'undefined') {
+        const controller = new AbortController();
+        setTimeout(() => controller.abort(), this.timeout);
+        fetchOptions.signal = controller.signal;
+      }
+
+      const response = await fetch(url, fetchOptions);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Invalid AviationStack API key');
+        } else if (response.status === 429) {
+          throw new Error('AviationStack API rate limit exceeded');
+        } else {
+          throw new Error(`AviationStack API error: ${response.status}`);
+        }
+      }
+
+      const data: AviationStackResponse = await response.json();
+
+      if (!data.data || data.data.length === 0) {
+        console.log('📭 No flight found, returning default status');
+        return {
+          flightNumber: request.flightNumber,
+          status: 'Unknown',
+          lastUpdated: new Date(),
+        };
+      }
+
+      // Convert AviationStack flight to our FlightStatus format
+      const flight = data.data[0];
+      return {
+        flightNumber: request.flightNumber,
+        status: this.convertToFlightStatusType(flight.flight_status),
+        scheduledDeparture: flight.departure.scheduled,
+        actualDeparture: flight.departure.actual,
+        scheduledArrival: flight.arrival.scheduled,
+        actualArrival: flight.arrival.actual,
+        lastUpdated: new Date(),
+      };
+    } catch (error) {
+      console.error('❌ Failed to fetch flight status:', error);
+      // Return mock data as fallback
+      return this.getMockFlightStatus(request.flightNumber);
+    }
+  }
+
+  /**
+   * Convert AviationStack flight status to our FlightStatus type
+   */
+  private convertToFlightStatusType(status: string): FlightStatus['status'] {
+    switch (status.toLowerCase()) {
+      case 'scheduled':
+        return 'On Time';
+      case 'active':
+        return 'Departed';
+      case 'landed':
+        return 'Arrived';
+      case 'cancelled':
+        return 'Cancelled';
+      case 'incident':
+      case 'delayed':
+        return 'Delayed';
+      case 'diverted':
+        return 'Delayed';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  /**
+   * Generate mock flight status data
+   */
+  private getMockFlightStatus(flightNumber: string): FlightStatus {
+    // Create deterministic mock data based on flight number
+    const seed = flightNumber
+      .split('')
+      .reduce((a, b) => a + b.charCodeAt(0), 0);
+    const random = ((seed * 9301 + 49297) % 233280) / 233280;
+
+    const statuses: FlightStatus['status'][] = [
+      'On Time',
+      'Delayed',
+      'Cancelled',
+      'Departed',
+      'Arrived',
+      'Boarding',
+    ];
+    const status = statuses[Math.floor(random * statuses.length)];
+
+    // Generate realistic timestamps
+    const now = new Date();
+    const hoursOffset = Math.floor(random * 48) - 24; // -24 to +24 hours
+    const scheduledTime = new Date(
+      now.getTime() + hoursOffset * 60 * 60 * 1000
+    );
+
+    let actualTime: string | undefined;
+
+    if (status === 'Departed' || status === 'Arrived') {
+      const delayMinutes = Math.floor(random * 120) - 30; // -30 to +90 minutes delay
+      actualTime = new Date(
+        scheduledTime.getTime() + delayMinutes * 60 * 1000
+      ).toISOString();
+    }
+
+    const mockDataLabel = this.forceMockData ? '🎭 [DEV MODE]' : '🎭';
+    console.log(
+      `${mockDataLabel} Generated mock flight status for ${flightNumber}: ${status}`
+    );
+
     return {
-      flightNumber: request.flightNumber,
-      status: 'Unknown',
+      flightNumber,
+      status,
+      scheduledDeparture: scheduledTime.toISOString(),
+      actualDeparture: actualTime,
+      scheduledArrival: new Date(
+        scheduledTime.getTime() + 2 * 60 * 60 * 1000
+      ).toISOString(), // 2 hours later
       lastUpdated: new Date(),
     };
   }

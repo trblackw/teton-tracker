@@ -124,4 +124,13 @@ export const toasts = {
       },
     });
   },
+
+  // Historical flight detection toast
+  historicalFlight: (flightNumber: string, flightDate: string) => {
+    toast.info('Historical flight detected', {
+      description: `Flight ${flightNumber} on ${flightDate} has already completed. Please verify the flight details.`,
+      duration: 6000, // Longer duration for important info
+      style: getToastStyle('info'),
+    });
+  },
 };
