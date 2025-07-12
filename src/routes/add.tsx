@@ -29,8 +29,52 @@ import {
   SelectValue,
 } from '../components/ui/select';
 import { runsApi } from '../lib/api/client';
+import {
+  convertParsedRunToForm,
+  parseScheduleMessage,
+} from '../lib/schedule-parser';
 import { NewRunFormSchema, type NewRunForm } from '../lib/schema';
 import { toasts } from '../lib/toast';
+
+// Helper function to detect if pasted text looks like a schedule message
+function isScheduleMessage(text: string): boolean {
+  if (!text || text.length < 20) {
+    return false;
+  }
+
+  const lines = text.split('\n').filter(line => line.trim().length > 0);
+
+  if (lines.length < 4) {
+    return false;
+  }
+
+  // Look for patterns that suggest it's a schedule message
+  const hasFlightPattern = lines.some(line =>
+    /[A-Z]{2,3}\s*\d{1,4}[A-Z]?|[A-Z]{2,3}\s*CABIN|ASAP/i.test(line)
+  );
+  const hasTimePattern = lines.some(line =>
+    /\d{1,2}:?\d{0,2}\s*(AM|PM)|ASAP/i.test(line)
+  );
+  const hasVehiclePattern = lines.some(line => /SUV|EXEC|SEDAN/i.test(line));
+  const hasPricePattern = lines.some(line => /\$\d+\.?\d*/i.test(line));
+  const hasRunIdPattern = lines.some(line => /^\d+\*?\d*/i.test(line));
+  const hasAirportPattern = lines.some(line =>
+    /\b(AP|JLL|SK|DL|AA|UA)\b/i.test(line)
+  );
+
+  // Must have at least 2 of these patterns to be considered a schedule
+  const patterns = [
+    hasFlightPattern,
+    hasTimePattern,
+    hasVehiclePattern,
+    hasPricePattern,
+    hasRunIdPattern,
+    hasAirportPattern,
+  ];
+  const patternCount = patterns.filter(Boolean).length;
+
+  return patternCount >= 2;
+}
 
 function AddRun() {
   const router = useRouter();
@@ -66,6 +110,91 @@ function AddRun() {
       notes: '',
     },
   });
+
+  // Store default form values for undo functionality
+  const defaultFormValues: NewRunForm = {
+    flightNumber: '',
+    airline: '',
+    departure: '',
+    arrival: '',
+    pickupLocation: '',
+    dropoffLocation: '',
+    scheduledTime: '',
+    type: 'pickup',
+    notes: '',
+  };
+
+  // Global paste event listener for schedule detection
+  useEffect(() => {
+    const handleGlobalPaste = (event: ClipboardEvent) => {
+      // Don't interfere with paste events in form inputs
+      const target = event.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      const pastedText = event.clipboardData?.getData('text') || '';
+      
+      // Check if the pasted text looks like a schedule message
+      if (isScheduleMessage(pastedText)) {
+        event.preventDefault(); // Prevent default paste behavior
+
+        // Parse the schedule message
+        const result = parseScheduleMessage(pastedText);
+        
+        if (result.success && result.runs.length > 0) {
+          // Auto-fill the form fields with the first run's data
+          const today = new Date().toISOString().split('T')[0];
+          const firstRun = result.runs[0];
+          const formData = convertParsedRunToForm(firstRun, today);
+
+          // Set form values
+          form.reset(formData);
+
+          // Create undo function that resets form to defaults
+          const handleUndo = () => {
+            form.reset(defaultFormValues);
+          };
+
+          // Show enhanced toast with undo action
+          toasts.scheduleDetected(result.runs.length, handleUndo);
+
+          if (result.runs.length > 1) {
+            toasts.info(
+              'Multiple runs detected',
+              `${result.runs.length} runs found. Only the first run was auto-filled. You can manually add the others.`
+            );
+          }
+        } else {
+          // Show error toast
+          toasts.error(
+            'Unable to parse schedule message',
+            result.errors.length > 0 
+              ? result.errors[0] 
+              : 'The pasted content does not appear to be a valid schedule message.'
+          );
+        }
+      }
+    };
+
+    // Add event listener
+    document.addEventListener('paste', handleGlobalPaste);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('paste', handleGlobalPaste);
+    };
+  }, [form]);
+
+  // Watch form values to determine if any field has been filled
+  const watchedValues = form.watch();
+  const hasFilledFields = Object.values(watchedValues).some(value => 
+    value !== '' && value !== defaultFormValues.type
+  );
 
   // Mutation for creating a new run
   const createRunMutation = useMutation({
@@ -135,13 +264,28 @@ function AddRun() {
 
       <Card>
         <CardHeader>
-          <CardTitle className='flex items-center gap-2'>
-            <Plus className='h-5 w-5' />
-            Run Details
-          </CardTitle>
-          <CardDescription>
-            Enter the flight and location information for your run
-          </CardDescription>
+          <div className='flex items-center justify-between'>
+            <div>
+              <CardTitle className='flex items-center gap-2'>
+                <Plus className='h-5 w-5' />
+                Run Details
+              </CardTitle>
+              <CardDescription>
+                Enter the flight and location information for your run
+              </CardDescription>
+            </div>
+            {hasFilledFields && (
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => form.reset(defaultFormValues)}
+                className='text-muted-foreground hover:text-foreground'
+                title='Reset form'
+              >
+                Clear
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <Form {...form}>

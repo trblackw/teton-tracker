@@ -111,4 +111,17 @@ export const toasts = {
   dismissAll: () => {
     toast.dismiss();
   },
+
+  // Schedule detection toast with undo action
+  scheduleDetected: (runCount: number, onUndo: () => void) => {
+    toast.success('Schedule message detected!', {
+      description: `Found ${runCount} run(s). Form auto-filled with first run data.`,
+      duration: 7000, // Longer duration (7 seconds)
+      style: getToastStyle('success'),
+      action: {
+        label: 'Undo',
+        onClick: onUndo,
+      },
+    });
+  },
 };

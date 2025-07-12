@@ -111,26 +111,27 @@ function extractAirportCode(text: string): string {
 }
 
 function extractAirlineName(flightNumber: string): string {
-  const airlineCode = flightNumber.replace(/\d.*/, '');
-  return AIRLINE_MAPPINGS[airlineCode] || `${airlineCode} Airlines`;
+  const airlineCode = flightNumber.match(/^[A-Z]{2,3}/)?.[0];
+  return airlineCode
+    ? AIRLINE_MAPPINGS[airlineCode] || airlineCode
+    : 'Unknown Airline';
 }
 
 function isFlightNumber(text: string): boolean {
-  return extractFlightNumber(text) !== null;
+  return FLIGHT_NUMBER_PATTERNS.some(pattern => pattern.test(text.trim()));
+}
+
+function hasFlightInLine(text: string): boolean {
+  return FLIGHT_NUMBER_PATTERNS.some(pattern => pattern.test(text));
 }
 
 function isCancelled(lines: string[]): boolean {
-  return lines.some(line => line.toUpperCase().includes('CANCEL'));
+  return lines.some(line => /cancel/i.test(line));
 }
 
 function extractPhoneNumber(text: string): string | null {
   const phoneMatch = text.match(/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/);
   return phoneMatch ? phoneMatch[0] : null;
-}
-
-function hasFlightInLine(text: string): boolean {
-  // Check if line contains a flight number anywhere
-  return /[A-Z]{2,3}\d{1,4}[A-Z]?/i.test(text);
 }
 
 function parseScheduleBlock(
@@ -368,4 +369,44 @@ export function convertParsedRunToForm(
     type: parsedRun.type,
     notes: parsedRun.notes,
   };
+}
+
+// Helper function to detect if pasted text looks like a schedule message
+export function isScheduleMessage(text: string): boolean {
+  if (!text || text.length < 20) {
+    return false;
+  }
+
+  const lines = text.split('\n').filter(line => line.trim().length > 0);
+
+  if (lines.length < 4) {
+    return false;
+  }
+
+  // Look for patterns that suggest it's a schedule message
+  const hasFlightPattern = lines.some(line =>
+    /[A-Z]{2,3}\s*\d{1,4}[A-Z]?|[A-Z]{2,3}\s*CABIN|ASAP/i.test(line)
+  );
+  const hasTimePattern = lines.some(line =>
+    /\d{1,2}:?\d{0,2}\s*(AM|PM)|ASAP/i.test(line)
+  );
+  const hasVehiclePattern = lines.some(line => /SUV|EXEC|SEDAN/i.test(line));
+  const hasPricePattern = lines.some(line => /\$\d+\.?\d*/i.test(line));
+  const hasRunIdPattern = lines.some(line => /^\d+\*?\d*/i.test(line));
+  const hasAirportPattern = lines.some(line =>
+    /\b(AP|JLL|SK|DL|AA|UA)\b/i.test(line)
+  );
+
+  // Must have at least 2 of these patterns to be considered a schedule
+  const patterns = [
+    hasFlightPattern,
+    hasTimePattern,
+    hasVehiclePattern,
+    hasPricePattern,
+    hasRunIdPattern,
+    hasAirportPattern,
+  ];
+  const patternCount = patterns.filter(Boolean).length;
+
+  return patternCount >= 2;
 }
