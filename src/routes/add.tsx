@@ -21,6 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from '../components/ui/card';
+import { DateTimePicker } from '../components/ui/date-time-picker';
 import {
   Form,
   FormControl,
@@ -580,14 +581,15 @@ function AddRun() {
                           )}
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          type='datetime-local'
-                          {...field}
-                          className={`bg-background ${
+                        <DateTimePicker
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder='Select date and time'
+                          className={
                             flightStatusState.isHistorical
                               ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20'
                               : ''
-                          }`}
+                          }
                         />
                       </FormControl>
                       {flightStatusState.isHistorical && (
