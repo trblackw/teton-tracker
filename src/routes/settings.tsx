@@ -1,26 +1,43 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import {
-  Building,
-  Monitor,
-  Moon,
-  Palette,
-  SettingsIcon,
-  Sun,
+    Building,
+    Monitor,
+    Moon,
+    Palette,
+    SettingsIcon,
+    Sun,
+    X,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { AirportCombobox } from '../components/ui/airport-combobox';
 import { Button } from '../components/ui/button';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from '../components/ui/card';
-import { Input } from '../components/ui/input';
 import { Toggle } from '../components/ui/toggle';
+import airportsData from '../data/airports-full.json';
 import { preferencesApi } from '../lib/api/client';
 import { type UpdatePreferencesData } from '../lib/db/preferences';
+
+// Convert airport data from object to array format expected by AirportCombobox
+const airports = Object.entries(airportsData)
+  .map(([code, airport]) => ({
+    icao: airport.icao,
+    iata: airport.iata || code, // Use code as fallback if iata is empty
+    name: airport.name,
+    city: airport.city,
+    state: airport.state,
+    elevation: airport.elevation,
+    lat: airport.lat,
+    lon: airport.lon,
+    tz: airport.tz,
+  }))
+  .filter(airport => airport.iata); // Filter out airports without IATA codes
 
 function Settings() {
   const { theme, setTheme } = useTheme();
@@ -133,12 +150,28 @@ function Settings() {
         </CardHeader>
         <CardContent className='space-y-4'>
           <div className='flex flex-col gap-2'>
-            <Input
-              value={preferences?.homeAirport || ''}
-              onChange={e => handleHomeAirportChange(e.target.value)}
-              placeholder='Enter your home airport code (e.g., LAX, JFK)'
-              disabled={updatePreferencesMutation.isPending}
-            />
+            <div className='flex gap-2'>
+              <div className='flex-1'>
+                <AirportCombobox
+                  airports={airports}
+                  value={preferences?.homeAirport || ''}
+                  onValueChange={handleHomeAirportChange}
+                  placeholder='Search for your home airport...'
+                  emptyMessage='No airports found matching your search.'
+                />
+              </div>
+              {preferences?.homeAirport && (
+                <Button
+                  variant='outline'
+                  size='icon'
+                  onClick={() => handleHomeAirportChange('')}
+                  disabled={updatePreferencesMutation.isPending}
+                  title='Clear home airport'
+                >
+                  <X className='h-4 w-4' />
+                </Button>
+              )}
+            </div>
             {preferences?.homeAirport && (
               <p className='text-sm text-muted-foreground'>
                 Current home airport: {preferences.homeAirport}
