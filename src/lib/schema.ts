@@ -154,7 +154,9 @@ export const NewRunFormSchema = z
       .string()
       .min(2, 'Airline name must be at least 2 characters')
       .max(100, 'Airline name must be at most 100 characters')
-      .trim(),
+      .trim()
+      .optional()
+      .or(z.literal('')),
     departure: AirportCodeSchema,
     arrival: AirportCodeSchema,
     pickupLocation: LocationSchema,
@@ -267,12 +269,13 @@ export const transformOpenSkyToFlightStatus = (
 ): FlightStatus => {
   // Determine flight status based on OpenSky data
   let status: FlightStatusType = 'Unknown';
-  
+
   if (openSkyData.firstSeen && openSkyData.lastSeen) {
     const currentTime = Math.floor(Date.now() / 1000);
     const timeSinceLastSeen = currentTime - openSkyData.lastSeen;
-    
-    if (timeSinceLastSeen < 300) { // Less than 5 minutes ago
+
+    if (timeSinceLastSeen < 300) {
+      // Less than 5 minutes ago
       status = 'Departed'; // Flight is currently active
     } else if (openSkyData.estArrivalAirport) {
       status = 'Arrived'; // Flight has landed
@@ -282,7 +285,7 @@ export const transformOpenSkyToFlightStatus = (
   } else if (openSkyData.firstSeen) {
     status = 'Boarding'; // Flight is preparing to depart
   }
-  
+
   return FlightStatusSchema.parse({
     flightNumber,
     status,

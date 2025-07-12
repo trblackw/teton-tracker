@@ -365,7 +365,7 @@ function AddRun() {
                 Run Details
               </CardTitle>
               <CardDescription>
-                Enter the flight and location information for your run
+                Enter the flight & location information for your run
               </CardDescription>
             </div>
             {hasFilledFields && (

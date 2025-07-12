@@ -55,10 +55,6 @@ export function DateTimePicker({
     onChange?.(formattedDateTime);
   };
 
-  const displayValue = selectedDate
-    ? `${format(selectedDate, 'PPP')} at ${timeValue}`
-    : placeholder;
-
   return (
     <div className='flex gap-2'>
       <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -91,7 +87,7 @@ export function DateTimePicker({
           type='time'
           value={timeValue}
           onChange={e => handleTimeChange(e.target.value)}
-          className='w-32 flex-shrink-0'
+          className='w-35 flex-shrink-0'
           disabled={disabled}
         />
       </div>
