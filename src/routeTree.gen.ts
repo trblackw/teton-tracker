@@ -12,6 +12,7 @@ import { Route as rootRoute } from './routes/__root';
 import { Route as AddRoute } from './routes/add';
 import { Route as IndexRoute } from './routes/index';
 import { Route as RunsRoute } from './routes/runs';
+import { Route as SettingsRoute } from './routes/settings';
 
 // Create/Update Routes
 
@@ -27,6 +28,11 @@ const AddRouteRoute = AddRoute.update({
 
 const RunsRouteRoute = RunsRoute.update({
   path: '/runs',
+  getParentRoute: () => rootRoute,
+} as any);
+
+const SettingsRouteRoute = SettingsRoute.update({
+  path: '/settings',
   getParentRoute: () => rootRoute,
 } as any);
 
@@ -55,6 +61,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RunsRouteRoute;
       parentRoute: typeof rootRoute;
     };
+    '/settings': {
+      id: '/settings';
+      path: '/settings';
+      fullPath: '/settings';
+      preLoaderRoute: typeof SettingsRouteRoute;
+      parentRoute: typeof rootRoute;
+    };
   }
 }
 
@@ -64,6 +77,7 @@ export const routeTree = rootRoute.addChildren({
   IndexRouteRoute,
   AddRouteRoute,
   RunsRouteRoute,
+  SettingsRouteRoute,
 });
 
 /* prettier-ignore-end */

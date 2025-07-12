@@ -214,8 +214,8 @@ function Add() {
   return (
     <div className='space-y-6'>
       <div>
-        <h2 className='text-2xl font-bold text-gray-900'>Add New Run</h2>
-        <p className='text-gray-600 mt-1'>
+        <h2 className='text-2xl font-bold text-foreground'>Add New Run</h2>
+        <p className='text-muted-foreground mt-1'>
           Schedule a new airport pickup or dropoff
         </p>
       </div>
@@ -278,7 +278,7 @@ function Add() {
               <Label htmlFor='schedule-text'>Schedule Message</Label>
               <textarea
                 id='schedule-text'
-                className='w-full min-h-32 p-3 border border-gray-300 rounded-md resize-vertical'
+                className='w-full min-h-32 p-3 border border-border rounded-md resize-vertical bg-background text-foreground'
                 placeholder='Paste your schedule message here, or just paste anywhere on the page...'
                 value={scheduleText}
                 onChange={e => setScheduleText(e.target.value)}
@@ -375,10 +375,10 @@ function Add() {
                     flightNumber: e.target.value.toUpperCase(),
                   }))
                 }
-                className={formErrors.flightNumber ? 'border-red-500' : ''}
+                className={formErrors.flightNumber ? 'border-destructive' : ''}
               />
               {formErrors.flightNumber && (
-                <p className='text-sm text-red-500'>
+                <p className='text-sm text-destructive'>
                   {formErrors.flightNumber}
                 </p>
               )}
@@ -395,10 +395,10 @@ function Add() {
                     airline: e.target.value,
                   }))
                 }
-                className={formErrors.airline ? 'border-red-500' : ''}
+                className={formErrors.airline ? 'border-destructive' : ''}
               />
               {formErrors.airline && (
-                <p className='text-sm text-red-500'>{formErrors.airline}</p>
+                <p className='text-sm text-destructive'>{formErrors.airline}</p>
               )}
             </div>
             <div className='space-y-2'>
@@ -413,10 +413,12 @@ function Add() {
                     departure: e.target.value.toUpperCase(),
                   }))
                 }
-                className={formErrors.departure ? 'border-red-500' : ''}
+                className={formErrors.departure ? 'border-destructive' : ''}
               />
               {formErrors.departure && (
-                <p className='text-sm text-red-500'>{formErrors.departure}</p>
+                <p className='text-sm text-destructive'>
+                  {formErrors.departure}
+                </p>
               )}
             </div>
             <div className='space-y-2'>
@@ -431,10 +433,10 @@ function Add() {
                     arrival: e.target.value.toUpperCase(),
                   }))
                 }
-                className={formErrors.arrival ? 'border-red-500' : ''}
+                className={formErrors.arrival ? 'border-destructive' : ''}
               />
               {formErrors.arrival && (
-                <p className='text-sm text-red-500'>{formErrors.arrival}</p>
+                <p className='text-sm text-destructive'>{formErrors.arrival}</p>
               )}
             </div>
             <div className='space-y-2 sm:col-span-2'>
@@ -449,10 +451,12 @@ function Add() {
                     pickupLocation: e.target.value,
                   }))
                 }
-                className={formErrors.pickupLocation ? 'border-red-500' : ''}
+                className={
+                  formErrors.pickupLocation ? 'border-destructive' : ''
+                }
               />
               {formErrors.pickupLocation && (
-                <p className='text-sm text-red-500'>
+                <p className='text-sm text-destructive'>
                   {formErrors.pickupLocation}
                 </p>
               )}
@@ -469,10 +473,12 @@ function Add() {
                     dropoffLocation: e.target.value,
                   }))
                 }
-                className={formErrors.dropoffLocation ? 'border-red-500' : ''}
+                className={
+                  formErrors.dropoffLocation ? 'border-destructive' : ''
+                }
               />
               {formErrors.dropoffLocation && (
-                <p className='text-sm text-red-500'>
+                <p className='text-sm text-destructive'>
                   {formErrors.dropoffLocation}
                 </p>
               )}
@@ -489,10 +495,10 @@ function Add() {
                     scheduledTime: e.target.value,
                   }))
                 }
-                className={formErrors.scheduledTime ? 'border-red-500' : ''}
+                className={formErrors.scheduledTime ? 'border-destructive' : ''}
               />
               {formErrors.scheduledTime && (
-                <p className='text-sm text-red-500'>
+                <p className='text-sm text-destructive'>
                   {formErrors.scheduledTime}
                 </p>
               )}
@@ -501,7 +507,7 @@ function Add() {
               <Label htmlFor='type'>Run Type *</Label>
               <select
                 id='type'
-                className='w-full p-2 border border-gray-300 rounded-md h-10'
+                className='w-full p-2 border border-border rounded-md h-10 bg-background text-foreground'
                 value={newRun.type || 'pickup'}
                 onChange={e =>
                   setNewRun(prev => ({
@@ -523,10 +529,10 @@ function Add() {
                 onChange={e =>
                   setNewRun(prev => ({ ...prev, notes: e.target.value }))
                 }
-                className={formErrors.notes ? 'border-red-500' : ''}
+                className={formErrors.notes ? 'border-destructive' : ''}
               />
               {formErrors.notes && (
-                <p className='text-sm text-red-500'>{formErrors.notes}</p>
+                <p className='text-sm text-destructive'>{formErrors.notes}</p>
               )}
             </div>
           </div>

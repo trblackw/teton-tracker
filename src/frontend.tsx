@@ -12,6 +12,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { createRouter, RouterProvider } from '@tanstack/react-router';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { ThemeProvider } from './components/theme-provider';
 import { queryClient } from './lib/react-query-client';
 import { routeTree } from './routeTree.gen';
 
@@ -28,13 +29,15 @@ declare module '@tanstack/react-router' {
 const elem = document.getElementById('root');
 const app = (
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-      {/* Show React Query devtools in development */}
-      {process.env.NODE_ENV !== 'production' && (
-        <ReactQueryDevtools initialIsOpen={false} />
-      )}
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+        {/* Show React Query devtools in development */}
+        {process.env.NODE_ENV !== 'production' && (
+          <ReactQueryDevtools initialIsOpen={false} />
+        )}
+      </QueryClientProvider>
+    </ThemeProvider>
   </StrictMode>
 );
 

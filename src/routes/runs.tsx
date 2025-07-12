@@ -93,15 +93,15 @@ function Runs() {
   const getStatusColor = (status: RunStatus) => {
     switch (status) {
       case 'scheduled':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
       case 'active':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
       case 'completed':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-muted-foreground';
       case 'cancelled':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-muted-foreground';
     }
   };
 
@@ -109,8 +109,8 @@ function Runs() {
     return (
       <Card>
         <CardContent className='p-8 text-center'>
-          <Plane className='h-16 w-16 text-gray-400 mx-auto mb-6' />
-          <p className='text-gray-500 text-lg mb-4'>
+          <Plane className='h-16 w-16 text-muted-foreground mx-auto mb-6' />
+          <p className='text-muted-foreground text-lg mb-4'>
             No runs scheduled. Add your first run to get started!
           </p>
           <Link to='/add'>
@@ -128,8 +128,8 @@ function Runs() {
     <div className='space-y-6'>
       <div className='flex items-center justify-between'>
         <div>
-          <h2 className='text-2xl font-bold text-gray-900'>Current Runs</h2>
-          <p className='text-gray-600 mt-1'>
+          <h2 className='text-2xl font-bold text-foreground'>Current Runs</h2>
+          <p className='text-muted-foreground mt-1'>
             {runs.length} run{runs.length !== 1 ? 's' : ''} scheduled
           </p>
         </div>
@@ -137,10 +137,10 @@ function Runs() {
 
       {/* API Loading Indicator */}
       {runsApiData.isFetching && (
-        <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
+        <div className='bg-primary/5 border border-primary/20 rounded-lg p-4'>
           <div className='flex items-center gap-2'>
-            <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600'></div>
-            <p className='text-blue-800 text-sm'>
+            <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-primary'></div>
+            <p className='text-primary text-sm'>
               Fetching latest flight and traffic data...
             </p>
           </div>
@@ -160,7 +160,9 @@ function Runs() {
                         <span className='ml-2 inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600'></span>
                       )}
                       {isError && (
-                        <span className='ml-2 text-red-500 text-sm'>⚠️</span>
+                        <span className='ml-2 text-destructive text-sm'>
+                          ⚠️
+                        </span>
                       )}
                     </CardTitle>
                     <CardDescription>
@@ -185,13 +187,13 @@ function Runs() {
                 <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
                   <div className='space-y-3'>
                     <div className='flex items-center gap-2'>
-                      <Clock className='h-4 w-4 text-gray-500 flex-shrink-0' />
+                      <Clock className='h-4 w-4 text-muted-foreground flex-shrink-0' />
                       <span className='text-sm font-medium'>
                         {new Date(run.scheduledTime).toLocaleString()}
                       </span>
                     </div>
                     <div className='flex items-start gap-2'>
-                      <MapPin className='h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5' />
+                      <MapPin className='h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5' />
                       <span className='text-sm'>
                         {run.type === 'pickup' ? 'Pickup' : 'Dropoff'} •{' '}
                         {run.pickupLocation} → {run.dropoffLocation}
@@ -199,8 +201,8 @@ function Runs() {
                     </div>
                     {run.notes && (
                       <div className='flex items-start gap-2'>
-                        <FileText className='h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5' />
-                        <span className='text-sm text-gray-600'>
+                        <FileText className='h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5' />
+                        <span className='text-sm text-muted-foreground'>
                           {run.notes}
                         </span>
                       </div>
@@ -210,11 +212,11 @@ function Runs() {
                   <div className='space-y-3'>
                     {flightStatus && (
                       <div className='flex items-center gap-2'>
-                        <Plane className='h-4 w-4 text-gray-500 flex-shrink-0' />
+                        <Plane className='h-4 w-4 text-muted-foreground flex-shrink-0' />
                         <span className='text-sm'>
                           Flight: {flightStatus.status}
                           {flightStatus.delay && flightStatus.delay > 0 && (
-                            <span className='text-red-600 ml-1'>
+                            <span className='text-destructive ml-1'>
                               (+{flightStatus.delay} min)
                             </span>
                           )}
@@ -223,17 +225,17 @@ function Runs() {
                     )}
                     {trafficData && (
                       <div className='flex items-start gap-2'>
-                        <Navigation className='h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5' />
+                        <Navigation className='h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5' />
                         <span className='text-sm'>
                           Traffic: {trafficData.duration} min •{' '}
                           {trafficData.distance} •{' '}
                           <span
                             className={
                               trafficData.status === 'heavy'
-                                ? 'text-red-600'
+                                ? 'text-red-600 dark:text-red-400'
                                 : trafficData.status === 'moderate'
-                                  ? 'text-yellow-600'
-                                  : 'text-green-600'
+                                  ? 'text-yellow-600 dark:text-yellow-400'
+                                  : 'text-green-600 dark:text-green-400'
                             }
                           >
                             {trafficData.status}
@@ -244,8 +246,8 @@ function Runs() {
                     {trafficData?.incidents &&
                       trafficData.incidents.length > 0 && (
                         <div className='flex items-center gap-2'>
-                          <AlertCircle className='h-4 w-4 text-orange-500 flex-shrink-0' />
-                          <span className='text-sm text-orange-600'>
+                          <AlertCircle className='h-4 w-4 text-orange-500 dark:text-orange-400 flex-shrink-0' />
+                          <span className='text-sm text-orange-600 dark:text-orange-400'>
                             {trafficData.incidents.length} incident(s)
                           </span>
                         </div>
