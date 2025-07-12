@@ -10,6 +10,8 @@ import { Card, CardContent } from '../components/ui/card';
 import { isDebugMode } from '../lib/debug';
 import { queryClient } from '../lib/react-query-client';
 
+const activeNavClass = 'bg-primary/10 text-primary text-muted-foreground';
+
 export const Route = createRootRoute({
   component: () => (
     <QueryClientProvider client={queryClient}>
@@ -35,7 +37,13 @@ export const Route = createRootRoute({
                         variant='ghost'
                         className='w-full justify-start'
                       >
-                        <Link to='/' className='flex items-center gap-2'>
+                        <Link
+                          to='/'
+                          className='flex items-center gap-2'
+                          activeProps={{
+                            className: activeNavClass,
+                          }}
+                        >
                           <Home className='h-4 w-4' />
                           Home
                         </Link>
@@ -45,7 +53,13 @@ export const Route = createRootRoute({
                         variant='ghost'
                         className='w-full justify-start'
                       >
-                        <Link to='/runs' className='flex items-center gap-2'>
+                        <Link
+                          to='/runs'
+                          className='flex items-center gap-2'
+                          activeProps={{
+                            className: activeNavClass,
+                          }}
+                        >
                           <Activity className='h-4 w-4' />
                           Current Runs
                         </Link>
@@ -55,7 +69,13 @@ export const Route = createRootRoute({
                         variant='ghost'
                         className='w-full justify-start'
                       >
-                        <Link to='/flights' className='flex items-center gap-2'>
+                        <Link
+                          to='/flights'
+                          className='flex items-center gap-2'
+                          activeProps={{
+                            className: activeNavClass,
+                          }}
+                        >
                           <Plane className='h-4 w-4' />
                           Upcoming Flights
                         </Link>
@@ -65,7 +85,13 @@ export const Route = createRootRoute({
                         variant='ghost'
                         className='w-full justify-start'
                       >
-                        <Link to='/add' className='flex items-center gap-2'>
+                        <Link
+                          to='/add'
+                          className='flex items-center gap-2'
+                          activeProps={{
+                            className: activeNavClass,
+                          }}
+                        >
                           <Plus className='h-4 w-4' />
                           Add Run
                         </Link>
@@ -78,6 +104,9 @@ export const Route = createRootRoute({
                         <Link
                           to='/settings'
                           className='flex items-center gap-2'
+                          activeProps={{
+                            className: activeNavClass,
+                          }}
                         >
                           <Settings className='h-4 w-4' />
                           Settings
@@ -104,7 +133,13 @@ export const Route = createRootRoute({
                 size='sm'
                 className='flex-col h-auto p-3 min-w-[60px]'
               >
-                <Link to='/' className='flex flex-col items-center gap-1'>
+                <Link
+                  to='/'
+                  className='flex flex-col items-center gap-1'
+                  activeProps={{
+                    className: activeNavClass,
+                  }}
+                >
                   <Home className='h-4 w-4' />
                   <span className='text-xs'>Home</span>
                 </Link>
@@ -115,7 +150,13 @@ export const Route = createRootRoute({
                 size='sm'
                 className='flex-col h-auto p-3 min-w-[60px]'
               >
-                <Link to='/runs' className='flex flex-col items-center gap-1'>
+                <Link
+                  to='/runs'
+                  className='flex flex-col items-center gap-1'
+                  activeProps={{
+                    className: activeNavClass,
+                  }}
+                >
                   <Activity className='h-4 w-4' />
                   <span className='text-xs'>Runs</span>
                 </Link>
@@ -126,7 +167,13 @@ export const Route = createRootRoute({
                 size='sm'
                 className='flex-col h-auto p-3 min-w-[60px]'
               >
-                <Link to='/add' className='flex flex-col items-center gap-1'>
+                <Link
+                  to='/add'
+                  className='flex flex-col items-center gap-1'
+                  activeProps={{
+                    className: activeNavClass,
+                  }}
+                >
                   <Plus className='h-4 w-4' />
                   <span className='text-xs'>Add</span>
                 </Link>
@@ -140,6 +187,9 @@ export const Route = createRootRoute({
                 <Link
                   to='/flights'
                   className='flex flex-col items-center gap-1'
+                  activeProps={{
+                    className: activeNavClass,
+                  }}
                 >
                   <Plane className='h-4 w-4' />
                   <span className='text-xs'>Flights</span>
@@ -154,6 +204,9 @@ export const Route = createRootRoute({
                 <Link
                   to='/settings'
                   className='flex flex-col items-center gap-1'
+                  activeProps={{
+                    className: activeNavClass,
+                  }}
                 >
                   <Settings className='h-4 w-4' />
                   <span className='text-xs'>Settings</span>
