@@ -483,24 +483,25 @@ export default function App() {
   };
 
   return (
-    <div className='min-h-screen bg-gray-50 p-4'>
+    <div className='min-h-screen bg-gray-50 p-2 sm:p-4'>
       <div className='max-w-3xl mx-auto'>
-        <div className='mb-8'>
-          <div className='flex items-center justify-between'>
-            <div className='flex items-center gap-4'>
-              <IconLogo className='h-8 w-8' />
-              <h1 className='text-3xl font-bold text-gray-900'>
+        <div className='mb-6 sm:mb-8'>
+          <div className='flex items-center justify-between mb-4'>
+            <div className='flex items-center gap-2 sm:gap-4'>
+              <IconLogo className='h-6 w-6 sm:h-8 sm:w-8' />
+              <h1 className='text-2xl sm:text-3xl font-bold text-gray-900'>
                 Teton Tracker
               </h1>
             </div>
-            <div className='flex items-center gap-2'>
+            <div className='flex items-center gap-1 sm:gap-2'>
               <Button
                 variant='outline'
                 size='sm'
                 onClick={() => setShowDebugInfo(!showDebugInfo)}
+                className='p-2 sm:px-3'
               >
                 <Settings className='h-4 w-4' />
-                Debug
+                <span className='hidden sm:inline ml-2'>Debug</span>
               </Button>
               <Button
                 variant='outline'
@@ -513,22 +514,28 @@ export default function App() {
                     pollingService.stop();
                   }
                 }}
+                className='p-2 sm:px-3'
               >
                 <Activity className='h-4 w-4' />
-                {pollingEnabled ? 'Disable' : 'Enable'} Polling
+                <span className='hidden sm:inline ml-2'>
+                  {pollingEnabled ? 'Disable' : 'Enable'} Polling
+                </span>
               </Button>
               <Button
                 variant='outline'
                 size='sm'
                 onClick={refreshAllData}
                 disabled={runsApiData.isFetching}
+                className='p-2 sm:px-3'
               >
                 <Settings className='h-4 w-4' />
-                {runsApiData.isFetching ? 'Refreshing...' : 'Refresh All'}
+                <span className='hidden sm:inline ml-2'>
+                  {runsApiData.isFetching ? 'Refreshing...' : 'Refresh All'}
+                </span>
               </Button>
             </div>
           </div>
-          <p className='text-gray-600 mt-2'>
+          <p className='text-gray-600 text-sm sm:text-base'>
             Track airport runs with real-time flight and traffic data
           </p>
         </div>
@@ -560,7 +567,7 @@ export default function App() {
                 if (!debugDisplay) return <p>No debug info available</p>;
 
                 return (
-                  <div className='grid grid-cols-2 md:grid-cols-4 gap-4 text-sm'>
+                  <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm'>
                     <div>
                       <p className='font-medium'>Polling Status</p>
                       <p
@@ -604,7 +611,7 @@ export default function App() {
                       <p>{queryClient.getQueryCache().getAll().length}</p>
                     </div>
                     {debugDisplay.apiCallsBlocked > 0 && (
-                      <div className='col-span-2'>
+                      <div className='sm:col-span-2 lg:col-span-2'>
                         <p className='font-medium'>API Calls Blocked</p>
                         <p className='text-yellow-600'>
                           {debugDisplay.apiCallsBlocked} (Debug Mode)
@@ -612,7 +619,7 @@ export default function App() {
                       </div>
                     )}
                     {debugDisplay.errors.length > 0 && (
-                      <div className='col-span-4'>
+                      <div className='sm:col-span-2 lg:col-span-4'>
                         <p className='font-medium'>Recent Errors</p>
                         <div className='text-xs text-red-600 mt-1'>
                           {debugDisplay.errors.map((error, index) => (
@@ -663,11 +670,11 @@ export default function App() {
           onValueChange={setCurrentTab}
           className='w-full'
         >
-          <TabsList className='grid w-full grid-cols-2'>
-            <TabsTrigger className='cursor-pointer' value='runs'>
+          <TabsList className='grid w-full grid-cols-2 h-12'>
+            <TabsTrigger className='cursor-pointer py-2' value='runs'>
               Current Runs
             </TabsTrigger>
-            <TabsTrigger className='cursor-pointer' value='add'>
+            <TabsTrigger className='cursor-pointer py-2' value='add'>
               Add New Run
             </TabsTrigger>
           </TabsList>
@@ -675,11 +682,15 @@ export default function App() {
           <TabsContent value='runs' className='mt-6'>
             {runs.length === 0 ? (
               <Card>
-                <CardContent className='p-6 text-center'>
-                  <Plane className='h-12 w-12 text-gray-400 mx-auto mb-4' />
-                  <p className='text-gray-500'>
+                <CardContent className='p-8 text-center'>
+                  <Plane className='h-16 w-16 text-gray-400 mx-auto mb-6' />
+                  <p className='text-gray-500 text-lg mb-4'>
                     No runs scheduled. Add your first run to get started!
                   </p>
+                  <Button onClick={() => setCurrentTab('add')} className='mt-2'>
+                    <Plus className='h-4 w-4 mr-2' />
+                    Add Your First Run
+                  </Button>
                 </CardContent>
               </Card>
             ) : (
@@ -721,24 +732,24 @@ export default function App() {
                           </div>
                         </CardHeader>
                         <CardContent>
-                          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                            <div className='space-y-2'>
+                          <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
+                            <div className='space-y-3'>
                               <div className='flex items-center gap-2'>
-                                <Clock className='h-4 w-4 text-gray-500' />
+                                <Clock className='h-4 w-4 text-gray-500 flex-shrink-0' />
                                 <span className='text-sm font-medium'>
                                   {new Date(run.scheduledTime).toLocaleString()}
                                 </span>
                               </div>
-                              <div className='flex items-center gap-2'>
-                                <MapPin className='h-4 w-4 text-gray-500' />
+                              <div className='flex items-start gap-2'>
+                                <MapPin className='h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5' />
                                 <span className='text-sm'>
                                   {run.type === 'pickup' ? 'Pickup' : 'Dropoff'}{' '}
                                   • {run.pickupLocation} → {run.dropoffLocation}
                                 </span>
                               </div>
                               {run.notes && (
-                                <div className='flex items-center gap-2'>
-                                  <FileText className='h-4 w-4 text-gray-500' />
+                                <div className='flex items-start gap-2'>
+                                  <FileText className='h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5' />
                                   <span className='text-sm text-gray-600'>
                                     {run.notes}
                                   </span>
@@ -746,10 +757,10 @@ export default function App() {
                               )}
                             </div>
 
-                            <div className='space-y-2'>
+                            <div className='space-y-3'>
                               {flightStatus && (
                                 <div className='flex items-center gap-2'>
-                                  <Plane className='h-4 w-4 text-gray-500' />
+                                  <Plane className='h-4 w-4 text-gray-500 flex-shrink-0' />
                                   <span className='text-sm'>
                                     Flight: {flightStatus.status}
                                     {flightStatus.delay &&
@@ -762,8 +773,8 @@ export default function App() {
                                 </div>
                               )}
                               {trafficData && (
-                                <div className='flex items-center gap-2'>
-                                  <Navigation className='h-4 w-4 text-gray-500' />
+                                <div className='flex items-start gap-2'>
+                                  <Navigation className='h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5' />
                                   <span className='text-sm'>
                                     Traffic: {trafficData.duration} min •{' '}
                                     {trafficData.distance} •{' '}
@@ -784,7 +795,7 @@ export default function App() {
                               {trafficData?.incidents &&
                                 trafficData.incidents.length > 0 && (
                                   <div className='flex items-center gap-2'>
-                                    <AlertCircle className='h-4 w-4 text-orange-500' />
+                                    <AlertCircle className='h-4 w-4 text-orange-500 flex-shrink-0' />
                                     <span className='text-sm text-orange-600'>
                                       {trafficData.incidents.length} incident(s)
                                     </span>
@@ -793,12 +804,13 @@ export default function App() {
                             </div>
                           </div>
 
-                          <div className='flex gap-2 mt-4'>
+                          <div className='flex flex-wrap gap-2 mt-4'>
                             <Button
                               variant='outline'
                               size='sm'
                               onClick={() => refreshRunData(run)}
                               disabled={isLoading}
+                              className='min-w-0'
                             >
                               {isLoading ? 'Loading...' : 'Refresh Data'}
                             </Button>
@@ -808,6 +820,7 @@ export default function App() {
                                 onClick={() =>
                                   updateRunStatus(run.id, 'active')
                                 }
+                                className='min-w-0'
                               >
                                 Start Run
                               </Button>
@@ -819,6 +832,7 @@ export default function App() {
                                 onClick={() =>
                                   updateRunStatus(run.id, 'completed')
                                 }
+                                className='min-w-0'
                               >
                                 Complete Run
                               </Button>
@@ -828,6 +842,7 @@ export default function App() {
                                 size='sm'
                                 variant='outline'
                                 onClick={() => pollingService.triggerPoll()}
+                                className='min-w-0'
                               >
                                 Manual Poll
                               </Button>
@@ -974,7 +989,7 @@ export default function App() {
                 </CardDescription>
               </CardHeader>
               <CardContent className='space-y-4'>
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
                   <div className='space-y-2'>
                     <Label htmlFor='flight-number'>Flight Number *</Label>
                     <Input
@@ -1057,7 +1072,7 @@ export default function App() {
                       </p>
                     )}
                   </div>
-                  <div className='space-y-2'>
+                  <div className='space-y-2 sm:col-span-2'>
                     <Label htmlFor='pickup-location'>Pickup Location *</Label>
                     <Input
                       id='pickup-location'
@@ -1079,7 +1094,7 @@ export default function App() {
                       </p>
                     )}
                   </div>
-                  <div className='space-y-2'>
+                  <div className='space-y-2 sm:col-span-2'>
                     <Label htmlFor='dropoff-location'>Dropoff Location *</Label>
                     <Input
                       id='dropoff-location'
@@ -1127,7 +1142,7 @@ export default function App() {
                     <Label htmlFor='type'>Run Type *</Label>
                     <select
                       id='type'
-                      className='w-full p-2 border border-gray-300 rounded-md'
+                      className='w-full p-2 border border-gray-300 rounded-md h-10'
                       value={newRun.type || 'pickup'}
                       onChange={e =>
                         setNewRun(prev => ({
@@ -1140,7 +1155,7 @@ export default function App() {
                       <option value='dropoff'>Dropoff (from airport)</option>
                     </select>
                   </div>
-                  <div className='space-y-2 md:col-span-2'>
+                  <div className='space-y-2 sm:col-span-2'>
                     <Label htmlFor='notes'>Notes (Optional)</Label>
                     <Input
                       id='notes'
@@ -1158,10 +1173,10 @@ export default function App() {
                 </div>
                 <Button
                   onClick={addRun}
-                  className='w-full'
+                  className='w-full h-12 text-lg'
                   disabled={runsApiData.isLoading}
                 >
-                  <Plus className='h-4 w-4 mr-2' />
+                  <Plus className='h-5 w-5 mr-2' />
                   Add Run
                 </Button>
               </CardContent>

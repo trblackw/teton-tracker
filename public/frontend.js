@@ -51539,18 +51539,35 @@ var AirportCodeSchema,
     return TrafficDataSchema.parse(data);
   },
   transformOpenSkyToFlightStatus = (openSkyData, flightNumber) => {
+    let status = 'Unknown';
+    if (openSkyData.firstSeen && openSkyData.lastSeen) {
+      const currentTime = Math.floor(Date.now() / 1000);
+      const timeSinceLastSeen = currentTime - openSkyData.lastSeen;
+      if (timeSinceLastSeen < 300) {
+        status = 'Departed';
+      } else if (openSkyData.estArrivalAirport) {
+        status = 'Arrived';
+      } else {
+        status = 'Departed';
+      }
+    } else if (openSkyData.firstSeen) {
+      status = 'Boarding';
+    }
     return FlightStatusSchema.parse({
       flightNumber,
-      status: 'Unknown',
+      status,
       scheduledDeparture: undefined,
       actualDeparture: openSkyData.firstSeen
-        ? new Date(openSkyData.firstSeen * 1000).toISOString()
+        ? new Date(openSkyData.firstSeen * 1000).toTimeString().substring(0, 5)
         : undefined,
       scheduledArrival: undefined,
       actualArrival: openSkyData.lastSeen
-        ? new Date(openSkyData.lastSeen * 1000).toISOString()
+        ? new Date(openSkyData.lastSeen * 1000).toTimeString().substring(0, 5)
         : undefined,
       delay: undefined,
+      gate: undefined,
+      terminal: undefined,
+      aircraft: undefined,
       lastUpdated: new Date(),
     });
   },
@@ -51829,6 +51846,9 @@ class OpenSkyFlightService {
   }
   async searchFlightByCallsign(flightNumber) {
     const cleanFlightNumber = flightNumber.replace(/\s+/g, '').toUpperCase();
+    console.log(
+      `\uD83D\uDD0D Searching OpenSky for flight: ${cleanFlightNumber}`
+    );
     const now = Math.floor(Date.now() / 1000);
     const oneDayAgo = now - 86400;
     try {
@@ -51841,22 +51861,36 @@ class OpenSkyFlightService {
       }
       const response = await fetch(statesUrl, fetchOptions);
       if (!response.ok) {
+        console.error(
+          `❌ OpenSky API error: ${response.status} ${response.statusText}`
+        );
         throw new Error(
           `OpenSky API error: ${response.status} ${response.statusText}`
         );
       }
       const data = await response.json();
+      console.log(
+        `\uD83D\uDCCA OpenSky returned ${data.states?.length || 0} current flights`
+      );
       if (data.states && Array.isArray(data.states)) {
+        let checkedCount = 0;
         for (const state of data.states) {
           const callsign = state[1]?.trim()?.toUpperCase();
-          if (
-            callsign &&
-            this.matchesFlightNumber(callsign, cleanFlightNumber)
-          ) {
-            return this.convertStateToFlightData(state);
+          if (callsign) {
+            checkedCount++;
+            if (this.matchesFlightNumber(callsign, cleanFlightNumber)) {
+              console.log(`✅ Found matching flight: ${callsign}`);
+              return this.convertStateToFlightData(state);
+            }
           }
         }
+        console.log(
+          `\uD83D\uDD0D Checked ${checkedCount} flights, no match found for ${cleanFlightNumber}`
+        );
       }
+      console.log(
+        `\uD83D\uDD50 Searching historical data for ${cleanFlightNumber}`
+      );
       return await this.searchHistoricalFlights(
         cleanFlightNumber,
         oneDayAgo,
@@ -51864,8 +51898,15 @@ class OpenSkyFlightService {
       );
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
+        console.error(
+          `⏱️ OpenSky API request timed out for ${cleanFlightNumber}`
+        );
         throw new Error('OpenSky API request timed out');
       }
+      console.error(
+        `❌ OpenSky search failed for ${cleanFlightNumber}:`,
+        error
+      );
       throw error;
     }
   }
@@ -51927,6 +51968,7 @@ class OpenSkyFlightService {
     );
   }
   createNotFoundStatus(flightNumber) {
+    console.log(`❌ Flight ${flightNumber} not found in OpenSky database`);
     return {
       flightNumber,
       status: 'Unknown',
@@ -61072,7 +61114,7 @@ function App() {
   return /* @__PURE__ */ jsx_dev_runtime6.jsxDEV(
     'div',
     {
-      className: 'min-h-screen bg-gray-50 p-4',
+      className: 'min-h-screen bg-gray-50 p-2 sm:p-4',
       children: /* @__PURE__ */ jsx_dev_runtime6.jsxDEV(
         'div',
         {
@@ -61081,22 +61123,22 @@ function App() {
             /* @__PURE__ */ jsx_dev_runtime6.jsxDEV(
               'div',
               {
-                className: 'mb-8',
+                className: 'mb-6 sm:mb-8',
                 children: [
                   /* @__PURE__ */ jsx_dev_runtime6.jsxDEV(
                     'div',
                     {
-                      className: 'flex items-center justify-between',
+                      className: 'flex items-center justify-between mb-4',
                       children: [
                         /* @__PURE__ */ jsx_dev_runtime6.jsxDEV(
                           'div',
                           {
-                            className: 'flex items-center gap-4',
+                            className: 'flex items-center gap-2 sm:gap-4',
                             children: [
                               /* @__PURE__ */ jsx_dev_runtime6.jsxDEV(
                                 IconLogo,
                                 {
-                                  className: 'h-8 w-8',
+                                  className: 'h-6 w-6 sm:h-8 sm:w-8',
                                 },
                                 undefined,
                                 false,
@@ -61106,7 +61148,8 @@ function App() {
                               /* @__PURE__ */ jsx_dev_runtime6.jsxDEV(
                                 'h1',
                                 {
-                                  className: 'text-3xl font-bold text-gray-900',
+                                  className:
+                                    'text-2xl sm:text-3xl font-bold text-gray-900',
                                   children: 'Teton Tracker',
                                 },
                                 undefined,
@@ -61124,7 +61167,7 @@ function App() {
                         /* @__PURE__ */ jsx_dev_runtime6.jsxDEV(
                           'div',
                           {
-                            className: 'flex items-center gap-2',
+                            className: 'flex items-center gap-1 sm:gap-2',
                             children: [
                               /* @__PURE__ */ jsx_dev_runtime6.jsxDEV(
                                 Button2,
@@ -61133,6 +61176,7 @@ function App() {
                                   size: 'sm',
                                   onClick: () =>
                                     setShowDebugInfo(!showDebugInfo),
+                                  className: 'p-2 sm:px-3',
                                   children: [
                                     /* @__PURE__ */ jsx_dev_runtime6.jsxDEV(
                                       Settings2,
@@ -61144,7 +61188,17 @@ function App() {
                                       undefined,
                                       this
                                     ),
-                                    'Debug',
+                                    /* @__PURE__ */ jsx_dev_runtime6.jsxDEV(
+                                      'span',
+                                      {
+                                        className: 'hidden sm:inline ml-2',
+                                        children: 'Debug',
+                                      },
+                                      undefined,
+                                      false,
+                                      undefined,
+                                      this
+                                    ),
                                   ],
                                 },
                                 undefined,
@@ -61165,6 +61219,7 @@ function App() {
                                       pollingService.stop();
                                     }
                                   },
+                                  className: 'p-2 sm:px-3',
                                   children: [
                                     /* @__PURE__ */ jsx_dev_runtime6.jsxDEV(
                                       Activity,
@@ -61176,8 +61231,20 @@ function App() {
                                       undefined,
                                       this
                                     ),
-                                    pollingEnabled ? 'Disable' : 'Enable',
-                                    ' Polling',
+                                    /* @__PURE__ */ jsx_dev_runtime6.jsxDEV(
+                                      'span',
+                                      {
+                                        className: 'hidden sm:inline ml-2',
+                                        children: [
+                                          pollingEnabled ? 'Disable' : 'Enable',
+                                          ' Polling',
+                                        ],
+                                      },
+                                      undefined,
+                                      true,
+                                      undefined,
+                                      this
+                                    ),
                                   ],
                                 },
                                 undefined,
@@ -61192,6 +61259,7 @@ function App() {
                                   size: 'sm',
                                   onClick: refreshAllData,
                                   disabled: runsApiData.isFetching,
+                                  className: 'p-2 sm:px-3',
                                   children: [
                                     /* @__PURE__ */ jsx_dev_runtime6.jsxDEV(
                                       Settings2,
@@ -61203,9 +61271,19 @@ function App() {
                                       undefined,
                                       this
                                     ),
-                                    runsApiData.isFetching
-                                      ? 'Refreshing...'
-                                      : 'Refresh All',
+                                    /* @__PURE__ */ jsx_dev_runtime6.jsxDEV(
+                                      'span',
+                                      {
+                                        className: 'hidden sm:inline ml-2',
+                                        children: runsApiData.isFetching
+                                          ? 'Refreshing...'
+                                          : 'Refresh All',
+                                      },
+                                      undefined,
+                                      false,
+                                      undefined,
+                                      this
+                                    ),
                                   ],
                                 },
                                 undefined,
@@ -61230,7 +61308,7 @@ function App() {
                   /* @__PURE__ */ jsx_dev_runtime6.jsxDEV(
                     'p',
                     {
-                      className: 'text-gray-600 mt-2',
+                      className: 'text-gray-600 text-sm sm:text-base',
                       children:
                         'Track airport runs with real-time flight and traffic data',
                     },
@@ -61352,7 +61430,7 @@ function App() {
                               'div',
                               {
                                 className:
-                                  'grid grid-cols-2 md:grid-cols-4 gap-4 text-sm',
+                                  'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm',
                                 children: [
                                   /* @__PURE__ */ jsx_dev_runtime6.jsxDEV(
                                     'div',
@@ -61558,7 +61636,8 @@ function App() {
                                     /* @__PURE__ */ jsx_dev_runtime6.jsxDEV(
                                       'div',
                                       {
-                                        className: 'col-span-2',
+                                        className:
+                                          'sm:col-span-2 lg:col-span-2',
                                         children: [
                                           /* @__PURE__ */ jsx_dev_runtime6.jsxDEV(
                                             'p',
@@ -61596,7 +61675,8 @@ function App() {
                                     /* @__PURE__ */ jsx_dev_runtime6.jsxDEV(
                                       'div',
                                       {
-                                        className: 'col-span-4',
+                                        className:
+                                          'sm:col-span-2 lg:col-span-4',
                                         children: [
                                           /* @__PURE__ */ jsx_dev_runtime6.jsxDEV(
                                             'p',
@@ -62132,8 +62212,8 @@ function App() {
                                                                           'pickup'
                                                                             ? 'Pickup'
                                                                             : 'Dropoff',
-                                                                          ' •',
                                                                           ' ',
+                                                                          '• ',
                                                                           run.pickupLocation,
                                                                           ' → ',
                                                                           run.dropoffLocation,
@@ -63732,5 +63812,5 @@ if (undefined) {
   import_client.createRoot(elem).render(app);
 }
 
-//# debugId=F1E132248320766164756E2164756E21
+//# debugId=D5685BE743DEEE2564756E2164756E21
 //# sourceMappingURL=frontend.js.map
