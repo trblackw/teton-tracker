@@ -91,7 +91,7 @@ export function DateTimePicker({
           type='time'
           value={timeValue}
           onChange={e => handleTimeChange(e.target.value)}
-          className='w-24'
+          className='w-32 flex-shrink-0'
           disabled={disabled}
         />
       </div>

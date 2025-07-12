@@ -395,11 +395,7 @@ function AddRun() {
                         Flight Number
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder='e.g., UA123'
-                          {...field}
-                          className='bg-background'
-                        />
+                        <Input placeholder='e.g., UA123' {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -412,11 +408,7 @@ function AddRun() {
                     <FormItem>
                       <FormLabel>Airline</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder='e.g., United Airlines'
-                          {...field}
-                          className='bg-background'
-                        />
+                        <Input placeholder='e.g., United Airlines' {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -432,11 +424,7 @@ function AddRun() {
                     <FormItem>
                       <FormLabel>Departure Airport</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder='e.g., DEN'
-                          {...field}
-                          className='bg-background'
-                        />
+                        <Input placeholder='e.g., DEN' {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -449,11 +437,7 @@ function AddRun() {
                     <FormItem>
                       <FormLabel>Arrival Airport</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder='e.g., JAC'
-                          {...field}
-                          className='bg-background'
-                        />
+                        <Input placeholder='e.g., JAC' {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -475,7 +459,6 @@ function AddRun() {
                         <Input
                           placeholder='e.g., Jackson Hole Airport'
                           {...field}
-                          className='bg-background'
                         />
                       </FormControl>
                       <FormMessage />
@@ -495,7 +478,6 @@ function AddRun() {
                         <Input
                           placeholder='e.g., Snow King Resort'
                           {...field}
-                          className='bg-background'
                         />
                       </FormControl>
                       <FormMessage />
@@ -613,7 +595,7 @@ function AddRun() {
                         value={field.value}
                       >
                         <FormControl>
-                          <SelectTrigger className='bg-background'>
+                          <SelectTrigger>
                             <SelectValue placeholder='Select run type' />
                           </SelectTrigger>
                         </FormControl>
@@ -638,7 +620,6 @@ function AddRun() {
                       <Input
                         placeholder='e.g., VIP guest, special instructions'
                         {...field}
-                        className='bg-background'
                       />
                     </FormControl>
                     <FormMessage />
