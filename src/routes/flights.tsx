@@ -220,47 +220,49 @@ function UpcomingFlights() {
 
   return (
     <div className='space-y-6'>
-      {/* Header section stays the same */}
       <div className='flex items-center justify-between'>
         <div>
           <h2 className='text-2xl font-bold text-foreground'>
             Upcoming Flights
           </h2>
-          <p className='text-muted-foreground mt-1'>
-            Next{' '}
-            <Select
-              value={flightLimit.toString()}
-              onValueChange={value => setFlightLimit(parseInt(value))}
-            >
-              <SelectTrigger className='inline-flex h-auto w-auto border-0 bg-transparent p-0 font-bold text-foreground underline hover:text-blue-500'>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='5'>5</SelectItem>
-                <SelectItem value='10'>10</SelectItem>
-                <SelectItem value='20'>20</SelectItem>
-              </SelectContent>
-            </Select>{' '}
-            departures from{' '}
-            <Button
-              variant='link'
-              className='font-bold text-foreground px-0 underline hover:text-blue-500'
-            >
-              <a href='/settings'>{homeAirport}</a>
-            </Button>
+          <div className='mt-1 min-h-[3.5rem]'>
+            {' '}
+            <p className='text-muted-foreground'>
+              Next{' '}
+              <Select
+                value={flightLimit.toString()}
+                onValueChange={value => setFlightLimit(parseInt(value))}
+              >
+                <SelectTrigger className='inline-flex h-auto w-auto border-0 bg-transparent p-0 font-bold text-foreground underline hover:text-blue-500'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='5'>5</SelectItem>
+                  <SelectItem value='10'>10</SelectItem>
+                  <SelectItem value='20'>20</SelectItem>
+                </SelectContent>
+              </Select>{' '}
+              departures from{' '}
+              <Button
+                variant='link'
+                className='font-bold text-foreground px-0 underline hover:text-blue-500'
+              >
+                <a href='/settings'>{homeAirport}</a>
+              </Button>
+            </p>
             {selectedAirline && (
-              <span className='text-foreground/90 block'>
+              <span className='text-foreground/90 block text-sm'>
                 {getAirlineName(selectedAirline)}
               </span>
             )}
             {searchTerm && (
-              <span className='text-foreground/90 block'>
+              <span className='text-foreground/90 block text-sm'>
                 Searching{' '}
                 {searchMode === 'selected' ? 'selected flights' : 'all flights'}{' '}
                 for: {searchTerm}
               </span>
             )}
-          </p>
+          </div>
         </div>
         <Button
           variant='outline'
@@ -276,15 +278,15 @@ function UpcomingFlights() {
       </div>
 
       {/* Collapsible Flight Search */}
-      <Card>
+      <Card className='pb-2 pt-3'>
         <CardHeader
           className='cursor-pointer hover:bg-muted/50 transition-colors'
           onClick={() => setIsSearchExpanded(!isSearchExpanded)}
         >
           <div className='flex items-center justify-between'>
             <div>
-              <CardTitle className='flex items-center gap-2'>
-                <Search className='h-5 w-5' />
+              <CardTitle className='flex items-center gap-2 mb-1'>
+                <Search className='h-5 w-5 text-muted-foreground' />
                 Search Flights
                 {searchTerm && (
                   <span className='text-sm font-normal text-muted-foreground'>
@@ -346,15 +348,15 @@ function UpcomingFlights() {
       </Card>
 
       {/* Collapsible Airline Filter */}
-      <Card>
+      <Card className='pb-2 pt-3'>
         <CardHeader
           className='cursor-pointer hover:bg-muted/50 transition-colors'
           onClick={() => setIsFilterExpanded(!isFilterExpanded)}
         >
           <div className='flex items-center justify-between'>
             <div>
-              <CardTitle className='flex items-center gap-2'>
-                <Filter className='h-5 w-5' />
+              <CardTitle className='flex items-center gap-2 mb-1'>
+                <Filter className='h-5 w-5 text-muted-foreground' />
                 Filter by Airline
                 {selectedAirline && (
                   <span className='text-sm font-normal text-muted-foreground'>
