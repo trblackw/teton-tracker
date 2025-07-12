@@ -11,7 +11,7 @@ import {
   Search,
   X,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { AirlineCombobox } from '../components/ui/airline-combobox';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -33,7 +33,6 @@ import {
 import airlinesData from '../data/airlines.json';
 import airportsData from '../data/airports-comprehensive.json';
 import { preferencesApi } from '../lib/api/client';
-import { imageCache } from '../lib/image-cache';
 import { getFlightServiceWithConfig } from '../lib/services/flight-service';
 
 interface Airline {
@@ -62,19 +61,6 @@ function UpcomingFlights() {
   });
 
   const homeAirport = preferences?.homeAirport || '';
-
-  // Preload airline logos when component mounts
-  useEffect(() => {
-    const logoUrls = airlines
-      .filter(airline => airline.logo && airline.logo.trim())
-      .map(airline => airline.logo);
-
-    if (logoUrls.length > 0) {
-      imageCache.preloadImages(logoUrls).catch(error => {
-        console.warn('Some airline logos failed to preload:', error);
-      });
-    }
-  }, []);
 
   // Query for upcoming flights
   const {

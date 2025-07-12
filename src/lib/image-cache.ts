@@ -42,8 +42,7 @@ class ImageCache {
         reject(new Error(`Failed to load image: ${url}`));
       };
 
-      // Set crossOrigin to handle CORS issues
-      img.crossOrigin = 'anonymous';
+      // Don't set crossOrigin to avoid CORS issues with external images
       img.src = url;
     });
   }
