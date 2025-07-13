@@ -186,7 +186,7 @@ export interface UpcomingFlightsResponse {
 }
 
 export class FlightService {
-  private timeout: number = 3000;
+  private timeout: number = 15000;
   private apiKey: string | null = null;
   private forceMockData: boolean = false;
 
@@ -204,7 +204,7 @@ export class FlightService {
     cacheTimeout?: number
   ) {
     this.apiKey = apiKey || null;
-    this.timeout = timeout || 3000;
+    this.timeout = timeout || 15000;
     this.forceMockData = forceMockData || false;
     this.cacheTimeout = cacheTimeout || 2 * 60 * 1000; // Default 2 minutes
 
