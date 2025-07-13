@@ -1,13 +1,10 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { createRootRoute, Link, Outlet } from '@tanstack/react-router';
-import { TanStackRouterDevtools } from '@tanstack/router-devtools';
 import { Activity, Plane, Plus, Settings } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '../components/theme-provider';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
-import { isDebugMode } from '../lib/debug';
 import { queryClient } from '../lib/react-query-client';
 
 const activeNavClass = 'bg-primary/10 text-primary text-muted-foreground';
@@ -16,83 +13,83 @@ export const Route = createRootRoute({
   component: () => (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <div className='min-h-screen bg-background'>
-          <div className='container mx-auto px-4 py-4'>
-            <div className='flex flex-col lg:flex-row lg:gap-8'>
+        <div className="min-h-screen bg-background">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex flex-col lg:flex-row lg:gap-8">
               {/* Desktop Navigation */}
-              <aside className='hidden lg:block w-64 shrink-0'>
-                <Card className='sticky top-4 bg-card'>
-                  <CardContent className='p-4'>
-                    <div className='flex items-center gap-2 mb-6'>
-                      <div className='p-2 bg-primary rounded-lg'>
-                        <Plane className='h-5 w-5 text-primary-foreground' />
+              <aside className="hidden lg:block w-64 shrink-0">
+                <Card className="sticky top-4 bg-card">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-6">
+                      <div className="p-2 bg-primary rounded-lg">
+                        <Plane className="h-5 w-5 text-primary-foreground" />
                       </div>
-                      <h1 className='text-xl font-bold text-foreground'>
+                      <h1 className="text-xl font-bold text-foreground">
                         Teton Tracker
                       </h1>
                     </div>
-                    <nav className='space-y-2'>
+                    <nav className="space-y-2">
                       <Button
                         asChild
-                        variant='ghost'
-                        className='w-full justify-start'
+                        variant="ghost"
+                        className="w-full justify-start"
                       >
                         <Link
-                          to='/runs'
-                          className='flex items-center gap-2'
+                          to="/runs"
+                          className="flex items-center gap-2"
                           activeProps={{
                             className: activeNavClass,
                           }}
                         >
-                          <Activity className='h-4 w-4' />
+                          <Activity className="h-4 w-4" />
                           Current Runs
                         </Link>
                       </Button>
                       <Button
                         asChild
-                        variant='ghost'
-                        className='w-full justify-start'
+                        variant="ghost"
+                        className="w-full justify-start"
                       >
                         <Link
-                          to='/flights'
-                          className='flex items-center gap-2'
+                          to="/flights"
+                          className="flex items-center gap-2"
                           activeProps={{
                             className: activeNavClass,
                           }}
                         >
-                          <Plane className='h-4 w-4' />
+                          <Plane className="h-4 w-4" />
                           Upcoming Flights
                         </Link>
                       </Button>
                       <Button
                         asChild
-                        variant='ghost'
-                        className='w-full justify-start'
+                        variant="ghost"
+                        className="w-full justify-start"
                       >
                         <Link
-                          to='/add'
-                          className='flex items-center gap-2'
+                          to="/add"
+                          className="flex items-center gap-2"
                           activeProps={{
                             className: activeNavClass,
                           }}
                         >
-                          <Plus className='h-4 w-4' />
+                          <Plus className="h-4 w-4" />
                           Add Run
                         </Link>
                       </Button>
                       <Button
                         asChild
-                        variant='ghost'
-                        className='w-full justify-start'
+                        variant="ghost"
+                        className="w-full justify-start"
                       >
                         <Link
-                          to='/settings'
-                          className='flex items-center gap-2'
+                          to="/settings"
+                          className="flex items-center gap-2"
                           activeProps={{
                             className: activeNavClass,
                           }}
                         >
-                          <Settings className='h-4 w-4' />
+                          <Settings className="h-4 w-4" />
                           Settings
                         </Link>
                       </Button>
@@ -102,92 +99,92 @@ export const Route = createRootRoute({
               </aside>
 
               {/* Main Content */}
-              <main className='flex-1 lg:max-w-4xl pb-20 lg:pb-0'>
+              <main className="flex-1 lg:max-w-4xl pb-20 lg:pb-0">
                 <Outlet />
               </main>
             </div>
           </div>
 
           {/* Mobile Navigation */}
-          <div className='lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-sm'>
-            <nav className='flex items-center justify-center gap-1 p-2'>
+          <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-sm">
+            <nav className="flex items-center justify-center gap-1 p-2">
               <Button
                 asChild
-                variant='ghost'
-                size='sm'
-                className='flex-col h-auto p-3 min-w-[60px]'
+                variant="ghost"
+                size="sm"
+                className="flex-col h-auto p-3 min-w-[60px]"
               >
                 <Link
-                  to='/runs'
-                  className='flex flex-col items-center gap-1'
+                  to="/runs"
+                  className="flex flex-col items-center gap-1"
                   activeProps={{
                     className: activeNavClass,
                   }}
                 >
-                  <Activity className='h-4 w-4' />
-                  <span className='text-xs'>Runs</span>
+                  <Activity className="h-4 w-4" />
+                  <span className="text-xs">Runs</span>
                 </Link>
               </Button>
               <Button
                 asChild
-                variant='ghost'
-                size='sm'
-                className='flex-col h-auto p-3 min-w-[60px]'
+                variant="ghost"
+                size="sm"
+                className="flex-col h-auto p-3 min-w-[60px]"
               >
                 <Link
-                  to='/add'
-                  className='flex flex-col items-center gap-1'
+                  to="/add"
+                  className="flex flex-col items-center gap-1"
                   activeProps={{
                     className: activeNavClass,
                   }}
                 >
-                  <Plus className='h-4 w-4' />
-                  <span className='text-xs'>Add</span>
+                  <Plus className="h-4 w-4" />
+                  <span className="text-xs">Add</span>
                 </Link>
               </Button>
               <Button
                 asChild
-                variant='ghost'
-                size='sm'
-                className='flex-col h-auto p-3 min-w-[60px]'
+                variant="ghost"
+                size="sm"
+                className="flex-col h-auto p-3 min-w-[60px]"
               >
                 <Link
-                  to='/flights'
-                  className='flex flex-col items-center gap-1'
+                  to="/flights"
+                  className="flex flex-col items-center gap-1"
                   activeProps={{
                     className: activeNavClass,
                   }}
                 >
-                  <Plane className='h-4 w-4' />
-                  <span className='text-xs'>Flights</span>
+                  <Plane className="h-4 w-4" />
+                  <span className="text-xs">Flights</span>
                 </Link>
               </Button>
               <Button
                 asChild
-                variant='ghost'
-                size='sm'
-                className='flex-col h-auto p-3 min-w-[60px]'
+                variant="ghost"
+                size="sm"
+                className="flex-col h-auto p-3 min-w-[60px]"
               >
                 <Link
-                  to='/settings'
-                  className='flex flex-col items-center gap-1'
+                  to="/settings"
+                  className="flex flex-col items-center gap-1"
                   activeProps={{
                     className: activeNavClass,
                   }}
                 >
-                  <Settings className='h-4 w-4' />
-                  <span className='text-xs'>Settings</span>
+                  <Settings className="h-4 w-4" />
+                  <span className="text-xs">Settings</span>
                 </Link>
               </Button>
             </nav>
           </div>
 
           {/* Add bottom padding for mobile navigation */}
-          <div className='lg:hidden h-16' />
+          <div className="lg:hidden h-16" />
 
           {/* Toast Notifications */}
           <Toaster
-            position='bottom-center'
+            position="bottom-center"
             toastOptions={{
               style: {
                 background: 'hsl(var(--background))',
@@ -195,18 +192,14 @@ export const Route = createRootRoute({
                 border: '1px solid hsl(var(--border))',
               },
             }}
-            theme='system'
+            theme="system"
             richColors
             closeButton
-            offset='100px'
+            offset="100px"
             expand={false}
             visibleToasts={3}
           />
-
-          {/* Router Devtools - only show in debug mode */}
-          {isDebugMode() && <TanStackRouterDevtools />}
         </div>
-        {isDebugMode() && <ReactQueryDevtools initialIsOpen={false} />}
       </ThemeProvider>
     </QueryClientProvider>
   ),

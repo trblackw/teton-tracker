@@ -5,18 +5,20 @@
 
 // Check if debug mode is enabled
 export const isDebugMode = (): boolean => {
-  // Check multiple ways debug can be enabled
-  const browserDebug =
-    typeof window !== 'undefined' &&
-    (window.location.search.includes('debug=true') ||
-      window.localStorage.getItem('debug') === 'true');
+  const isLocalhost = Boolean(
+    window?.location?.hostname === 'localhost' ||
+      window?.location?.hostname === '127.0.0.1' ||
+      window?.location?.hostname === '' || // blank hostname edge case
+      // IPv6 localhost
+      window?.location?.hostname === '[::1]'
+  );
 
   // Only enable via explicit environment variables, not just development mode
   const envDebug =
     typeof process !== 'undefined' &&
     (process.env.DEBUG === 'true' || process.env.BUN_DEBUG === 'true');
 
-  return browserDebug || envDebug;
+  return isLocalhost || envDebug;
 };
 
 // Enable debug mode via localStorage (for runtime toggling)
