@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import * as notificationsApi from './api/notifications';
 import * as preferencesApi from './api/preferences';
 import * as runsApi from './api/runs';
 import { initializeSchema } from './lib/db';
@@ -97,6 +98,52 @@ async function startApiServer() {
             : request.method === 'PUT'
               ? await preferencesApi.PUT(request)
               : new Response('Method not allowed', { status: 405 });
+
+        // Add CORS headers to response
+        const headers = new Headers(response.headers);
+        Object.entries(corsHeaders).forEach(([key, value]) => {
+          headers.set(key, value);
+        });
+
+        return new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers,
+        });
+      }
+
+      // Notifications API routes
+      if (url.pathname === '/api/notifications') {
+        const response =
+          request.method === 'GET'
+            ? await notificationsApi.GET(request)
+            : request.method === 'POST'
+              ? await notificationsApi.POST(request)
+              : request.method === 'PUT'
+                ? await notificationsApi.PUT(request)
+                : request.method === 'DELETE'
+                  ? await notificationsApi.DELETE(request)
+                  : new Response('Method not allowed', { status: 405 });
+
+        // Add CORS headers to response
+        const headers = new Headers(response.headers);
+        Object.entries(corsHeaders).forEach(([key, value]) => {
+          headers.set(key, value);
+        });
+
+        return new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers,
+        });
+      }
+
+      // Notifications stats endpoint
+      if (url.pathname === '/api/notifications/stats') {
+        const response =
+          request.method === 'GET'
+            ? await notificationsApi.getStats(request)
+            : new Response('Method not allowed', { status: 405 });
 
         // Add CORS headers to response
         const headers = new Headers(response.headers);

@@ -1,3 +1,9 @@
+import {
+  type CreateNotificationData,
+  type Notification,
+  type NotificationsQuery,
+  type NotificationType,
+} from '../db/notifications';
 import { type UpdatePreferencesData } from '../db/preferences';
 import { type NewRunForm, type Run, type RunStatus } from '../schema';
 
@@ -114,5 +120,140 @@ export const preferencesApi = {
     }
 
     return response.json();
+  },
+};
+
+// API client for notifications
+export const notificationsApi = {
+  // Get notifications with optional filtering
+  async getNotifications(
+    query: Partial<NotificationsQuery> = {}
+  ): Promise<Notification[]> {
+    const userId = getUserId();
+
+    const params = new URLSearchParams();
+    params.append('userId', userId);
+
+    if (query.limit) params.append('limit', query.limit.toString());
+    if (query.offset) params.append('offset', query.offset.toString());
+    if (query.orderBy) params.append('orderBy', query.orderBy);
+    if (query.orderDirection)
+      params.append('orderDirection', query.orderDirection);
+    if (query.type) params.append('type', query.type.join(','));
+    if (query.isRead !== undefined)
+      params.append('isRead', query.isRead.toString());
+    if (query.flightNumber) params.append('flightNumber', query.flightNumber);
+    if (query.search) params.append('search', query.search);
+
+    const response = await fetch(`${API_BASE}/notifications?${params}`);
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch notifications');
+    }
+
+    return response.json();
+  },
+
+  // Create a new notification
+  async createNotification(
+    notificationData: CreateNotificationData
+  ): Promise<Notification> {
+    const userId = getUserId();
+    const response = await fetch(`${API_BASE}/notifications`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ notificationData, userId }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create notification');
+    }
+
+    return response.json();
+  },
+
+  // Mark notification as read/unread
+  async markNotificationAsRead(
+    id: string,
+    isRead: boolean = true
+  ): Promise<void> {
+    const userId = getUserId();
+    const response = await fetch(`${API_BASE}/notifications`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action: 'mark_read', id, isRead, userId }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update notification');
+    }
+  },
+
+  // Mark all notifications as read
+  async markAllNotificationsAsRead(): Promise<void> {
+    const userId = getUserId();
+    const response = await fetch(`${API_BASE}/notifications`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action: 'mark_all_read', userId }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to mark all notifications as read');
+    }
+  },
+
+  // Delete a notification
+  async deleteNotification(id: string): Promise<void> {
+    const userId = getUserId();
+    const response = await fetch(
+      `${API_BASE}/notifications?id=${id}&userId=${userId}`,
+      {
+        method: 'DELETE',
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to delete notification');
+    }
+  },
+
+  // Get notification statistics
+  async getNotificationStats(): Promise<{
+    total: number;
+    unread: number;
+    byType: Record<NotificationType, number>;
+  }> {
+    const userId = getUserId();
+    const response = await fetch(
+      `${API_BASE}/notifications/stats?userId=${userId}`
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch notification stats');
+    }
+
+    return response.json();
+  },
+
+  // Cleanup old notifications
+  async cleanupOldNotifications(daysToKeep: number = 30): Promise<void> {
+    const userId = getUserId();
+    const response = await fetch(
+      `${API_BASE}/notifications?action=cleanup&userId=${userId}&daysToKeep=${daysToKeep}`,
+      {
+        method: 'DELETE',
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to cleanup old notifications');
+    }
   },
 };

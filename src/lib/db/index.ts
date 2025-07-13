@@ -129,6 +129,25 @@ export async function initializeSchema(): Promise<void> {
       )
     `);
 
+    // Notifications table
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        type TEXT NOT NULL CHECK (type IN ('flight_update', 'traffic_alert', 'run_reminder', 'status_change', 'system')),
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        flight_number TEXT,
+        pickup_location TEXT,
+        dropoff_location TEXT,
+        run_id TEXT,
+        is_read BOOLEAN DEFAULT FALSE,
+        metadata TEXT DEFAULT '{}',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Create indexes for better performance
     await db.execute(`
       CREATE INDEX IF NOT EXISTS idx_runs_user_id ON runs(user_id)
@@ -144,6 +163,26 @@ export async function initializeSchema(): Promise<void> {
 
     await db.execute(`
       CREATE INDEX IF NOT EXISTS idx_flight_cache_expires ON flight_cache(expires_at)
+    `);
+
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)
+    `);
+
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at)
+    `);
+
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_notifications_flight_number ON notifications(flight_number)
+    `);
+
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type)
+    `);
+
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read)
     `);
 
     // Migration: Add price column to existing runs table
@@ -345,6 +384,197 @@ export async function initializeSchema(): Promise<void> {
         if (DEV_MODE.DEBUG_LOGGING) {
           console.log(
             `📊 Found ${runCount} existing runs, skipping mock data generation`
+          );
+        }
+      }
+    }
+
+    // Mock notification data generation (if in development mode)
+    if (DEV_MODE.FORCE_MOCK_RUNS) {
+      // Check if we already have notifications to avoid duplicating data
+      const existingNotifications = await db.execute(
+        'SELECT COUNT(*) as count FROM notifications'
+      );
+      const notificationCount = existingNotifications.rows[0].count as number;
+
+      if (notificationCount === 0) {
+        console.log('🔄 Generating realistic mock notification data...');
+
+        const now = new Date();
+        const userId = generateUserId();
+
+        const mockNotifications = [
+          // Recent notifications
+          {
+            id: crypto.randomUUID(),
+            userId,
+            type: 'flight_update',
+            title: 'Flight Status Update',
+            message:
+              'Flight UA2729 to Denver has been delayed by 30 minutes due to weather conditions.',
+            flightNumber: 'UA2729',
+            pickupLocation: 'Jackson Hole Mountain Resort - Teton Village',
+            dropoffLocation: 'Jackson Hole Airport (JAC)',
+            isRead: false,
+            metadata: JSON.stringify({
+              originalType: 'flight-status-change',
+              delay: 30,
+              reason: 'weather',
+            }),
+            createdAt: new Date(now.getTime() - 30 * 60 * 1000).toISOString(),
+            updatedAt: new Date(now.getTime() - 30 * 60 * 1000).toISOString(),
+          },
+          {
+            id: crypto.randomUUID(),
+            userId,
+            type: 'run_reminder',
+            title: 'Pickup Reminder',
+            message:
+              'Reminder: You have a pickup scheduled in 2 hours at Four Seasons Resort.',
+            pickupLocation: 'Four Seasons Resort - Teton Village',
+            dropoffLocation: 'Jackson Hole Airport (JAC)',
+            runId: crypto.randomUUID(),
+            isRead: false,
+            metadata: JSON.stringify({
+              originalType: 'run-reminder',
+              passengerCount: 2,
+            }),
+            createdAt: new Date(
+              now.getTime() - 1 * 60 * 60 * 1000
+            ).toISOString(),
+            updatedAt: new Date(
+              now.getTime() - 1 * 60 * 60 * 1000
+            ).toISOString(),
+          },
+          {
+            id: crypto.randomUUID(),
+            userId,
+            type: 'traffic_alert',
+            title: 'Traffic Alert',
+            message:
+              'Heavy traffic reported on Highway 22 towards Jackson Hole Airport. Consider alternative route.',
+            metadata: JSON.stringify({
+              originalType: 'traffic-alert',
+              severity: 'heavy',
+              estimatedDelay: 15,
+            }),
+            isRead: true,
+            createdAt: new Date(
+              now.getTime() - 2 * 60 * 60 * 1000
+            ).toISOString(),
+            updatedAt: new Date(
+              now.getTime() - 2 * 60 * 60 * 1000
+            ).toISOString(),
+          },
+          {
+            id: crypto.randomUUID(),
+            userId,
+            type: 'flight_update',
+            title: 'Flight Arrival Update',
+            message:
+              'Flight DL1234 from Minneapolis has landed early at Jackson Hole Airport.',
+            flightNumber: 'DL1234',
+            pickupLocation: 'Jackson Hole Airport (JAC)',
+            dropoffLocation: 'Four Seasons Resort - Teton Village',
+            isRead: true,
+            metadata: JSON.stringify({
+              originalType: 'flight-arrival-reminder',
+              gate: 'A3',
+              terminal: 'Main',
+            }),
+            createdAt: new Date(
+              now.getTime() - 3 * 60 * 60 * 1000
+            ).toISOString(),
+            updatedAt: new Date(
+              now.getTime() - 3 * 60 * 60 * 1000
+            ).toISOString(),
+          },
+          {
+            id: crypto.randomUUID(),
+            userId,
+            type: 'status_change',
+            title: 'Run Status Update',
+            message:
+              'Your run to Jackson Hole Airport has been completed successfully.',
+            flightNumber: 'AA1558',
+            pickupLocation: 'Hotel Inn & Suites - Downtown Jackson',
+            dropoffLocation: 'Jackson Hole Airport (JAC)',
+            runId: crypto.randomUUID(),
+            isRead: true,
+            metadata: JSON.stringify({
+              originalType: 'system-update',
+              completedAt: new Date(
+                now.getTime() - 4 * 60 * 60 * 1000
+              ).toISOString(),
+            }),
+            createdAt: new Date(
+              now.getTime() - 4 * 60 * 60 * 1000
+            ).toISOString(),
+            updatedAt: new Date(
+              now.getTime() - 4 * 60 * 60 * 1000
+            ).toISOString(),
+          },
+          {
+            id: crypto.randomUUID(),
+            userId,
+            type: 'system',
+            title: 'System Update',
+            message:
+              'Teton Tracker has been updated with new features for better flight tracking.',
+            isRead: false,
+            metadata: JSON.stringify({
+              originalType: 'system-update',
+              version: '1.2.0',
+            }),
+            createdAt: new Date(
+              now.getTime() - 6 * 60 * 60 * 1000
+            ).toISOString(),
+            updatedAt: new Date(
+              now.getTime() - 6 * 60 * 60 * 1000
+            ).toISOString(),
+          },
+        ];
+
+        for (const notification of mockNotifications) {
+          await db.execute({
+            sql: `
+              INSERT INTO notifications (
+                id, user_id, type, title, message, flight_number, pickup_location, 
+                dropoff_location, run_id, is_read, metadata, created_at, updated_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+            args: [
+              notification.id,
+              notification.userId,
+              notification.type,
+              notification.title,
+              notification.message,
+              notification.flightNumber || null,
+              notification.pickupLocation || null,
+              notification.dropoffLocation || null,
+              notification.runId || null,
+              notification.isRead,
+              notification.metadata,
+              notification.createdAt,
+              notification.updatedAt,
+            ],
+          });
+
+          if (DEV_MODE.DEBUG_LOGGING) {
+            console.log(`✅ Added mock notification: ${notification.title}`);
+          }
+        }
+
+        console.log(
+          `✅ Generated ${mockNotifications.length} realistic mock notifications`
+        );
+        console.log(
+          '📋 Mock notifications include various types and read statuses'
+        );
+      } else {
+        if (DEV_MODE.DEBUG_LOGGING) {
+          console.log(
+            `📊 Found ${notificationCount} existing notifications, skipping mock data generation`
           );
         }
       }

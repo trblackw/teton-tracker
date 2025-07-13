@@ -1,4 +1,5 @@
-import { preferencesApi } from '../api/client';
+import { notificationsApi, preferencesApi } from '../api/client';
+import { type NotificationType as DbNotificationType } from '../db/notifications';
 import { toasts } from '../toast';
 
 // Check if we're in development mode
@@ -436,6 +437,14 @@ export class NotificationService {
    * Send a notification
    */
   async sendNotification(notification: AppNotification): Promise<void> {
+    // Save notification to database first
+    try {
+      await this.saveNotificationToDatabase(notification);
+    } catch (error) {
+      console.error('❌ Failed to save notification to database:', error);
+      // Continue with push notification even if database save fails
+    }
+
     // Check user preferences first
     const shouldSend = await this.shouldSendNotification(notification);
     if (!shouldSend) {
@@ -491,6 +500,106 @@ export class NotificationService {
     } catch (error) {
       console.error('❌ Failed to send notification:', error);
     }
+  }
+
+  /**
+   * Save notification to database
+   */
+  private async saveNotificationToDatabase(
+    notification: AppNotification
+  ): Promise<void> {
+    try {
+      // Map notification type to database type
+      const dbType = this.mapNotificationTypeToDbType(notification.type);
+
+      // Extract common fields
+      const { flightNumber, pickupLocation, dropoffLocation, runId } =
+        this.extractNotificationFields(notification);
+
+      // Create notification data for database
+      const notificationData = {
+        type: dbType,
+        title: notification.title,
+        message: notification.body,
+        flightNumber,
+        pickupLocation,
+        dropoffLocation,
+        runId,
+        metadata: {
+          originalType: notification.type,
+          timestamp: notification.timestamp,
+          icon: notification.icon,
+          badge: notification.badge,
+          actions: notification.actions,
+          data: notification.data,
+        },
+      };
+
+      await notificationsApi.createNotification(notificationData);
+
+      if (this.debug) {
+        console.log('💾 Notification saved to database:', notification.title);
+      }
+    } catch (error) {
+      console.error('❌ Failed to save notification to database:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Map notification type to database notification type
+   */
+  private mapNotificationTypeToDbType(
+    type: NotificationType
+  ): DbNotificationType {
+    switch (type) {
+      case 'flight-status-change':
+      case 'flight-departure-reminder':
+      case 'flight-arrival-reminder':
+        return 'flight_update';
+      case 'traffic-alert':
+        return 'traffic_alert';
+      case 'run-reminder':
+        return 'run_reminder';
+      case 'system-update':
+        return 'system';
+      default:
+        return 'system';
+    }
+  }
+
+  /**
+   * Extract relevant fields from notification for database storage
+   */
+  private extractNotificationFields(notification: AppNotification): {
+    flightNumber?: string;
+    pickupLocation?: string;
+    dropoffLocation?: string;
+    runId?: string;
+  } {
+    const fields: {
+      flightNumber?: string;
+      pickupLocation?: string;
+      dropoffLocation?: string;
+      runId?: string;
+    } = {};
+
+    switch (notification.type) {
+      case 'flight-status-change':
+      case 'flight-departure-reminder':
+      case 'flight-arrival-reminder':
+        fields.flightNumber = notification.data.flightNumber;
+        break;
+      case 'traffic-alert':
+        // Traffic alerts might include route information
+        break;
+      case 'run-reminder':
+        fields.runId = notification.data.runId;
+        fields.pickupLocation = notification.data.location;
+        break;
+    }
+
+    return fields;
   }
 
   /**

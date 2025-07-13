@@ -5,7 +5,7 @@ import {
   Outlet,
   useRouterState,
 } from '@tanstack/react-router';
-import { Activity, Plane, Plus, Settings } from 'lucide-react';
+import { Activity, Bell, Plane, Plus, Settings } from 'lucide-react';
 import { useEffect } from 'react';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '../components/theme-provider';
@@ -103,6 +103,22 @@ function RootComponent() {
                         className="w-full justify-start"
                       >
                         <Link
+                          to="/notifications"
+                          className="flex items-center gap-2"
+                          activeProps={{
+                            className: activeNavClass,
+                          }}
+                        >
+                          <Bell className="h-4 w-4" />
+                          Notifications
+                        </Link>
+                      </Button>
+                      <Button
+                        asChild
+                        variant="ghost"
+                        className="w-full justify-start"
+                      >
+                        <Link
                           to="/settings"
                           className="flex items-center gap-2"
                           activeProps={{
@@ -142,7 +158,6 @@ function RootComponent() {
                   }}
                 >
                   <Activity className="size-5" />
-                  <span className="text-xs">Runs</span>
                 </Link>
               </Button>
               <Button
@@ -159,7 +174,6 @@ function RootComponent() {
                   }}
                 >
                   <Plus className="size-5" />
-                  <span className="text-xs">Add</span>
                 </Link>
               </Button>
               <Button
@@ -176,7 +190,22 @@ function RootComponent() {
                   }}
                 >
                   <Plane className="size-5" />
-                  <span className="text-xs">Flights</span>
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="flex-col h-auto p-3 min-w-[60px]"
+              >
+                <Link
+                  to="/notifications"
+                  className="flex flex-col items-center gap-1"
+                  activeProps={{
+                    className: activeNavClass,
+                  }}
+                >
+                  <Bell className="size-5" />
                 </Link>
               </Button>
               <Button
@@ -193,7 +222,6 @@ function RootComponent() {
                   }}
                 >
                   <Settings className="size-5" />
-                  <span className="text-xs">Settings</span>
                 </Link>
               </Button>
             </nav>

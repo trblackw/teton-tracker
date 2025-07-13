@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root';
 import { Route as SettingsRouteImport } from './routes/settings';
 import { Route as RunsRouteImport } from './routes/runs';
+import { Route as NotificationsRouteImport } from './routes/notifications';
 import { Route as FlightsRouteImport } from './routes/flights';
 import { Route as AddRouteImport } from './routes/add';
 import { Route as IndexRouteImport } from './routes/index';
@@ -23,6 +24,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const RunsRoute = RunsRouteImport.update({
   id: '/runs',
   path: '/runs',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any);
 const FlightsRoute = FlightsRouteImport.update({
@@ -45,6 +51,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute;
   '/add': typeof AddRoute;
   '/flights': typeof FlightsRoute;
+  '/notifications': typeof NotificationsRoute;
   '/runs': typeof RunsRoute;
   '/settings': typeof SettingsRoute;
 }
@@ -52,6 +59,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute;
   '/add': typeof AddRoute;
   '/flights': typeof FlightsRoute;
+  '/notifications': typeof NotificationsRoute;
   '/runs': typeof RunsRoute;
   '/settings': typeof SettingsRoute;
 }
@@ -60,21 +68,36 @@ export interface FileRoutesById {
   '/': typeof IndexRoute;
   '/add': typeof AddRoute;
   '/flights': typeof FlightsRoute;
+  '/notifications': typeof NotificationsRoute;
   '/runs': typeof RunsRoute;
   '/settings': typeof SettingsRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: '/' | '/add' | '/flights' | '/runs' | '/settings';
+  fullPaths:
+    | '/'
+    | '/add'
+    | '/flights'
+    | '/notifications'
+    | '/runs'
+    | '/settings';
   fileRoutesByTo: FileRoutesByTo;
-  to: '/' | '/add' | '/flights' | '/runs' | '/settings';
-  id: '__root__' | '/' | '/add' | '/flights' | '/runs' | '/settings';
+  to: '/' | '/add' | '/flights' | '/notifications' | '/runs' | '/settings';
+  id:
+    | '__root__'
+    | '/'
+    | '/add'
+    | '/flights'
+    | '/notifications'
+    | '/runs'
+    | '/settings';
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
   AddRoute: typeof AddRoute;
   FlightsRoute: typeof FlightsRoute;
+  NotificationsRoute: typeof NotificationsRoute;
   RunsRoute: typeof RunsRoute;
   SettingsRoute: typeof SettingsRoute;
 }
@@ -93,6 +116,13 @@ declare module '@tanstack/react-router' {
       path: '/runs';
       fullPath: '/runs';
       preLoaderRoute: typeof RunsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/notifications': {
+      id: '/notifications';
+      path: '/notifications';
+      fullPath: '/notifications';
+      preLoaderRoute: typeof NotificationsRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/flights': {
@@ -123,6 +153,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AddRoute: AddRoute,
   FlightsRoute: FlightsRoute,
+  NotificationsRoute: NotificationsRoute,
   RunsRoute: RunsRoute,
   SettingsRoute: SettingsRoute,
 };
