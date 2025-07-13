@@ -485,29 +485,29 @@ export default function App() {
   };
 
   return (
-    <div className='min-h-screen bg-gray-50 p-2 sm:p-4'>
-      <div className='max-w-3xl mx-auto'>
-        <div className='mb-6 sm:mb-8'>
-          <div className='flex items-center justify-between mb-4'>
-            <div className='flex items-center gap-2 sm:gap-4'>
-              <IconLogo className='h-6 w-6 sm:h-8 sm:w-8' />
-              <h1 className='text-2xl sm:text-3xl font-bold text-gray-900'>
+    <div className="min-h-screen bg-gray-50 p-2 sm:p-4">
+      <div className="max-w-3xl mx-auto">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <IconLogo className="h-6 w-6 sm:h-8 sm:w-8" />
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
                 Teton Tracker
               </h1>
             </div>
-            <div className='flex items-center gap-1 sm:gap-2'>
+            <div className="flex items-center gap-1 sm:gap-2">
               <Button
-                variant='outline'
-                size='sm'
+                variant="outline"
+                size="sm"
                 onClick={() => setShowDebugInfo(!showDebugInfo)}
-                className='p-2 sm:px-3'
+                className="p-2 sm:px-3"
               >
-                <Settings className='h-4 w-4' />
-                <span className='hidden sm:inline ml-2'>Debug</span>
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline ml-2">Debug</span>
               </Button>
               <Button
-                variant='outline'
-                size='sm'
+                variant="outline"
+                size="sm"
                 onClick={() => {
                   setPollingEnabled(!pollingEnabled);
                   if (!pollingEnabled) {
@@ -516,38 +516,38 @@ export default function App() {
                     pollingService.stop();
                   }
                 }}
-                className='p-2 sm:px-3'
+                className="p-2 sm:px-3"
               >
-                <Activity className='h-4 w-4' />
-                <span className='hidden sm:inline ml-2'>
+                <Activity className="h-4 w-4" />
+                <span className="hidden sm:inline ml-2">
                   {pollingEnabled ? 'Disable' : 'Enable'} Polling
                 </span>
               </Button>
               <Button
-                variant='outline'
-                size='sm'
+                variant="outline"
+                size="sm"
                 onClick={refreshAllData}
-                disabled={runsApiData.isFetching}
-                className='p-2 sm:px-3'
+                disabled={runsApiData.isLoading}
+                className="p-2 sm:px-3"
               >
-                <Settings className='h-4 w-4' />
-                <span className='hidden sm:inline ml-2'>
-                  {runsApiData.isFetching ? 'Refreshing...' : 'Refresh All'}
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline ml-2">
+                  {runsApiData.isLoading ? 'Refreshing...' : 'Refresh All'}
                 </span>
               </Button>
             </div>
           </div>
-          <p className='text-gray-600 text-sm sm:text-base'>
+          <p className="text-gray-600 text-sm sm:text-base">
             Track airport runs with real-time flight and traffic data
           </p>
         </div>
 
         {/* API Loading Indicator */}
-        {runsApiData.isFetching && (
-          <div className='mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4'>
-            <div className='flex items-center gap-2'>
-              <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600'></div>
-              <p className='text-blue-800 text-sm'>
+        {runsApiData.isLoading && (
+          <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <p className="text-blue-800 text-sm">
                 Fetching latest flight and traffic data...
               </p>
             </div>
@@ -556,10 +556,10 @@ export default function App() {
 
         {/* Debug Info Panel */}
         {showDebugInfo && (
-          <Card className='mb-6 border-yellow-200 bg-yellow-50'>
+          <Card className="mb-6 border-yellow-200 bg-yellow-50">
             <CardHeader>
-              <CardTitle className='text-lg flex items-center gap-2'>
-                <Settings className='h-5 w-5' />
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Settings className="h-5 w-5" />
                 Debug Information
               </CardTitle>
             </CardHeader>
@@ -569,9 +569,9 @@ export default function App() {
                 if (!debugDisplay) return <p>No debug info available</p>;
 
                 return (
-                  <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm'>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <p className='font-medium'>Polling Status</p>
+                      <p className="font-medium">Polling Status</p>
                       <p
                         className={`${
                           debugDisplay.status === 'Active'
@@ -585,47 +585,47 @@ export default function App() {
                       </p>
                     </div>
                     <div>
-                      <p className='font-medium'>Active Runs</p>
+                      <p className="font-medium">Active Runs</p>
                       <p>{debugDisplay.activeRuns}</p>
                     </div>
                     <div>
-                      <p className='font-medium'>Last Poll</p>
+                      <p className="font-medium">Last Poll</p>
                       <p>{debugDisplay.lastPoll}</p>
                     </div>
                     <div>
-                      <p className='font-medium'>Poll Count</p>
+                      <p className="font-medium">Poll Count</p>
                       <p>{debugDisplay.pollCount}</p>
                     </div>
                     <div>
-                      <p className='font-medium'>React Query Status</p>
+                      <p className="font-medium">React Query Status</p>
                       <p
                         className={
-                          runsApiData.isFetching
+                          runsApiData.isLoading
                             ? 'text-blue-600'
                             : 'text-green-600'
                         }
                       >
-                        {runsApiData.isFetching ? 'Fetching' : 'Idle'}
+                        {runsApiData.isLoading ? 'Fetching' : 'Idle'}
                       </p>
                     </div>
                     <div>
-                      <p className='font-medium'>Cached Queries</p>
+                      <p className="font-medium">Cached Queries</p>
                       <p>{queryClient.getQueryCache().getAll().length}</p>
                     </div>
                     {debugDisplay.apiCallsBlocked > 0 && (
-                      <div className='sm:col-span-2 lg:col-span-2'>
-                        <p className='font-medium'>API Calls Blocked</p>
-                        <p className='text-yellow-600'>
+                      <div className="sm:col-span-2 lg:col-span-2">
+                        <p className="font-medium">API Calls Blocked</p>
+                        <p className="text-yellow-600">
                           {debugDisplay.apiCallsBlocked} (Debug Mode)
                         </p>
                       </div>
                     )}
                     {debugDisplay.errors.length > 0 && (
-                      <div className='sm:col-span-2 lg:col-span-4'>
-                        <p className='font-medium'>Recent Errors</p>
-                        <div className='text-xs text-red-600 mt-1'>
+                      <div className="sm:col-span-2 lg:col-span-4">
+                        <p className="font-medium">Recent Errors</p>
+                        <div className="text-xs text-red-600 mt-1">
                           {debugDisplay.errors.map((error, index) => (
-                            <div key={index} className='mb-1'>
+                            <div key={index} className="mb-1">
                               {error.time.toLocaleTimeString()}: {error.message}
                             </div>
                           ))}
@@ -635,15 +635,15 @@ export default function App() {
                   </div>
                 );
               })()}
-              <div className='mt-4 pt-4 border-t border-yellow-200'>
-                <p className='text-xs text-gray-600'>
+              <div className="mt-4 pt-4 border-t border-yellow-200">
+                <p className="text-xs text-gray-600">
                   <strong>Debug Mode:</strong>{' '}
                   {pollingService.config.enableDebugMode ? 'ON' : 'OFF'} -
                   {pollingService.config.enableDebugMode
                     ? ' API calls are blocked to prevent unnecessary requests during development.'
                     : ' API calls are enabled for active runs every 5 minutes.'}
                 </p>
-                <p className='text-xs text-gray-600 mt-1'>
+                <p className="text-xs text-gray-600 mt-1">
                   <strong>React Query:</strong> Automatic background refetching
                   every 5 minutes for stale data. Data is cached for 10 minutes
                   and considered fresh for 2-3 minutes.
@@ -655,11 +655,11 @@ export default function App() {
 
         {/* Paste Detection Notification */}
         {showPasteDetected && (
-          <Card className='mb-6 border-green-200 bg-green-50 animate-pulse'>
-            <CardContent className='p-4'>
-              <div className='flex items-center gap-2'>
-                <FileText className='h-5 w-5 text-green-600' />
-                <p className='text-green-800 font-medium'>
+          <Card className="mb-6 border-green-200 bg-green-50 animate-pulse">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-green-600" />
+                <p className="text-green-800 font-medium">
                   Schedule detected! Found {parseResult?.runs.length || 0} runs
                 </p>
               </div>
@@ -670,206 +670,204 @@ export default function App() {
         <Tabs
           value={currentTab}
           onValueChange={setCurrentTab}
-          className='w-full'
+          className="w-full"
         >
-          <TabsList className='grid w-full grid-cols-2 h-12'>
-            <TabsTrigger className='cursor-pointer py-2' value='runs'>
+          <TabsList className="grid w-full grid-cols-2 h-12">
+            <TabsTrigger className="cursor-pointer py-2" value="runs">
               Current Runs
             </TabsTrigger>
-            <TabsTrigger className='cursor-pointer py-2' value='add'>
+            <TabsTrigger className="cursor-pointer py-2" value="add">
               Add New Run
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value='runs' className='mt-6'>
+          <TabsContent value="runs" className="mt-6">
             {runs.length === 0 ? (
-              <Card className='bg-accent/50 border rounded-md'>
-                <CardContent className='p-8 text-center'>
-                  <Plane className='h-16 w-16 text-gray-400 mx-auto mb-6' />
-                  <p className='text-gray-500 text-lg mb-4'>
+              <Card className="bg-accent/50 border rounded-md">
+                <CardContent className="p-8 text-center">
+                  <Plane className="h-16 w-16 text-gray-400 mx-auto mb-6" />
+                  <p className="text-gray-500 text-lg mb-4">
                     No runs scheduled. Add your first run to get started!
                   </p>
                   <Button
                     onClick={() => setCurrentTab('add')}
-                    className='mt-2 bg-green-500 hover:bg-green-600 text-white'
+                    className="mt-2 bg-green-500 hover:bg-green-600 text-white"
                   >
-                    <Plus className='h-4 w-4 mr-2 ' />
+                    <Plus className="h-4 w-4 mr-2 " />
                     Add Your First Run
                   </Button>
                 </CardContent>
               </Card>
             ) : (
-              <div className='grid gap-4'>
-                {runsApiData.data.map(
-                  ({ run, flightStatus, trafficData, isLoading, isError }) => {
-                    return (
-                      <Card key={run.id} className='w-full'>
-                        <CardHeader className='pb-3'>
-                          <div className='flex items-start justify-between'>
-                            <div>
-                              <CardTitle className='text-lg'>
-                                {run.flightNumber}
-                                {isLoading && (
-                                  <span className='ml-2 inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600'></span>
-                                )}
-                                {isError && (
-                                  <span className='ml-2 text-red-500 text-sm'>
-                                    ⚠️
-                                  </span>
-                                )}
-                              </CardTitle>
-                              <CardDescription>
-                                {run.airline} • {run.departure} → {run.arrival}
-                              </CardDescription>
-                            </div>
-                            <div className='flex items-center gap-2'>
-                              <Badge className={getStatusColor(run.status)}>
-                                {run.status}
-                              </Badge>
-                              <Button
-                                variant='ghost'
-                                size='sm'
-                                onClick={() => deleteRun(run.id)}
-                              >
-                                <Trash2 className='h-4 w-4' />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
-                            <div className='space-y-3'>
-                              <div className='flex items-center gap-2'>
-                                <Clock className='h-4 w-4 text-gray-500 flex-shrink-0' />
-                                <span className='text-sm font-medium'>
-                                  {new Date(run.scheduledTime).toLocaleString()}
+              <div className="grid gap-4">
+                {runsApiData.data.map(({ run, flightStatus, trafficData }) => {
+                  return (
+                    <Card key={run.id} className="w-full">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle className="text-lg">
+                              {run.flightNumber}
+                              {runsApiData.isLoading && (
+                                <span className="ml-2 inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></span>
+                              )}
+                              {runsApiData.isError && (
+                                <span className="ml-2 text-red-500 text-sm">
+                                  ⚠️
                                 </span>
-                              </div>
-                              <div className='flex items-start gap-2'>
-                                <MapPin className='h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5' />
-                                <span className='text-sm'>
-                                  {run.type === 'pickup' ? 'Pickup' : 'Dropoff'}{' '}
-                                  • {run.pickupLocation} → {run.dropoffLocation}
-                                </span>
-                              </div>
-                              {run.notes && (
-                                <div className='flex items-start gap-2'>
-                                  <FileText className='h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5' />
-                                  <span className='text-sm text-gray-600'>
-                                    {run.notes}
-                                  </span>
-                                </div>
                               )}
-                            </div>
-
-                            <div className='space-y-3'>
-                              {flightStatus && (
-                                <div className='flex items-center gap-2'>
-                                  <Plane className='h-4 w-4 text-gray-500 flex-shrink-0' />
-                                  <span className='text-sm'>
-                                    Flight: {flightStatus.status}
-                                    {flightStatus.delay &&
-                                      flightStatus.delay > 0 && (
-                                        <span className='text-red-600 ml-1'>
-                                          (+{flightStatus.delay} min)
-                                        </span>
-                                      )}
-                                  </span>
-                                </div>
-                              )}
-                              {trafficData && (
-                                <div className='flex items-start gap-2'>
-                                  <Navigation className='h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5' />
-                                  <span className='text-sm'>
-                                    Traffic: {trafficData.duration} min •{' '}
-                                    {trafficData.distance} •{' '}
-                                    <span
-                                      className={
-                                        trafficData.status === 'heavy'
-                                          ? 'text-red-600'
-                                          : trafficData.status === 'moderate'
-                                            ? 'text-yellow-600'
-                                            : 'text-green-600'
-                                      }
-                                    >
-                                      {trafficData.status}
-                                    </span>
-                                  </span>
-                                </div>
-                              )}
-                              {trafficData?.incidents &&
-                                trafficData.incidents.length > 0 && (
-                                  <div className='flex items-center gap-2'>
-                                    <AlertCircle className='h-4 w-4 text-orange-500 flex-shrink-0' />
-                                    <span className='text-sm text-orange-600'>
-                                      {trafficData.incidents.length} incident(s)
-                                    </span>
-                                  </div>
-                                )}
-                            </div>
+                            </CardTitle>
+                            <CardDescription>
+                              {run.airline} • {run.departure} → {run.arrival}
+                            </CardDescription>
                           </div>
-
-                          <div className='flex flex-wrap gap-2 mt-4'>
+                          <div className="flex items-center gap-2">
+                            <Badge className={getStatusColor(run.status)}>
+                              {run.status}
+                            </Badge>
                             <Button
-                              variant='outline'
-                              size='sm'
-                              onClick={() => refreshRunData(run)}
-                              disabled={isLoading}
-                              className='min-w-0'
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteRun(run.id)}
                             >
-                              {isLoading ? 'Loading...' : 'Refresh Data'}
+                              <Trash2 className="h-4 w-4" />
                             </Button>
-                            {run.status === 'scheduled' && (
-                              <Button
-                                size='sm'
-                                onClick={() =>
-                                  updateRunStatus(run.id, 'active')
-                                }
-                                className='min-w-0'
-                              >
-                                Start Run
-                              </Button>
-                            )}
-                            {run.status === 'active' && (
-                              <Button
-                                size='sm'
-                                variant='secondary'
-                                onClick={() =>
-                                  updateRunStatus(run.id, 'completed')
-                                }
-                                className='min-w-0'
-                              >
-                                Complete Run
-                              </Button>
-                            )}
-                            {run.status === 'active' && (
-                              <Button
-                                size='sm'
-                                variant='outline'
-                                onClick={() => pollingService.triggerPoll()}
-                                className='min-w-0'
-                              >
-                                Manual Poll
-                              </Button>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                              <span className="text-sm font-medium">
+                                {new Date(run.scheduledTime).toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <MapPin className="h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5" />
+                              <span className="text-sm">
+                                {run.type === 'pickup' ? 'Pickup' : 'Dropoff'} •{' '}
+                                {run.pickupLocation} → {run.dropoffLocation}
+                              </span>
+                            </div>
+                            {run.notes && (
+                              <div className="flex items-start gap-2">
+                                <FileText className="h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5" />
+                                <span className="text-sm text-gray-600">
+                                  {run.notes}
+                                </span>
+                              </div>
                             )}
                           </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  }
-                )}
+
+                          <div className="space-y-3">
+                            {flightStatus && (
+                              <div className="flex items-center gap-2">
+                                <Plane className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                                <span className="text-sm">
+                                  Flight: {flightStatus.status}
+                                  {flightStatus.delay &&
+                                    flightStatus.delay > 0 && (
+                                      <span className="text-red-600 ml-1">
+                                        (+{flightStatus.delay} min)
+                                      </span>
+                                    )}
+                                </span>
+                              </div>
+                            )}
+                            {trafficData && (
+                              <div className="flex items-start gap-2">
+                                <Navigation className="h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5" />
+                                <span className="text-sm">
+                                  Traffic: {trafficData.duration} min •{' '}
+                                  {trafficData.distance} •{' '}
+                                  <span
+                                    className={
+                                      trafficData.status === 'heavy'
+                                        ? 'text-red-600'
+                                        : trafficData.status === 'moderate'
+                                          ? 'text-yellow-600'
+                                          : 'text-green-600'
+                                    }
+                                  >
+                                    {trafficData.status}
+                                  </span>
+                                </span>
+                              </div>
+                            )}
+                            {trafficData?.incidents &&
+                              trafficData.incidents.length > 0 && (
+                                <div className="flex items-center gap-2">
+                                  <AlertCircle className="h-4 w-4 text-orange-500 flex-shrink-0" />
+                                  <span className="text-sm text-orange-600">
+                                    {trafficData.incidents.length} incident(s)
+                                  </span>
+                                </div>
+                              )}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => refreshRunData(run)}
+                            disabled={runsApiData.isLoading}
+                            className="min-w-0"
+                          >
+                            {runsApiData.isLoading
+                              ? 'Loading...'
+                              : 'Refresh Data'}
+                          </Button>
+                          {run.status === 'scheduled' && (
+                            <Button
+                              size="sm"
+                              onClick={() => updateRunStatus(run.id, 'active')}
+                              className="min-w-0"
+                            >
+                              Start Run
+                            </Button>
+                          )}
+                          {run.status === 'active' && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() =>
+                                updateRunStatus(run.id, 'completed')
+                              }
+                              className="min-w-0"
+                            >
+                              Complete Run
+                            </Button>
+                          )}
+                          {run.status === 'active' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => pollingService.triggerPoll()}
+                              className="min-w-0"
+                            >
+                              Manual Poll
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </TabsContent>
 
-          <TabsContent value='add' className='mt-6'>
+          <TabsContent value="add" className="mt-6">
             {/* Bulk Import Option */}
             <Card>
               <CardHeader>
-                <div className='flex items-center justify-between'>
+                <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className='flex items-center gap-2'>
-                      <FileText className='h-5 w-5' />
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
                       Quick Import
                     </CardTitle>
                     <CardDescription>
@@ -878,8 +876,8 @@ export default function App() {
                     </CardDescription>
                   </div>
                   <Button
-                    variant='outline'
-                    size='sm'
+                    variant="outline"
+                    size="sm"
                     onClick={() => setShowBulkImport(!showBulkImport)}
                   >
                     {showBulkImport ? 'Hide' : 'Show'} Bulk Import
@@ -887,36 +885,36 @@ export default function App() {
                 </div>
               </CardHeader>
               {showBulkImport && (
-                <CardContent className='space-y-4'>
+                <CardContent className="space-y-4">
                   {/* Paste Detection Notification */}
                   {showPasteDetected && (
-                    <div className='bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200 p-4 rounded-lg shadow-md animate-pulse'>
-                      <div className='flex items-center gap-2 text-green-800'>
-                        <FileText className='h-5 w-5 text-green-600' />
-                        <span className='font-bold text-lg'>
+                    <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200 p-4 rounded-lg shadow-md animate-pulse">
+                      <div className="flex items-center gap-2 text-green-800">
+                        <FileText className="h-5 w-5 text-green-600" />
+                        <span className="font-bold text-lg">
                           🎉 Schedule Auto-Detected!
                         </span>
                       </div>
-                      <p className='text-sm text-green-700 mt-2 font-medium'>
+                      <p className="text-sm text-green-700 mt-2 font-medium">
                         ✅ Successfully pasted and parsed your schedule message!
                         Review below and click "Import" to add the runs.
                       </p>
                     </div>
                   )}
 
-                  <div className='space-y-2'>
-                    <Label htmlFor='schedule-text'>Schedule Message</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="schedule-text">Schedule Message</Label>
                     <textarea
-                      id='schedule-text'
-                      className='w-full min-h-32 p-3 border border-gray-300 rounded-md resize-vertical'
-                      placeholder='Paste your schedule message here, or just paste anywhere on the page...'
+                      id="schedule-text"
+                      className="w-full min-h-32 p-3 border border-gray-300 rounded-md resize-vertical"
+                      placeholder="Paste your schedule message here, or just paste anywhere on the page..."
                       value={scheduleText}
                       onChange={e => setScheduleText(e.target.value)}
                     />
                   </div>
-                  <div className='flex gap-2'>
+                  <div className="flex gap-2">
                     <Button
-                      variant='outline'
+                      variant="outline"
                       onClick={handleScheduleParse}
                       disabled={!scheduleText.trim()}
                     >
@@ -934,18 +932,18 @@ export default function App() {
 
                   {/* Parse Results */}
                   {parseResult && (
-                    <div className='mt-4 space-y-2'>
+                    <div className="mt-4 space-y-2">
                       {parseResult.success ? (
-                        <div className='bg-green-50 p-3 rounded-lg'>
-                          <div className='flex items-center gap-2 text-green-800 font-medium'>
-                            <Badge className='bg-green-100 text-green-800'>
+                        <div className="bg-green-50 p-3 rounded-lg">
+                          <div className="flex items-center gap-2 text-green-800 font-medium">
+                            <Badge className="bg-green-100 text-green-800">
                               ✓ Success
                             </Badge>
                             Found {parseResult.runs.length} runs
                           </div>
-                          <div className='mt-2 text-sm text-green-700'>
+                          <div className="mt-2 text-sm text-green-700">
                             {parseResult.runs.map((run, index) => (
-                              <div key={index} className='mt-1'>
+                              <div key={index} className="mt-1">
                                 • {run.type.toUpperCase()}: {run.flightNumber}{' '}
                                 at {run.time} ({run.airline})
                               </div>
@@ -953,12 +951,12 @@ export default function App() {
                           </div>
                         </div>
                       ) : (
-                        <div className='bg-red-50 p-3 rounded-lg'>
-                          <div className='flex items-center gap-2 text-red-800 font-medium'>
-                            <AlertCircle className='h-4 w-4' />
+                        <div className="bg-red-50 p-3 rounded-lg">
+                          <div className="flex items-center gap-2 text-red-800 font-medium">
+                            <AlertCircle className="h-4 w-4" />
                             Parse Failed
                           </div>
-                          <div className='mt-2 text-sm text-red-700'>
+                          <div className="mt-2 text-sm text-red-700">
                             {parseResult.errors.map((error, index) => (
                               <div key={index}>• {error}</div>
                             ))}
@@ -967,12 +965,12 @@ export default function App() {
                       )}
 
                       {parseResult.warnings.length > 0 && (
-                        <div className='bg-yellow-50 p-3 rounded-lg'>
-                          <div className='flex items-center gap-2 text-yellow-800 font-medium'>
-                            <AlertCircle className='h-4 w-4' />
+                        <div className="bg-yellow-50 p-3 rounded-lg">
+                          <div className="flex items-center gap-2 text-yellow-800 font-medium">
+                            <AlertCircle className="h-4 w-4" />
                             Warnings
                           </div>
-                          <div className='mt-2 text-sm text-yellow-700'>
+                          <div className="mt-2 text-sm text-yellow-700">
                             {parseResult.warnings.map((warning, index) => (
                               <div key={index}>• {warning}</div>
                             ))}
@@ -993,13 +991,13 @@ export default function App() {
                   Schedule a new airport pickup or dropoff
                 </CardDescription>
               </CardHeader>
-              <CardContent className='space-y-4'>
-                <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-                  <div className='space-y-2'>
-                    <Label htmlFor='flight-number'>Flight Number *</Label>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="flight-number">Flight Number *</Label>
                     <Input
-                      id='flight-number'
-                      placeholder='e.g., AA1234'
+                      id="flight-number"
+                      placeholder="e.g., AA1234"
                       value={newRun.flightNumber || ''}
                       onChange={e =>
                         setNewRun(prev => ({
@@ -1012,16 +1010,16 @@ export default function App() {
                       }
                     />
                     {formErrors.flightNumber && (
-                      <p className='text-sm text-red-500'>
+                      <p className="text-sm text-red-500">
                         {formErrors.flightNumber}
                       </p>
                     )}
                   </div>
-                  <div className='space-y-2'>
-                    <Label htmlFor='airline'>Airline *</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="airline">Airline *</Label>
                     <Input
-                      id='airline'
-                      placeholder='e.g., American Airlines'
+                      id="airline"
+                      placeholder="e.g., American Airlines"
                       value={newRun.airline || ''}
                       onChange={e =>
                         setNewRun(prev => ({
@@ -1032,16 +1030,16 @@ export default function App() {
                       className={formErrors.airline ? 'border-red-500' : ''}
                     />
                     {formErrors.airline && (
-                      <p className='text-sm text-red-500'>
+                      <p className="text-sm text-red-500">
                         {formErrors.airline}
                       </p>
                     )}
                   </div>
-                  <div className='space-y-2'>
-                    <Label htmlFor='departure'>Departure Airport *</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="departure">Departure Airport *</Label>
                     <Input
-                      id='departure'
-                      placeholder='e.g., JFK'
+                      id="departure"
+                      placeholder="e.g., JFK"
                       value={newRun.departure || ''}
                       onChange={e =>
                         setNewRun(prev => ({
@@ -1052,16 +1050,16 @@ export default function App() {
                       className={formErrors.departure ? 'border-red-500' : ''}
                     />
                     {formErrors.departure && (
-                      <p className='text-sm text-red-500'>
+                      <p className="text-sm text-red-500">
                         {formErrors.departure}
                       </p>
                     )}
                   </div>
-                  <div className='space-y-2'>
-                    <Label htmlFor='arrival'>Arrival Airport *</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="arrival">Arrival Airport *</Label>
                     <Input
-                      id='arrival'
-                      placeholder='e.g., LAX'
+                      id="arrival"
+                      placeholder="e.g., LAX"
                       value={newRun.arrival || ''}
                       onChange={e =>
                         setNewRun(prev => ({
@@ -1072,16 +1070,16 @@ export default function App() {
                       className={formErrors.arrival ? 'border-red-500' : ''}
                     />
                     {formErrors.arrival && (
-                      <p className='text-sm text-red-500'>
+                      <p className="text-sm text-red-500">
                         {formErrors.arrival}
                       </p>
                     )}
                   </div>
-                  <div className='space-y-2 sm:col-span-2'>
-                    <Label htmlFor='pickup-location'>Pickup Location *</Label>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="pickup-location">Pickup Location *</Label>
                     <Input
-                      id='pickup-location'
-                      placeholder='e.g., 123 Main St, City, State'
+                      id="pickup-location"
+                      placeholder="e.g., 123 Main St, City, State"
                       value={newRun.pickupLocation || ''}
                       onChange={e =>
                         setNewRun(prev => ({
@@ -1094,16 +1092,16 @@ export default function App() {
                       }
                     />
                     {formErrors.pickupLocation && (
-                      <p className='text-sm text-red-500'>
+                      <p className="text-sm text-red-500">
                         {formErrors.pickupLocation}
                       </p>
                     )}
                   </div>
-                  <div className='space-y-2 sm:col-span-2'>
-                    <Label htmlFor='dropoff-location'>Dropoff Location *</Label>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="dropoff-location">Dropoff Location *</Label>
                     <Input
-                      id='dropoff-location'
-                      placeholder='e.g., Airport Terminal 1'
+                      id="dropoff-location"
+                      placeholder="e.g., Airport Terminal 1"
                       value={newRun.dropoffLocation || ''}
                       onChange={e =>
                         setNewRun(prev => ({
@@ -1116,16 +1114,16 @@ export default function App() {
                       }
                     />
                     {formErrors.dropoffLocation && (
-                      <p className='text-sm text-red-500'>
+                      <p className="text-sm text-red-500">
                         {formErrors.dropoffLocation}
                       </p>
                     )}
                   </div>
-                  <div className='space-y-2'>
-                    <Label htmlFor='scheduled-time'>Scheduled Time *</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="scheduled-time">Scheduled Time *</Label>
                     <Input
-                      id='scheduled-time'
-                      type='datetime-local'
+                      id="scheduled-time"
+                      type="datetime-local"
                       value={newRun.scheduledTime || ''}
                       onChange={e =>
                         setNewRun(prev => ({
@@ -1138,16 +1136,16 @@ export default function App() {
                       }
                     />
                     {formErrors.scheduledTime && (
-                      <p className='text-sm text-red-500'>
+                      <p className="text-sm text-red-500">
                         {formErrors.scheduledTime}
                       </p>
                     )}
                   </div>
-                  <div className='space-y-2'>
-                    <Label htmlFor='type'>Run Type *</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="type">Run Type *</Label>
                     <select
-                      id='type'
-                      className='w-full p-2 border border-gray-300 rounded-md h-10'
+                      id="type"
+                      className="w-full p-2 border border-gray-300 rounded-md h-10"
                       value={newRun.type || 'pickup'}
                       onChange={e =>
                         setNewRun(prev => ({
@@ -1156,15 +1154,15 @@ export default function App() {
                         }))
                       }
                     >
-                      <option value='pickup'>Pickup (to airport)</option>
-                      <option value='dropoff'>Dropoff (from airport)</option>
+                      <option value="pickup">Pickup (to airport)</option>
+                      <option value="dropoff">Dropoff (from airport)</option>
                     </select>
                   </div>
-                  <div className='space-y-2 sm:col-span-2'>
-                    <Label htmlFor='notes'>Notes (Optional)</Label>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="notes">Notes (Optional)</Label>
                     <Input
-                      id='notes'
-                      placeholder='Additional notes...'
+                      id="notes"
+                      placeholder="Additional notes..."
                       value={newRun.notes || ''}
                       onChange={e =>
                         setNewRun(prev => ({ ...prev, notes: e.target.value }))
@@ -1172,16 +1170,16 @@ export default function App() {
                       className={formErrors.notes ? 'border-red-500' : ''}
                     />
                     {formErrors.notes && (
-                      <p className='text-sm text-red-500'>{formErrors.notes}</p>
+                      <p className="text-sm text-red-500">{formErrors.notes}</p>
                     )}
                   </div>
                 </div>
                 <Button
                   onClick={addRun}
-                  className='w-full h-12 text-lg'
+                  className="w-full h-12 text-lg"
                   disabled={runsApiData.isLoading}
                 >
-                  <Plus className='h-5 w-5 mr-2' />
+                  <Plus className="h-5 w-5 mr-2" />
                   Add Run
                 </Button>
               </CardContent>
