@@ -48,6 +48,7 @@ const airlines: Airline[] = airlinesData;
 
 function UpcomingFlights() {
   const [selectedAirline, setSelectedAirline] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [flightLimit, setFlightLimit] = useState<number>(5);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [searchMode, setSearchMode] = useState<'selected' | 'all'>('selected');
@@ -96,22 +97,35 @@ function UpcomingFlights() {
   });
 
   // Filter flights client-side when in "selected" mode
-  const filteredFlights =
-    searchMode === 'selected' && searchTerm
-      ? upcomingFlights.filter(
-          flight =>
-            flight.flightNumber
-              .toLowerCase()
-              .includes(searchTerm.toLowerCase()) ||
-            flight.airline.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      : upcomingFlights;
+  let filteredFlights = upcomingFlights;
+
+  // Apply search filter
+  if (searchMode === 'selected' && searchTerm) {
+    filteredFlights = filteredFlights.filter(
+      flight =>
+        flight.flightNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        flight.airline.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }
+
+  // Apply status filter
+  if (selectedStatus) {
+    filteredFlights = filteredFlights.filter(
+      flight => flight.status.toLowerCase() === selectedStatus.toLowerCase()
+    );
+  }
+
+  // Get available statuses from current flights
+  const availableStatuses = Array.from(
+    new Set(upcomingFlights.map(flight => flight.status))
+  ).sort();
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'on time':
-      case 'scheduled':
         return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'scheduled':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
       case 'delayed':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
       case 'boarding':
@@ -243,6 +257,11 @@ function UpcomingFlights() {
                 {getAirlineName(selectedAirline)}
               </span>
             )}
+            {selectedStatus && (
+              <span className='text-foreground/90 block text-sm'>
+                Status: {selectedStatus}
+              </span>
+            )}
             {searchTerm && (
               <span className='text-foreground/90 block text-sm'>
                 Searching{' '}
@@ -346,15 +365,22 @@ function UpcomingFlights() {
             <div>
               <CardTitle className='flex items-center gap-2 mb-1'>
                 <Filter className='h-5 w-5 text-muted-foreground' />
-                Filter by Airline
-                {selectedAirline && (
+                Filter by Airline or Status
+                {(selectedAirline || selectedStatus) && (
                   <span className='text-sm font-normal text-muted-foreground'>
-                    ({getAirlineName(selectedAirline)})
+                    (
+                    {[
+                      selectedAirline && getAirlineName(selectedAirline),
+                      selectedStatus,
+                    ]
+                      .filter(Boolean)
+                      .join(', ')}
+                    )
                   </span>
                 )}
               </CardTitle>
               <CardDescription>
-                Filter flights by a specific airline or show all departures
+                Filter flights by airline or status
               </CardDescription>
             </div>
             {isFilterExpanded ? (
@@ -367,27 +393,74 @@ function UpcomingFlights() {
         {isFilterExpanded && (
           <div className='animate-in slide-in-from-top-2 duration-300'>
             <CardContent className='pt-0'>
-              <div className='flex gap-2'>
-                <div className='flex-1'>
-                  <AirlineCombobox
-                    airlines={airlines}
-                    value={selectedAirline}
-                    onValueChange={setSelectedAirline}
-                    placeholder='All airlines'
-                    emptyMessage='No airlines found'
-                    maxResults={100}
-                  />
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <div className='space-y-2'>
+                  <label className='text-sm font-medium text-foreground'>
+                    Airline
+                  </label>
+                  <div className='flex gap-2'>
+                    <div className='flex-1'>
+                      <AirlineCombobox
+                        airlines={airlines}
+                        value={selectedAirline}
+                        onValueChange={setSelectedAirline}
+                        placeholder='All airlines'
+                        emptyMessage='No airlines found'
+                        maxResults={100}
+                      />
+                    </div>
+                    {selectedAirline && (
+                      <Button
+                        variant='outline'
+                        size='icon'
+                        onClick={() => setSelectedAirline('')}
+                        title='Clear airline filter'
+                      >
+                        <X className='h-4 w-4 text-destructive hover:text-destructive/80' />
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                {selectedAirline && (
-                  <Button
-                    variant='outline'
-                    size='icon'
-                    onClick={() => setSelectedAirline('')}
-                    title='Clear airline filter'
-                  >
-                    <X className='h-4 w-4 text-destructive hover:text-destructive/80' />
-                  </Button>
-                )}
+                <div className='space-y-2'>
+                  <label className='text-sm font-medium text-foreground'>
+                    Status
+                  </label>
+                  <div className='flex gap-2'>
+                    <div className='flex-1'>
+                      <Select
+                        value={selectedStatus}
+                        onValueChange={setSelectedStatus}
+                      >
+                        <SelectTrigger className='w-full'>
+                          <SelectValue placeholder='All statuses' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableStatuses.map(status => (
+                            <SelectItem key={status} value={status}>
+                              <div className='flex items-center gap-2'>
+                                <Badge
+                                  className={`text-xs ${getStatusColor(status)}`}
+                                >
+                                  {status}
+                                </Badge>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {selectedStatus && (
+                      <Button
+                        variant='outline'
+                        size='icon'
+                        onClick={() => setSelectedStatus('')}
+                        title='Clear status filter'
+                      >
+                        <X className='h-4 w-4 text-destructive hover:text-destructive/80' />
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </div>
@@ -504,27 +577,33 @@ function UpcomingFlights() {
         !isError &&
         filteredFlights.length === 0 &&
         upcomingFlights.length > 0 &&
-        searchTerm && (
+        (searchTerm || selectedStatus) && (
           <Card>
             <CardContent className='p-8 text-center'>
               <Search className='h-16 w-16 text-muted-foreground mx-auto mb-6' />
               <p className='text-muted-foreground text-lg mb-4'>
-                No flights found matching "{searchTerm}"
+                No flights found matching your filters
               </p>
               <p className='text-sm text-muted-foreground mb-4'>
-                Try searching{' '}
-                {searchMode === 'selected' ? 'all flights' : 'selected flights'}{' '}
-                or adjusting your search term
+                {searchTerm && `Search: "${searchTerm}"`}
+                {searchTerm && selectedStatus && ', '}
+                {selectedStatus && `Status: ${selectedStatus}`}
               </p>
-              <Button
-                variant='outline'
-                onClick={() =>
-                  setSearchMode(searchMode === 'selected' ? 'all' : 'selected')
-                }
-              >
-                Search{' '}
-                {searchMode === 'selected' ? 'all flights' : 'selected flights'}
-              </Button>
+              <div className='flex gap-2 justify-center'>
+                {searchTerm && (
+                  <Button variant='outline' onClick={() => setSearchTerm('')}>
+                    Clear search
+                  </Button>
+                )}
+                {selectedStatus && (
+                  <Button
+                    variant='outline'
+                    onClick={() => setSelectedStatus('')}
+                  >
+                    Clear status filter
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}
