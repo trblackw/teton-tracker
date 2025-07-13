@@ -12,7 +12,7 @@ import {
   Search,
   X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AirlineCombobox } from '../components/ui/airline-combobox';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -65,6 +65,14 @@ function UpcomingFlights() {
   const [dismissedTemporalAlerts, setDismissedTemporalAlerts] = useState<
     Set<string>
   >(new Set());
+
+  // Clipboard detection state
+  const [clipboardSuggestion, setClipboardSuggestion] = useState<{
+    flights: string[];
+    airports: string[];
+    confirmations: string[];
+    rawText: string;
+  } | null>(null);
 
   const { formatDateTime } = useTimezoneFormatters();
   const userTimezone = useTimezone();
@@ -148,11 +156,154 @@ function UpcomingFlights() {
   const dismissTemporalAlert = (temporalStatus: any) => {
     const alertKey = generateTemporalAlertKey(temporalStatus);
     if (alertKey) {
-      sessionStorage.setItem(alertKey, 'dismissed');
-      setDismissedTemporalAlerts(prev => new Set(prev).add(alertKey));
-      console.log(`📝 Dismissed temporal alert: ${alertKey}`);
+      const newDismissed = new Set(dismissedTemporalAlerts);
+      newDismissed.add(alertKey);
+      setDismissedTemporalAlerts(newDismissed);
+
+      // Store in sessionStorage
+      sessionStorage.setItem(
+        'dismissedTemporalAlerts',
+        JSON.stringify(Array.from(newDismissed))
+      );
     }
   };
+
+  // Clipboard detection utilities
+  const isClipboardSupported = () => {
+    return 'clipboard' in navigator && 'readText' in navigator.clipboard;
+  };
+
+  const detectFlightFormats = (text: string) => {
+    const patterns = {
+      // Flight numbers: AA123, DL 4567, United 1234, etc.
+      flights:
+        /\b(?:[A-Z]{2,3}[\s\-]?\d{1,4}|(?:American|Delta|United|Southwest|Alaska|JetBlue|Spirit|Frontier)[\s\-]\d{1,4})\b/gi,
+
+      // Airport codes: LAX, JFK, DEN
+      airports: /\b[A-Z]{3}\b/g,
+
+      // Confirmation codes: 6-character alphanumeric
+      confirmations: /\b[A-Z0-9]{6}\b/g,
+    };
+
+    const results = {
+      flights: (text.match(patterns.flights) || []) as string[],
+      airports: (text.match(patterns.airports) || []) as string[],
+      confirmations: (text.match(patterns.confirmations) || []) as string[],
+    };
+
+    // Filter out common false positives for airports
+    const commonWords = [
+      'THE',
+      'AND',
+      'FOR',
+      'YOU',
+      'ARE',
+      'CAN',
+      'GET',
+      'ALL',
+      'NEW',
+      'NOW',
+      'ANY',
+      'WAY',
+      'DAY',
+      'USE',
+      'HER',
+      'HOW',
+      'ITS',
+      'OUR',
+      'OUT',
+      'WHO',
+      'BOY',
+      'DID',
+      'HAS',
+      'LET',
+      'OLD',
+      'SEE',
+      'TWO',
+      'WAR',
+      'FAR',
+      'OFF',
+      'BAD',
+      'AGO',
+      'YES',
+    ];
+    results.airports = results.airports.filter(
+      code => !commonWords.includes(code.toUpperCase())
+    );
+
+    return results;
+  };
+
+  const checkClipboardForFlightData = async () => {
+    if (!isClipboardSupported()) {
+      console.warn('Clipboard API not supported');
+      return;
+    }
+
+    try {
+      const text = await navigator.clipboard.readText();
+
+      if (!text || text.trim().length === 0) {
+        console.log('Clipboard is empty');
+        return;
+      }
+
+      const detected = detectFlightFormats(text);
+
+      if (detected.flights.length > 0 || detected.confirmations.length > 0) {
+        setClipboardSuggestion({
+          flights: detected.flights,
+          airports: detected.airports,
+          confirmations: detected.confirmations,
+          rawText: text,
+        });
+
+        console.log('Found flight data in clipboard:', detected);
+      } else {
+        console.log('No flight data detected in clipboard');
+        setClipboardSuggestion(null);
+      }
+    } catch (error) {
+      console.warn('Clipboard access denied:', error);
+    }
+  };
+
+  const addFlightFromClipboard = (flightNumber: string) => {
+    setSearchTerm(flightNumber);
+    setSearchMode('all');
+
+    // Auto-set airline if we can detect it from the flight number
+    const airlineCode = flightNumber.match(/^([A-Z]{2,3})/)?.[1];
+    if (airlineCode) {
+      const airline = airlines.find(
+        a =>
+          a.lcc.toUpperCase() === airlineCode.toUpperCase() ||
+          a.id.toUpperCase() === airlineCode.toUpperCase()
+      );
+      if (airline) {
+        setSelectedAirline(airline.lcc);
+        console.log(`Auto-selected airline: ${airline.name} (${airline.lcc})`);
+      }
+    }
+
+    setClipboardSuggestion(null);
+    console.log(`Added ${flightNumber} to search from clipboard`);
+  };
+
+  // Auto-check clipboard when user returns to app
+  useEffect(() => {
+    const handleWindowFocus = () => {
+      // Only auto-check if we don't already have a suggestion showing
+      if (!clipboardSuggestion && isClipboardSupported()) {
+        // Small delay to ensure window is fully focused
+        setTimeout(checkClipboardForFlightData, 100);
+      }
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    return () => window.removeEventListener('focus', handleWindowFocus);
+  }, [clipboardSuggestion]); // Re-run effect when clipboardSuggestion changes
 
   // Query for user preferences to get home airport
   const { data: preferences, isLoading: isLoadingPreferences } = useQuery({
@@ -163,12 +314,12 @@ function UpcomingFlights() {
 
   const homeAirport = preferences?.homeAirport || '';
 
-  // Query for upcoming flights
   const {
-    data: flightResponse,
     isLoading,
-    isError,
+    error,
+    data: flightResponse,
     refetch,
+    isError,
   } = useQuery({
     queryKey: [
       'upcoming-flights',
@@ -553,10 +704,11 @@ function UpcomingFlights() {
               <div className='flex gap-2'>
                 <div className='flex-1'>
                   <Input
-                    placeholder='Enter flight number or airline...'
+                    type='text'
+                    placeholder='Flight number'
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
-                    className='w-full'
+                    className='flex-1'
                   />
                 </div>
                 <Select
@@ -584,6 +736,47 @@ function UpcomingFlights() {
                   </Button>
                 )}
               </div>
+
+              {/* Clipboard suggestions */}
+              {clipboardSuggestion && (
+                <div className='mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
+                  <p className='text-sm font-medium text-blue-900 mb-2'>
+                    📋 Found flight data in clipboard:
+                  </p>
+                  <div className='flex flex-wrap gap-2'>
+                    {clipboardSuggestion.flights.map((flight, index) => (
+                      <Button
+                        key={`flight-${index}`}
+                        variant='outline'
+                        size='sm'
+                        onClick={() => addFlightFromClipboard(flight)}
+                        className='text-blue-700 border-blue-300 hover:bg-blue-100'
+                      >
+                        ✈️ {flight}
+                      </Button>
+                    ))}
+                    {clipboardSuggestion.confirmations.map((conf, index) => (
+                      <Button
+                        key={`conf-${index}`}
+                        variant='outline'
+                        size='sm'
+                        onClick={() => setSearchTerm(conf)}
+                        className='text-green-700 border-green-300 hover:bg-green-100'
+                      >
+                        🎫 {conf}
+                      </Button>
+                    ))}
+                  </div>
+                  <Button
+                    variant='ghost'
+                    size='sm'
+                    onClick={() => setClipboardSuggestion(null)}
+                    className='mt-2 text-xs text-muted-foreground'
+                  >
+                    Dismiss
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </div>
         )}
@@ -599,7 +792,7 @@ function UpcomingFlights() {
             <div>
               <CardTitle className='flex items-center gap-2 mb-1'>
                 <Filter className='h-5 w-5 text-muted-foreground' />
-                Filter by Airline, Status or Time Frame
+                Filter
                 {(selectedAirline || selectedStatus || filterTime) && (
                   <span className='text-sm font-normal text-muted-foreground'>
                     (
