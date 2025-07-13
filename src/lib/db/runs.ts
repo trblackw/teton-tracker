@@ -242,6 +242,59 @@ export async function updateRunStatus(
   }
 }
 
+// Update a run
+export async function updateRun(
+  id: string,
+  runData: NewRunForm,
+  userId?: string
+): Promise<Run | null> {
+  try {
+    const db = getDatabase();
+    const now = new Date().toISOString();
+
+    let sql = `
+      UPDATE runs 
+      SET flight_number = ?, airline = ?, departure_airport = ?, arrival_airport = ?,
+          pickup_location = ?, dropoff_location = ?, scheduled_time = ?, type = ?,
+          price = ?, notes = ?, updated_at = ?
+      WHERE id = ?
+    `;
+    const args: any[] = [
+      runData.flightNumber,
+      runData.airline || '',
+      runData.departure,
+      runData.arrival,
+      runData.pickupLocation,
+      runData.dropoffLocation,
+      runData.scheduledTime,
+      runData.type,
+      runData.price,
+      runData.notes || '',
+      now,
+      id,
+    ];
+
+    if (userId) {
+      sql += ' AND user_id = ?';
+      args.push(userId);
+    }
+
+    const result = await db.execute({ sql, args });
+
+    const success = result.rowsAffected > 0;
+    if (success) {
+      console.log(`✅ Updated run ${id}`);
+      // Return the updated run
+      return await getRunById(id, userId);
+    }
+
+    return null;
+  } catch (error) {
+    handleDatabaseError(error, 'update run');
+    return null;
+  }
+}
+
 // Delete a run
 export async function deleteRun(id: string, userId?: string): Promise<boolean> {
   try {

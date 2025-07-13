@@ -57,6 +57,24 @@ export const runsApi = {
     return response.json();
   },
 
+  // Update an existing run
+  async updateRun(id: string, runData: NewRunForm): Promise<Run> {
+    const userId = getUserId();
+    const response = await fetch(`${API_BASE}/runs/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ runData, userId }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update run');
+    }
+
+    return response.json();
+  },
+
   // Update run status
   async updateRunStatus(id: string, status: RunStatus): Promise<void> {
     const userId = getUserId();

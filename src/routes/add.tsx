@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createFileRoute, useRouter } from '@tanstack/react-router';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { createFileRoute, useRouter, useSearch } from '@tanstack/react-router';
 import {
   AlertTriangle,
   Clock,
@@ -67,7 +67,7 @@ interface FlightStatusState {
 // Helper function to check if a flight is historical (separate from API call)
 const checkIsHistorical = (scheduledTime: string): boolean => {
   if (!scheduledTime) return false;
-  
+
   try {
     const scheduledDate = new Date(scheduledTime);
     const now = new Date();
@@ -121,6 +121,7 @@ function isScheduleMessage(text: string): boolean {
 function AddRun() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const search = useSearch({ from: '/add' });
   const [isInfoMessageDismissed, setIsInfoMessageDismissed] =
     useState<boolean>(false);
   const [flightStatusState, setFlightStatusState] = useState<FlightStatusState>(
@@ -131,6 +132,14 @@ function AddRun() {
       isHistorical: false,
     }
   );
+
+  // Query for edit mode
+  const { data: editingRun, isLoading: isLoadingRun } = useQuery({
+    queryKey: ['run', search.edit],
+    queryFn: () =>
+      runsApi.getRuns().then(runs => runs.find(run => run.id === search.edit)),
+    enabled: !!search.edit,
+  });
 
   // Check sessionStorage for dismissed state on component mount
   useEffect(() => {
@@ -162,6 +171,24 @@ function AddRun() {
     },
   });
 
+  // Effect to populate form when editing run is loaded
+  useEffect(() => {
+    if (editingRun) {
+      form.reset({
+        flightNumber: editingRun.flightNumber,
+        airline: editingRun.airline,
+        departure: editingRun.departure,
+        arrival: editingRun.arrival,
+        pickupLocation: editingRun.pickupLocation,
+        dropoffLocation: editingRun.dropoffLocation,
+        scheduledTime: editingRun.scheduledTime,
+        type: editingRun.type,
+        price: editingRun.price,
+        notes: editingRun.notes || '',
+      });
+    }
+  }, [editingRun, form]);
+
   // Store default form values for undo functionality
   const defaultFormValues: NewRunForm = {
     flightNumber: '',
@@ -183,7 +210,7 @@ function AddRun() {
   ) => {
     // Always check if flight is historical, regardless of debug mode
     const isHistorical = checkIsHistorical(scheduledTime);
-    
+
     if (!flightNumber || isDebugMode()) {
       // Even in debug mode, we still set the historical state
       setFlightStatusState(prev => ({
@@ -334,17 +361,24 @@ function AddRun() {
     value => value !== '' && value !== defaultFormValues.type
   );
 
-  // Mutation for creating a new run
+  // Mutation for creating/updating a run
   const createRunMutation = useMutation({
-    mutationFn: (data: NewRunForm) => runsApi.createRun(data),
+    mutationFn: (data: NewRunForm) => {
+      if (editingRun) {
+        return runsApi.updateRun(editingRun.id, data);
+      } else {
+        return runsApi.createRun(data);
+      }
+    },
     onSuccess: (_, variables) => {
       // Invalidate and refetch runs
       queryClient.invalidateQueries({ queryKey: ['runs'] });
 
       // Show success toast
+      const action = editingRun ? 'updated' : 'created';
       toasts.success(
-        'Run created successfully',
-        `${variables.type === 'pickup' ? 'Pickup' : 'Dropoff'} run for flight ${variables.flightNumber} has been scheduled.`
+        `Run ${action} successfully`,
+        `${variables.type === 'pickup' ? 'Pickup' : 'Dropoff'} run for flight ${variables.flightNumber} has been ${action}.`
       );
 
       // Reset form
@@ -354,9 +388,12 @@ function AddRun() {
       router.navigate({ to: '/runs' });
     },
     onError: error => {
-      console.error('Failed to create run:', error);
+      console.error(
+        `Failed to ${editingRun ? 'update' : 'create'} run:`,
+        error
+      );
       toasts.error(
-        'Failed to create run',
+        `Failed to ${editingRun ? 'update' : 'create'} run`,
         'Please check your information and try again.'
       );
     },
@@ -457,42 +494,46 @@ function AddRun() {
   };
 
   return (
-    <div className='space-y-6'>
+    <div className="space-y-6">
       <div>
-        <h2 className='text-2xl font-bold text-foreground'>Add New Run</h2>
-        <p className='text-muted-foreground mt-1'>
-          Schedule a new pickup or dropoff run
+        <h2 className="text-2xl font-bold text-foreground">
+          {editingRun ? 'Edit Run' : 'Add New Run'}
+        </h2>
+        <p className="text-muted-foreground mt-1">
+          {editingRun
+            ? 'Update the details for this run'
+            : 'Schedule a new pickup or dropoff run'}
         </p>
       </div>
 
       {/* Dismissable Info Message */}
-      {!isInfoMessageDismissed && (
-        <Card className='border-blue-200 py-1 bg-blue-50 dark:border-blue-800 dark:bg-blue-950'>
-          <CardContent className='px-2 py-0'>
-            <div className='flex items-center justify-between'>
-              <div className='flex items-center gap-2'>
-                <Plane className='size-12 text-blue-600 dark:text-blue-400' />
-                <p className='text-sm text-blue-800 dark:text-blue-200'>
-                  <strong>Snake River employee?</strong> <br />Copy & paste scheduled
-                  run messages directly
+      {!isInfoMessageDismissed && !editingRun && (
+        <Card className="border-blue-200 py-1 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+          <CardContent className="px-2 py-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Plane className="size-12 text-blue-600 dark:text-blue-400" />
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  <strong>Snake River employee?</strong> <br />
+                  Copy & paste scheduled run messages directly
                 </p>
               </div>
-              <div className='flex items-center gap-2'>
+              <div className="flex items-center gap-2">
                 <Button
-                  variant='outline'
-                  size='sm'
+                  variant="outline"
+                  size="sm"
                   onClick={handlePasteFromClipboard}
-                  className='text-xs m-0 bg-blue-100 border-blue-300 text-blue-700 hover:bg-blue-200 hover:border-blue-400 dark:bg-blue-900 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-800'
+                  className="text-xs m-0 bg-blue-100 border-blue-300 text-blue-700 hover:bg-blue-200 hover:border-blue-400 dark:bg-blue-900 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-800"
                 >
                   Paste
                 </Button>
                 <Button
-                  variant='ghost'
-                  size='sm'
+                  variant="ghost"
+                  size="sm"
                   onClick={dismissInfoMessage}
-                  className='h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900'
+                  className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900"
                 >
-                  <X className='h-4 w-4' />
+                  <X className="h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -502,10 +543,10 @@ function AddRun() {
 
       <Card>
         <CardHeader>
-          <div className='flex items-center justify-between'>
+          <div className="flex items-center justify-between">
             <div>
-              <CardTitle className='flex items-center gap-2'>
-                <Plus className='h-5 w-5' />
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="h-5 w-5" />
                 Run Details
               </CardTitle>
               <CardDescription>
@@ -514,11 +555,11 @@ function AddRun() {
             </div>
             {hasFilledFields && (
               <Button
-                variant='outline'
-                size='sm'
+                variant="outline"
+                size="sm"
                 onClick={() => form.reset(defaultFormValues)}
-                className='text-muted-foreground hover:text-foreground'
-                title='Reset form'
+                className="text-muted-foreground hover:text-foreground"
+                title="Reset form"
               >
                 Clear
               </Button>
@@ -527,20 +568,20 @@ function AddRun() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
-              <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name='flightNumber'
+                  name="flightNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className='flex items-center gap-2'>
-                        <Plane className='h-4 w-4' />
+                      <FormLabel className="flex items-center gap-2">
+                        <Plane className="h-4 w-4" />
                         Flight Number
-                        <small className='text-destructive'>*</small>
+                        <small className="text-destructive">*</small>
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder='e.g., UA123' {...field} />
+                        <Input placeholder="e.g., UA123" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -548,12 +589,12 @@ function AddRun() {
                 />
                 <FormField
                   control={form.control}
-                  name='airline'
+                  name="airline"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Airline</FormLabel>
                       <FormControl>
-                        <Input placeholder='e.g., United Airlines' {...field} />
+                        <Input placeholder="e.g., United Airlines" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -561,18 +602,18 @@ function AddRun() {
                 />
               </div>
 
-              <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name='departure'
+                  name="departure"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
                         Departure Airport
-                        <small className='text-destructive'>*</small>
+                        <small className="text-destructive">*</small>
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder='e.g., DEN' {...field} />
+                        <Input placeholder="e.g., DEN" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -580,15 +621,15 @@ function AddRun() {
                 />
                 <FormField
                   control={form.control}
-                  name='arrival'
+                  name="arrival"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
                         Arrival Airport
-                        <small className='text-destructive'>*</small>
+                        <small className="text-destructive">*</small>
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder='e.g., JAC' {...field} />
+                        <Input placeholder="e.g., JAC" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -596,20 +637,20 @@ function AddRun() {
                 />
               </div>
 
-              <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name='pickupLocation'
+                  name="pickupLocation"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className='flex items-center gap-2'>
-                        <MapPin className='h-4 w-4' />
+                      <FormLabel className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
                         Pickup Location
-                        <small className='text-destructive'>*</small>
+                        <small className="text-destructive">*</small>
                       </FormLabel>
                       <FormControl>
                         <Input
-                          placeholder='e.g., Jackson Hole Airport'
+                          placeholder="e.g., Jackson Hole Airport"
                           {...field}
                         />
                       </FormControl>
@@ -619,17 +660,17 @@ function AddRun() {
                 />
                 <FormField
                   control={form.control}
-                  name='dropoffLocation'
+                  name="dropoffLocation"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className='flex items-center gap-2'>
-                        <MapPin className='h-4 w-4' />
+                      <FormLabel className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
                         Dropoff Location
-                        <small className='text-destructive'>*</small>
+                        <small className="text-destructive">*</small>
                       </FormLabel>
                       <FormControl>
                         <Input
-                          placeholder='e.g., Snow King Resort'
+                          placeholder="e.g., Snow King Resort"
                           {...field}
                         />
                       </FormControl>
@@ -639,18 +680,18 @@ function AddRun() {
                 />
               </div>
 
-              <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name='scheduledTime'
+                  name="scheduledTime"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className='flex items-center gap-2'>
-                        <Clock className='h-4 w-4' />
+                      <FormLabel className="flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
                         Scheduled Time
-                        <small className='text-destructive'>*</small>
+                        <small className="text-destructive">*</small>
                         {flightStatusState.isLoading && (
-                          <Loader2 className='h-4 w-4 animate-spin text-blue-500' />
+                          <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
                         )}
                         {!flightStatusState.isLoading &&
                           flightStatusState.status &&
@@ -658,27 +699,27 @@ function AddRun() {
                             <Popover>
                               <PopoverTrigger asChild>
                                 <Button
-                                  variant='ghost'
-                                  size='sm'
-                                  className='h-4 w-4 p-0 hover:bg-transparent'
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-4 w-4 p-0 hover:bg-transparent"
                                 >
-                                  <Info className='h-4 w-4 text-blue-500 hover:text-blue-600' />
+                                  <Info className="h-4 w-4 text-blue-500 hover:text-blue-600" />
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className='w-64' side='top'>
-                                <div className='space-y-2'>
-                                  <div className='font-medium text-sm'>
+                              <PopoverContent className="w-64" side="top">
+                                <div className="space-y-2">
+                                  <div className="font-medium text-sm">
                                     Flight Status
                                   </div>
-                                  <div className='text-sm space-y-1'>
+                                  <div className="text-sm space-y-1">
                                     <div>
-                                      <span className='text-muted-foreground'>
+                                      <span className="text-muted-foreground">
                                         Flight:
                                       </span>{' '}
                                       {flightStatusState.status.flightNumber}
                                     </div>
                                     <div>
-                                      <span className='text-muted-foreground'>
+                                      <span className="text-muted-foreground">
                                         Status:
                                       </span>{' '}
                                       <span
@@ -699,7 +740,7 @@ function AddRun() {
                                       </span>
                                     </div>
                                     {flightStatusState.status.lastUpdated && (
-                                      <div className='text-xs text-muted-foreground'>
+                                      <div className="text-xs text-muted-foreground">
                                         Updated:{' '}
                                         {flightStatusState.status.lastUpdated.toLocaleString()}
                                       </div>
@@ -711,8 +752,8 @@ function AddRun() {
                           )}
                         {!flightStatusState.isLoading &&
                           flightStatusState.isHistorical && (
-                            <div title='Historical flight detected'>
-                              <AlertTriangle className='h-4 w-4 text-orange-500' />
+                            <div title="Historical flight detected">
+                              <AlertTriangle className="h-4 w-4 text-orange-500" />
                             </div>
                           )}
                       </FormLabel>
@@ -720,7 +761,7 @@ function AddRun() {
                         <DateTimePicker
                           value={field.value}
                           onChange={field.onChange}
-                          placeholder='Select date and time'
+                          placeholder="Select date and time"
                           className={
                             flightStatusState.isHistorical
                               ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20'
@@ -729,8 +770,8 @@ function AddRun() {
                         />
                       </FormControl>
                       {flightStatusState.isHistorical && (
-                        <div className='text-sm text-orange-600 dark:text-orange-400 flex items-center gap-1'>
-                          <AlertTriangle className='h-3 w-3' />
+                        <div className="text-sm text-orange-600 dark:text-orange-400 flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" />
                           This flight has already occurred
                         </div>
                       )}
@@ -740,12 +781,12 @@ function AddRun() {
                 />
                 <FormField
                   control={form.control}
-                  name='type'
+                  name="type"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
                         Run Type
-                        <small className='text-destructive'>*</small>
+                        <small className="text-destructive">*</small>
                       </FormLabel>
                       <Select
                         onValueChange={field.onChange}
@@ -753,12 +794,12 @@ function AddRun() {
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder='Select run type' />
+                            <SelectValue placeholder="Select run type" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value='pickup'>Pickup</SelectItem>
-                          <SelectItem value='dropoff'>Dropoff</SelectItem>
+                          <SelectItem value="pickup">Pickup</SelectItem>
+                          <SelectItem value="dropoff">Dropoff</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -769,16 +810,16 @@ function AddRun() {
 
               <FormField
                 control={form.control}
-                name='price'
+                name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className='flex items-center gap-2'>
-                      <DollarSign className='h-4 w-4' />
+                    <FormLabel className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4" />
                       Price
-                      <small className='text-destructive'>*</small>
+                      <small className="text-destructive">*</small>
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder='e.g., $100 or 176' {...field} />
+                      <Input placeholder="e.g., $100 or 176" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -787,13 +828,13 @@ function AddRun() {
 
               <FormField
                 control={form.control}
-                name='notes'
+                name="notes"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Notes</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder='e.g., VIP guest, special instructions'
+                        placeholder="e.g., VIP guest, special instructions"
                         {...field}
                         rows={3}
                       />
@@ -803,29 +844,29 @@ function AddRun() {
                 )}
               />
 
-              <div className='flex flex-col gap-3'>
+              <div className="flex flex-col gap-3">
                 <Button
-                  type='button'
-                  variant='outline'
+                  type="button"
+                  variant="outline"
                   onClick={() => router.navigate({ to: '/runs' })}
                   disabled={createRunMutation.isPending}
                 >
                   Cancel
                 </Button>
                 <Button
-                  type='submit'
-                  className='bg-green-500/40 text-white hover:bg-green-600/60'
+                  type="submit"
+                  className="bg-green-500/40 text-white hover:bg-green-600/60"
                   disabled={createRunMutation.isPending}
                 >
                   {createRunMutation.isPending ? (
                     <>
-                      <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2'></div>
-                      Creating Run...
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                      {editingRun ? 'Updating Run...' : 'Creating Run...'}
                     </>
                   ) : (
-                    <span className='flex items-center gap-2'>
-                      <Plus className='h-4 w-4' />
-                      Add Run
+                    <span className="flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      {editingRun ? 'Update Run' : 'Add Run'}
                     </span>
                   )}
                 </Button>
@@ -840,4 +881,9 @@ function AddRun() {
 
 export const Route = createFileRoute('/add')({
   component: AddRun,
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      edit: search.edit as string | undefined,
+    };
+  },
 });

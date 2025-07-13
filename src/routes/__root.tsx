@@ -15,7 +15,7 @@ import { queryClient } from '../lib/react-query-client';
 import { initializeTomTomServiceWithConfig } from '../lib/services/tomtom-service';
 import { toasts } from '../lib/toast';
 
-const activeNavClass = 'bg-primary/10 text-primary text-muted-foreground';
+const activeNavClass = 'bg-primary/10 text-blue-500';
 
 function RootComponent() {
   const routerState = useRouterState();

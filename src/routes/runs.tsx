@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import {
   AlertCircle,
   Clock,
+  Clock10,
+  Edit,
   FileText,
   MapPin,
   Navigation,
@@ -22,6 +24,14 @@ import {
   CardTitle,
 } from '../components/ui/card';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
+import {
   Tabs,
   TabsContent,
   TabsList,
@@ -37,9 +47,14 @@ import { toasts } from '../lib/toast';
 function Runs() {
   const queryClient = useQueryClient();
   const { formatScheduleTime } = useTimezoneFormatters();
+  const navigate = useNavigate();
 
   // Tab state
   const [activeTab, setActiveTab] = useState<'current' | 'past'>('current');
+
+  // Delete confirmation dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [runToDelete, setRunToDelete] = useState<string | null>(null);
 
   // Query for runs from API
   const {
@@ -105,9 +120,23 @@ function Runs() {
   };
 
   const handleDeleteRun = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this run?')) {
-      deleteRunMutation.mutate(id);
+    setRunToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (runToDelete) {
+      deleteRunMutation.mutate(runToDelete);
+      setDeleteDialogOpen(false);
+      setRunToDelete(null);
     }
+  };
+
+  const handleEditRun = (run: Run) => {
+    navigate({
+      to: '/add',
+      search: { edit: run.id },
+    });
   };
 
   const refreshRunData = (run: Run) => {
@@ -276,7 +305,11 @@ function Runs() {
                   currentRuns.some(currentRun => currentRun.id === run.id)
                 )
                 .map(({ run, flightStatus, trafficData }) => (
-                  <Card key={run.id} className="w-full">
+                  <Card
+                    key={run.id}
+                    className="w-full cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => handleEditRun(run)}
+                  >
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
                         <div>
@@ -295,17 +328,35 @@ function Runs() {
                             {run.airline} • {run.departure} → {run.arrival}
                           </CardDescription>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className={getStatusColor(run.status)}>
+                        <div className="flex items-center">
+                          <Badge
+                            className={`${getStatusColor(run.status)} mr-2`}
+                          >
                             {run.status}
                           </Badge>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDeleteRun(run.id)}
-                            disabled={deleteRunMutation.isPending}
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleEditRun(run);
+                            }}
+                            className="text-muted-foreground"
+                            title="Edit run"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleDeleteRun(run.id);
+                            }}
+                            disabled={deleteRunMutation.isPending}
+                            title="Delete run"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
                       </div>
@@ -383,25 +434,33 @@ function Runs() {
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-2 mt-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => refreshRunData(run)}
-                          disabled={runsApiData.isLoading}
-                          className="min-w-0"
-                        >
-                          {runsApiData.isLoading
-                            ? 'Loading...'
-                            : 'Refresh Data'}
-                        </Button>
+                      <div className="flex flex-wrap justify-between gap-2 mt-4">
+                        {activeTab === 'current' && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={e => {
+                              e.stopPropagation();
+                              refreshRunData(run);
+                            }}
+                            disabled={runsApiData.isLoading}
+                            className="min-w-0"
+                          >
+                            <RefreshCcw className="h-4 w-4" />
+                            {runsApiData.isLoading ? 'Loading...' : 'Refresh'}
+                          </Button>
+                        )}
                         {run.status === 'scheduled' && (
                           <Button
                             size="sm"
-                            onClick={() => handleUpdateStatus(run.id, 'active')}
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleUpdateStatus(run.id, 'active');
+                            }}
                             disabled={updateStatusMutation.isPending}
-                            className="min-w-0"
+                            className="min-w-0 bg-green-500 hover:bg-green-600 text-white"
                           >
+                            <Clock10 className="h-4 w-4" />
                             Start Run
                           </Button>
                         )}
@@ -409,9 +468,10 @@ function Runs() {
                           <Button
                             size="sm"
                             variant="secondary"
-                            onClick={() =>
-                              handleUpdateStatus(run.id, 'completed')
-                            }
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleUpdateStatus(run.id, 'completed');
+                            }}
                             disabled={updateStatusMutation.isPending}
                             className="min-w-0"
                           >
@@ -422,7 +482,10 @@ function Runs() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => pollingService.triggerPoll()}
+                            onClick={e => {
+                              e.stopPropagation();
+                              pollingService.triggerPoll();
+                            }}
                             className="min-w-0"
                           >
                             Manual Poll
@@ -446,7 +509,11 @@ function Runs() {
                   pastRuns.some(pastRun => pastRun.id === run.id)
                 )
                 .map(({ run, flightStatus, trafficData }) => (
-                  <Card key={run.id} className="w-full opacity-75">
+                  <Card
+                    key={run.id}
+                    className="w-full opacity-75 cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => handleEditRun(run)}
+                  >
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
                         <div>
@@ -464,8 +531,23 @@ function Runs() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDeleteRun(run.id)}
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleEditRun(run);
+                            }}
+                            title="Edit run"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleDeleteRun(run.id);
+                            }}
                             disabled={deleteRunMutation.isPending}
+                            title="Delete run"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -551,6 +633,34 @@ function Runs() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Run</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this run? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={deleteRunMutation.isPending}
+            >
+              {deleteRunMutation.isPending ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

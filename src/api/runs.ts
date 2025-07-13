@@ -2,6 +2,7 @@ import {
   createRun,
   deleteRun,
   getRuns,
+  updateRun,
   updateRunStatus,
   type RunsQuery,
 } from '../lib/db/runs';
@@ -80,40 +81,65 @@ export async function POST(request: Request): Promise<Response> {
   }
 }
 
-// PUT /api/runs/:id/status
+// PUT /api/runs/:id
 export async function PUT(request: Request): Promise<Response> {
   try {
     const url = new URL(request.url);
     const pathParts = url.pathname.split('/');
-    const runId = pathParts[pathParts.length - 2]; // /api/runs/:id/status
+    const runId = pathParts[pathParts.length - 1]; // /api/runs/:id
 
-    const body = await request.json();
-    const { status, userId } = body as { status: RunStatus; userId?: string };
+    // Check if this is a status update (ends with /status)
+    if (pathParts[pathParts.length - 1] === 'status') {
+      // Handle status update
+      const actualRunId = pathParts[pathParts.length - 2];
+      const body = await request.json();
+      const { status, userId } = body as { status: RunStatus; userId?: string };
 
-    const success = await updateRunStatus(runId, status, userId);
+      const success = await updateRunStatus(actualRunId, status, userId);
 
-    if (!success) {
-      return new Response(
-        JSON.stringify({ error: 'Run not found or unauthorized' }),
-        {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
+      if (!success) {
+        return new Response(
+          JSON.stringify({ error: 'Run not found or unauthorized' }),
+          {
+            status: 404,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } else {
+      // Handle full run update
+      const body = await request.json();
+      const { runData, userId } = body as {
+        runData: NewRunForm;
+        userId?: string;
+      };
+
+      const run = await updateRun(runId, runData, userId);
+
+      if (!run) {
+        return new Response(
+          JSON.stringify({ error: 'Run not found or unauthorized' }),
+          {
+            status: 404,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+      return new Response(JSON.stringify(run), {
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
-
-    return new Response(JSON.stringify({ success: true }), {
+  } catch (error) {
+    console.error('Failed to update run:', error);
+    return new Response(JSON.stringify({ error: 'Failed to update run' }), {
+      status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error) {
-    console.error('Failed to update run status:', error);
-    return new Response(
-      JSON.stringify({ error: 'Failed to update run status' }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
   }
 }
 

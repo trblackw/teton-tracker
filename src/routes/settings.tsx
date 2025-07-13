@@ -299,14 +299,6 @@ function Settings() {
                 </Button>
               )}
             </div>
-            {preferences?.homeAirport && (
-              <p className="text-sm text-muted-foreground">
-                Current home airport:{' '}
-                <span className="font-bold text-foreground">
-                  {preferences.homeAirport}
-                </span>
-              </p>
-            )}
           </div>
         </CardContent>
       </Card>
@@ -346,17 +338,6 @@ function Settings() {
                 </Button>
               )}
             </div>
-            {preferences?.timezone && (
-              <div className="flex flex-col gap-2">
-                <p className="text-sm text-muted-foreground">
-                  Current timezone:{' '}
-                </p>
-                <span className="font-bold text-foreground block">
-                  {timezones.find(tz => tz.id === preferences.timezone)
-                    ?.label || preferences.timezone}
-                </span>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
