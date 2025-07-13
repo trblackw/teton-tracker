@@ -77,6 +77,30 @@ async function startServer() {
       const url = new URL(request.url);
       const pathname = url.pathname;
 
+      // Force HTTPS redirect in production
+      if (
+        process.env.NODE_ENV === 'production' &&
+        url.protocol === 'http:' &&
+        !url.hostname.includes('localhost')
+      ) {
+        return new Response(null, {
+          status: 301,
+          headers: {
+            Location: `https://${url.host}${url.pathname}${url.search}`,
+          },
+        });
+      }
+
+      // Redirect www to non-www (optional)
+      if (url.hostname === 'www.tetontracker.com') {
+        return new Response(null, {
+          status: 301,
+          headers: {
+            Location: `https://tetontracker.com${url.pathname}${url.search}`,
+          },
+        });
+      }
+
       // Handle API routes
       if (pathname.startsWith('/api/')) {
         const { handler, params } = matchRoute(pathname);
