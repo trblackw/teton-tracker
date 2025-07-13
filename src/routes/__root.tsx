@@ -1,16 +1,30 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { createRootRoute, Link, Outlet } from '@tanstack/react-router';
+import {
+  createRootRoute,
+  Link,
+  Outlet,
+  useRouterState,
+} from '@tanstack/react-router';
 import { Activity, Plane, Plus, Settings } from 'lucide-react';
+import { useEffect } from 'react';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '../components/theme-provider';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { queryClient } from '../lib/react-query-client';
+import { toasts } from '../lib/toast';
 
 const activeNavClass = 'bg-primary/10 text-primary text-muted-foreground';
 
-export const Route = createRootRoute({
-  component: () => (
+function RootComponent() {
+  const routerState = useRouterState();
+
+  // Auto-dismiss toasts on route change
+  useEffect(() => {
+    toasts.dismissAll();
+  }, [routerState.location.pathname]);
+
+  return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <div className="min-h-screen bg-background">
@@ -184,7 +198,7 @@ export const Route = createRootRoute({
 
           {/* Toast Notifications */}
           <Toaster
-            position="bottom-center"
+            position="top-center"
             toastOptions={{
               style: {
                 background: 'hsl(var(--background))',
@@ -195,12 +209,16 @@ export const Route = createRootRoute({
             theme="system"
             richColors
             closeButton
-            offset="100px"
+            offset="20px"
             expand={false}
             visibleToasts={3}
           />
         </div>
       </ThemeProvider>
     </QueryClientProvider>
-  ),
+  );
+}
+
+export const Route = createRootRoute({
+  component: RootComponent,
 });
