@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import {
+  AlertTriangle,
   ChevronDown,
   ChevronUp,
   Clock,
@@ -67,7 +68,7 @@ function UpcomingFlights() {
 
   // Query for upcoming flights
   const {
-    data: upcomingFlights = [],
+    data: flightResponse,
     isLoading,
     isError,
     refetch,
@@ -80,7 +81,17 @@ function UpcomingFlights() {
       searchMode === 'all' ? searchTerm : '',
     ],
     queryFn: async () => {
-      if (!homeAirport) return [];
+      if (!homeAirport)
+        return {
+          flights: [],
+          temporalStatus: {
+            hasStaleData: false,
+            totalFlights: 0,
+            staleFlights: 0,
+            staleDates: [],
+            currentLocalTime: new Date().toLocaleString(),
+          },
+        };
 
       const flightService = await getFlightServiceWithConfig();
       return flightService.getUpcomingDepartures({
@@ -95,6 +106,10 @@ function UpcomingFlights() {
     refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
     staleTime: 2 * 60 * 1000, // Consider data stale after 2 minutes
   });
+
+  // Extract flights and temporal status from response
+  const upcomingFlights = flightResponse?.flights || [];
+  const temporalStatus = flightResponse?.temporalStatus;
 
   // Filter flights client-side when in "selected" mode
   let filteredFlights = upcomingFlights;
@@ -284,6 +299,31 @@ function UpcomingFlights() {
           Refresh
         </Button>
       </div>
+
+      {/* Temporal Status Alert */}
+      {temporalStatus?.hasStaleData && (
+        <Card className='border-orange-500 bg-orange-50 dark:bg-orange-950/20'>
+          <CardContent className='p-4'>
+            <div className='flex items-start gap-3'>
+              <AlertTriangle className='h-5 w-5 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5' />
+              <div>
+                <div className='font-medium text-orange-800 dark:text-orange-200'>
+                  Note:
+                </div>
+                <p className='text-sm text-orange-700 dark:text-orange-300 mt-1'>
+                  {temporalStatus.message}
+                </p>
+                {temporalStatus.staleFlights > 0 && (
+                  <p className='text-xs text-orange-600 dark:text-orange-400 mt-2'>
+                    Filtered out {temporalStatus.staleFlights} outdated flights
+                    from {temporalStatus.staleDates.join(', ')}
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Collapsible Flight Search */}
       <Card className='pb-2 pt-3'>

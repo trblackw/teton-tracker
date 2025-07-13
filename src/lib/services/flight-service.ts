@@ -9,9 +9,9 @@ const DEV_MODE = {
   // Set to true to force mock data in development (easy toggle)
   FORCE_MOCK_DATA: false, // Only enable via constructor parameter
   // Set to true to enable debug logging
-  DEBUG_LOGGING: false, // Only enable via constructor parameter
+  DEBUG_LOGGING: true, // Enable to see detailed API interactions
   // Set to true to test API key loading
-  TEST_API_KEY_LOADING: false, // Only enable via constructor parameter
+  TEST_API_KEY_LOADING: true, // Enable to verify API key configuration
 };
 
 // Development mode is now controlled via constructor parameters
@@ -112,6 +112,19 @@ export interface UpcomingFlight {
   terminal?: string;
 }
 
+export interface UpcomingFlightsResponse {
+  flights: UpcomingFlight[];
+  temporalStatus: {
+    hasStaleData: boolean;
+    totalFlights: number;
+    staleFlights: number;
+    oldestFlight?: string;
+    staleDates: string[];
+    currentLocalTime: string;
+    message?: string;
+  };
+}
+
 export class FlightService {
   private timeout: number = 15000;
   private apiKey: string | null = null;
@@ -143,7 +156,7 @@ export class FlightService {
    */
   async getUpcomingDepartures(
     request: UpcomingFlightsRequest
-  ): Promise<UpcomingFlight[]> {
+  ): Promise<UpcomingFlightsResponse> {
     try {
       console.log(
         `🛫 Fetching upcoming departures from ${request.airport}${request.airline ? ` for airline ${request.airline}` : ''}${request.flightNumber ? ` with flight number ${request.flightNumber}` : ''}`
@@ -154,84 +167,278 @@ export class FlightService {
         console.log(
           '🎭 Development mode: Using mock data (DEV_MODE.FORCE_MOCK_DATA = true)'
         );
-        return this.getMockUpcomingFlights(request);
+        const mockFlights = this.getMockUpcomingFlights(request);
+        return {
+          flights: mockFlights,
+          temporalStatus: {
+            hasStaleData: false,
+            totalFlights: mockFlights.length,
+            staleFlights: 0,
+            staleDates: [],
+            currentLocalTime: new Date().toLocaleString(),
+            message: 'Using mock data - no temporal filtering applied',
+          },
+        };
       }
 
       if (!this.apiKey) {
         console.warn('⚠️ No AviationStack API key provided, using mock data');
-        return this.getMockUpcomingFlights(request);
+        const mockFlights = this.getMockUpcomingFlights(request);
+        return {
+          flights: mockFlights,
+          temporalStatus: {
+            hasStaleData: false,
+            totalFlights: mockFlights.length,
+            staleFlights: 0,
+            staleDates: [],
+            currentLocalTime: new Date().toLocaleString(),
+            message: 'Using mock data - no temporal filtering applied',
+          },
+        };
       }
 
-      // Build API request parameters
-      const params = new URLSearchParams({
-        access_key: this.apiKey,
-        dep_iata: request.airport,
-        flight_status: 'scheduled', // Get upcoming flights (scheduled is most relevant)
-        limit: String(request.limit || 10),
-      });
+      // Fetch flights with multiple statuses to get comprehensive real-time data
+      const statuses = ['scheduled', 'active', 'delayed'];
+      const allFlights: AviationStackFlight[] = [];
 
-      // Add airline filter if specified
-      if (request.airline && request.airline.trim()) {
-        params.append('airline_iata', request.airline.toUpperCase());
-      }
-
-      // Add flight number filter if specified
-      if (request.flightNumber && request.flightNumber.trim()) {
-        params.append('flight_iata', request.flightNumber.toUpperCase());
-      }
-
-      const url = `${AVIATIONSTACK_BASE_URL}/flights?${params.toString()}`;
-      console.log(
-        `🔍 Fetching from AviationStack: ${url.replace(this.apiKey, '[API_KEY]')}`
-      );
-
-      const fetchOptions: RequestInit = {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-        },
-      };
-
-      if (typeof AbortController !== 'undefined') {
-        const controller = new AbortController();
-        setTimeout(() => controller.abort(), this.timeout);
-        fetchOptions.signal = controller.signal;
-      }
-
-      const response = await fetch(url, fetchOptions);
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Invalid AviationStack API key');
-        } else if (response.status === 429) {
-          throw new Error('AviationStack API rate limit exceeded');
-        } else {
-          throw new Error(`AviationStack API error: ${response.status}`);
+      for (const status of statuses) {
+        try {
+          const flights = await this.fetchFlightsByStatus(request, status);
+          allFlights.push(...flights);
+        } catch (error) {
+          console.warn(
+            `⚠️ Failed to fetch flights with status ${status}:`,
+            error
+          );
         }
       }
 
-      const data: AviationStackResponse = await response.json();
       console.log(
-        `📊 AviationStack returned ${data.data?.length || 0} flights`
+        `📊 AviationStack returned ${allFlights.length} total flights across all statuses`
       );
 
-      if (!data.data || data.data.length === 0) {
+      if (allFlights.length === 0) {
         console.log('📭 No flights found from AviationStack');
-        return [];
+        return {
+          flights: [],
+          temporalStatus: {
+            hasStaleData: false,
+            totalFlights: 0,
+            staleFlights: 0,
+            staleDates: [],
+            currentLocalTime: new Date().toLocaleString(),
+            message: 'No flights found from API',
+          },
+        };
       }
 
+      // Remove duplicates based on flight IATA code and date
+      const uniqueFlights = this.removeDuplicateFlights(allFlights);
+
+      // Apply temporal filtering to detect and handle stale data
+      const { filteredFlights, staleDataDetected } =
+        this.filterStaleFlights(uniqueFlights);
+
+      // Sort by scheduled departure time
+      filteredFlights.sort(
+        (a: AviationStackFlight, b: AviationStackFlight) =>
+          new Date(a.departure.scheduled).getTime() -
+          new Date(b.departure.scheduled).getTime()
+      );
+
       // Convert AviationStack flights to our format
-      const upcomingFlights = data.data
+      const upcomingFlights = filteredFlights
         .slice(0, request.limit || 5)
-        .map(flight => this.convertToUpcomingFlight(flight));
+        .map((flight: AviationStackFlight) =>
+          this.convertToUpcomingFlight(flight)
+        );
 
       console.log(`✅ Found ${upcomingFlights.length} upcoming departures`);
-      return upcomingFlights;
+
+      // Create response message based on temporal status
+      let message = 'Real-time data retrieved successfully';
+      if (staleDataDetected.hasStaleData) {
+        console.warn('⚠️ TEMPORAL MISMATCH DETECTED:', staleDataDetected);
+        message = `Found ${staleDataDetected.staleFlights} outdated flights that were filtered out. Showing only current flights.`;
+      }
+
+      return {
+        flights: upcomingFlights,
+        temporalStatus: {
+          ...staleDataDetected,
+          message,
+        },
+      };
     } catch (error) {
       console.error('❌ Failed to fetch upcoming departures:', error);
       // Return mock data as fallback
-      return this.getMockUpcomingFlights(request);
+      const fallbackFlights = this.getMockUpcomingFlights(request);
+      return {
+        flights: fallbackFlights,
+        temporalStatus: {
+          hasStaleData: false,
+          totalFlights: fallbackFlights.length,
+          staleFlights: 0,
+          staleDates: [],
+          currentLocalTime: new Date().toLocaleString(),
+          message: 'Using fallback mock data due to API error',
+        },
+      };
     }
+  }
+
+  /**
+   * Fetch flights by specific status
+   */
+  private async fetchFlightsByStatus(
+    request: UpcomingFlightsRequest,
+    status: string
+  ): Promise<AviationStackFlight[]> {
+    // Build API request parameters
+    const params = new URLSearchParams({
+      access_key: this.apiKey!,
+      dep_iata: request.airport,
+      flight_status: status,
+      limit: String(request.limit || 10),
+    });
+
+    // Add airline filter if specified
+    if (request.airline && request.airline.trim()) {
+      params.append('airline_iata', request.airline.toUpperCase());
+    }
+
+    // Add flight number filter if specified
+    if (request.flightNumber && request.flightNumber.trim()) {
+      params.append('flight_iata', request.flightNumber.toUpperCase());
+    }
+
+    const url = `${AVIATIONSTACK_BASE_URL}/flights?${params.toString()}`;
+    console.log(
+      `🔍 Fetching ${status} flights from AviationStack: ${url.replace(this.apiKey!, '[API_KEY]')}`
+    );
+
+    const fetchOptions: RequestInit = {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    };
+
+    if (typeof AbortController !== 'undefined') {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), this.timeout);
+      fetchOptions.signal = controller.signal;
+    }
+
+    const response = await fetch(url, fetchOptions);
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Invalid AviationStack API key');
+      } else if (response.status === 429) {
+        throw new Error('AviationStack API rate limit exceeded');
+      } else {
+        throw new Error(`AviationStack API error: ${response.status}`);
+      }
+    }
+
+    const data: AviationStackResponse = await response.json();
+    return data.data || [];
+  }
+
+  /**
+   * Remove duplicate flights based on flight IATA code and date
+   */
+  private removeDuplicateFlights(
+    flights: AviationStackFlight[]
+  ): AviationStackFlight[] {
+    const seen = new Set<string>();
+    return flights.filter(flight => {
+      const key = `${flight.flight.iata}-${flight.flight_date}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  }
+
+  /**
+   * Filter out stale flights and detect temporal mismatches
+   */
+  private filterStaleFlights(flights: AviationStackFlight[]): {
+    filteredFlights: AviationStackFlight[];
+    staleDataDetected: {
+      hasStaleData: boolean;
+      totalFlights: number;
+      staleFlights: number;
+      oldestFlight?: string;
+      staleDates: string[];
+      currentLocalTime: string;
+    };
+  } {
+    const now = new Date();
+    const currentLocalDate = now.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+    const currentLocalTime = now.toLocaleString();
+
+    // Consider flights "stale" if they're more than 4 hours in the past
+    const staleThreshold = new Date(now.getTime() - 4 * 60 * 60 * 1000);
+
+    const staleFlights: AviationStackFlight[] = [];
+    const validFlights: AviationStackFlight[] = [];
+    const staleDates = new Set<string>();
+    let oldestFlight: string | undefined;
+
+    for (const flight of flights) {
+      const flightDate = new Date(flight.departure.scheduled);
+      const flightDateString = flight.flight_date;
+
+      // Check if flight is significantly in the past
+      const isStale = flightDate < staleThreshold;
+
+      if (isStale) {
+        staleFlights.push(flight);
+        staleDates.add(flightDateString);
+
+        if (!oldestFlight || flightDate < new Date(oldestFlight)) {
+          oldestFlight = flight.departure.scheduled;
+        }
+      } else {
+        validFlights.push(flight);
+      }
+    }
+
+    const staleDataDetected = {
+      hasStaleData: staleFlights.length > 0,
+      totalFlights: flights.length,
+      staleFlights: staleFlights.length,
+      oldestFlight,
+      staleDates: Array.from(staleDates),
+      currentLocalTime,
+    };
+
+    // Log detailed information about what was filtered
+    if (staleDataDetected.hasStaleData) {
+      console.warn('🕐 Temporal filtering applied:', {
+        message: `Found ${staleFlights.length} stale flights from ${staleDates.size} different dates`,
+        staleFlightDates: Array.from(staleDates),
+        oldestFlightTime: oldestFlight,
+        currentTime: currentLocalTime,
+        validFlightsRemaining: validFlights.length,
+      });
+
+      // Log specific stale flights for debugging
+      staleFlights.forEach(flight => {
+        console.warn(
+          `  📅 Stale: ${flight.flight.iata} scheduled for ${flight.departure.scheduled} (${flight.flight_date})`
+        );
+      });
+    }
+
+    return {
+      filteredFlights: validFlights,
+      staleDataDetected,
+    };
   }
 
   /**
@@ -277,7 +484,7 @@ export class FlightService {
       case 'scheduled':
         return 'Scheduled';
       case 'active':
-        return 'Departed';
+        return 'En Route';
       case 'landed':
         return 'Landed';
       case 'cancelled':
@@ -286,6 +493,14 @@ export class FlightService {
         return 'Delayed';
       case 'diverted':
         return 'Diverted';
+      case 'delayed':
+        return 'Delayed';
+      case 'departed':
+        return 'Departed';
+      case 'boarding':
+        return 'Boarding';
+      case 'on_time':
+        return 'On Time';
       default:
         return status.charAt(0).toUpperCase() + status.slice(1);
     }
@@ -733,9 +948,10 @@ export async function getUpcomingDepartures(
   limit?: number
 ): Promise<UpcomingFlight[]> {
   const service = getFlightService();
-  return service.getUpcomingDepartures({
+  const response = await service.getUpcomingDepartures({
     airport,
     airline,
     limit,
   });
+  return response.flights;
 }
