@@ -303,7 +303,17 @@ function UpcomingFlights() {
                 )}
               </CardTitle>
               <CardDescription>
-                Search <span className='font-bold text-foreground/70'>selected</span> or <span className='font-bold text-foreground/70'>all</span> flights from {homeAirport ? <span className='font-bold text-foreground/90'>{homeAirport}</span> : 'your home airport'}
+                Search{' '}
+                <span className='font-bold text-foreground/70'>selected</span>{' '}
+                or <span className='font-bold text-foreground/70'>all</span>{' '}
+                flights from{' '}
+                {homeAirport ? (
+                  <span className='font-bold text-foreground/90'>
+                    {homeAirport}
+                  </span>
+                ) : (
+                  'your home airport'
+                )}
               </CardDescription>
             </div>
             {isSearchExpanded ? (
@@ -555,9 +565,9 @@ function UpcomingFlights() {
                   <div className='flex items-center gap-2'>
                     <Plane className='h-4 w-4 text-muted-foreground flex-shrink-0' />
                     <div className='text-sm'>
-                      {flight.gate && (
-                        <div className='font-medium'>Gate: {flight.gate}</div>
-                      )}
+                      <div className='font-medium'>
+                        Gate: {flight.gate || 'Indeterminate'}
+                      </div>
                       {flight.aircraft && (
                         <div className='text-muted-foreground text-xs'>
                           Aircraft: {flight.aircraft}
