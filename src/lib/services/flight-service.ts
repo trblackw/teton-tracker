@@ -30,6 +30,11 @@ export interface UpcomingFlightsRequest {
   airline?: string; // Optional airline filter (IATA airline code)
   flightNumber?: string; // Optional flight number filter
   limit?: number; // Number of flights to return (default 5)
+  timeFrame?: {
+    time?: string; // HH:MM format (24-hour)
+    timezone?: string; // User's timezone (e.g., 'America/New_York')
+    isAfter?: boolean; // true = at/after specified time, false = before specified time
+  };
 }
 
 // AviationStack API response structures
@@ -310,6 +315,35 @@ export class FlightService {
     // Add flight number filter if specified
     if (request.flightNumber && request.flightNumber.trim()) {
       params.append('flight_iata', request.flightNumber.toUpperCase());
+    }
+
+    // Add time frame filter if specified
+    if (request.timeFrame?.time && request.timeFrame?.timezone) {
+      // Convert time to the current date with user's timezone
+      const today = new Date();
+      const userTimeStr = `${today.toISOString().split('T')[0]}T${request.timeFrame.time}:00`;
+
+      // Convert to UTC for API
+      const userDate = new Date(userTimeStr);
+      const timezoneOffset = this.getTimezoneOffset(request.timeFrame.timezone);
+      const utcTime = new Date(userDate.getTime() - timezoneOffset * 60 * 1000);
+
+      // Use the time portion for filtering
+      const timeStr = utcTime.toISOString().split('T')[1].substring(0, 5); // HH:MM format
+
+      if (request.timeFrame.isAfter !== false) {
+        // Filter for flights at or after specified time
+        params.append('dep_time_from', timeStr);
+      } else {
+        // Filter for flights before specified time
+        params.append('dep_time_to', timeStr);
+      }
+
+      if (DEV_MODE.DEBUG_LOGGING) {
+        console.log(
+          `🕐 Time filter applied: ${request.timeFrame.isAfter !== false ? 'after' : 'before'} ${request.timeFrame.time} (${request.timeFrame.timezone}) = ${timeStr} UTC`
+        );
+      }
     }
 
     const url = `${AVIATIONSTACK_BASE_URL}/flights?${params.toString()}`;
@@ -782,6 +816,25 @@ export class FlightService {
       return false;
     }
   }
+
+  /**
+   * Get timezone offset in minutes
+   */
+  private getTimezoneOffset(timezone: string): number {
+    try {
+      const date = new Date();
+      const utcDate = new Date(
+        date.toLocaleString('en-US', { timeZone: 'UTC' })
+      );
+      const tzDate = new Date(
+        date.toLocaleString('en-US', { timeZone: timezone })
+      );
+      return (tzDate.getTime() - utcDate.getTime()) / (1000 * 60);
+    } catch (error) {
+      console.warn('⚠️ Invalid timezone, defaulting to UTC:', timezone);
+      return 0; // Default to UTC offset
+    }
+  }
 }
 
 // Default service instance
@@ -945,13 +998,15 @@ export async function getFlightStatus(
 export async function getUpcomingDepartures(
   airport: string,
   airline?: string,
-  limit?: number
+  limit?: number,
+  timeFrame?: { time?: string; timezone?: string; isAfter?: boolean }
 ): Promise<UpcomingFlight[]> {
   const service = getFlightService();
   const response = await service.getUpcomingDepartures({
     airport,
     airline,
     limit,
+    timeFrame,
   });
   return response.flights;
 }
