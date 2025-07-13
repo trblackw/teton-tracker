@@ -77,12 +77,12 @@ async function startServer() {
       const url = new URL(request.url);
       const pathname = url.pathname;
 
-      // Redirect www to non-www (only for custom domains)
-      if (url.hostname === 'www.tetontracker.com') {
+      // Temporarily redirect non-www to www (until main domain DNS is ready)
+      if (url.hostname === 'tetontracker.com') {
         return new Response(null, {
           status: 301,
           headers: {
-            Location: `https://tetontracker.com${url.pathname}${url.search}`,
+            Location: `https://www.tetontracker.com${url.pathname}${url.search}`,
           },
         });
       }
