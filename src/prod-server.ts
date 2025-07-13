@@ -77,21 +77,7 @@ async function startServer() {
       const url = new URL(request.url);
       const pathname = url.pathname;
 
-      // Force HTTPS redirect in production
-      if (
-        process.env.NODE_ENV === 'production' &&
-        url.protocol === 'http:' &&
-        !url.hostname.includes('localhost')
-      ) {
-        return new Response(null, {
-          status: 301,
-          headers: {
-            Location: `https://${url.host}${url.pathname}${url.search}`,
-          },
-        });
-      }
-
-      // Redirect www to non-www (optional)
+      // Redirect www to non-www (only for custom domains)
       if (url.hostname === 'www.tetontracker.com') {
         return new Response(null, {
           status: 301,
