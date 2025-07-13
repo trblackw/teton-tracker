@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { generateUserId } from './db/index';
 import { type User } from './schema';
+import { getCurrentUserId } from './user-utils';
 
 interface AppContextValue {
   currentUser: User | null;
@@ -20,13 +20,17 @@ export function AppContextProvider({
   useEffect(() => {
     const initializeUser = async () => {
       try {
-        const userId = generateUserId();
+        // Clean approach: use frontend utility (no database concerns)
+        const userId = getCurrentUserId();
+
         const user: User = {
           id: userId,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
+
         setCurrentUser(user);
+        console.log('👤 Initialized user:', userId);
       } catch (error) {
         console.error('Failed to initialize user:', error);
         // Fallback to a basic user

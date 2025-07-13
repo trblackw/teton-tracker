@@ -10,28 +10,16 @@ import {
   type Run,
   type RunStatus,
 } from '../schema';
+import { getCurrentUserId } from '../user-utils';
 
 const API_BASE =
   process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:3001/api';
-
-// Helper function to get user ID from localStorage
-function getUserId(): string {
-  if (typeof window !== 'undefined') {
-    let userId = window.localStorage.getItem('user-id');
-    if (!userId) {
-      userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      window.localStorage.setItem('user-id', userId);
-    }
-    return userId;
-  }
-  return `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
 
 // API client for runs
 export const runsApi = {
   // Get all runs for the current user
   async getRuns(): Promise<Run[]> {
-    const userId = getUserId();
+    const userId = getCurrentUserId();
     const response = await fetch(
       `${API_BASE}/runs?userId=${userId}&orderDirection=DESC`
     );
@@ -45,7 +33,7 @@ export const runsApi = {
 
   // Create a new run
   async createRun(runData: NewRunForm): Promise<Run> {
-    const userId = getUserId();
+    const userId = getCurrentUserId();
     const response = await fetch(`${API_BASE}/runs`, {
       method: 'POST',
       headers: {
@@ -63,7 +51,7 @@ export const runsApi = {
 
   // Update an existing run
   async updateRun(id: string, runData: NewRunForm): Promise<Run> {
-    const userId = getUserId();
+    const userId = getCurrentUserId();
     const response = await fetch(`${API_BASE}/runs/${id}`, {
       method: 'PUT',
       headers: {
@@ -81,7 +69,7 @@ export const runsApi = {
 
   // Update run status
   async updateRunStatus(id: string, status: RunStatus): Promise<void> {
-    const userId = getUserId();
+    const userId = getCurrentUserId();
     const response = await fetch(`${API_BASE}/runs/${id}/status`, {
       method: 'PUT',
       headers: {
@@ -97,7 +85,7 @@ export const runsApi = {
 
   // Delete a run
   async deleteRun(id: string): Promise<void> {
-    const userId = getUserId();
+    const userId = getCurrentUserId();
     const response = await fetch(`${API_BASE}/runs/${id}`, {
       method: 'DELETE',
       headers: {
@@ -116,7 +104,7 @@ export const runsApi = {
 export const preferencesApi = {
   // Get user preferences
   async getPreferences() {
-    const userId = getUserId();
+    const userId = getCurrentUserId();
     const response = await fetch(`${API_BASE}/preferences?userId=${userId}`);
 
     if (!response.ok) {
@@ -128,7 +116,7 @@ export const preferencesApi = {
 
   // Update user preferences
   async updatePreferences(preferencesData: UpdatePreferencesData) {
-    const userId = getUserId();
+    const userId = getCurrentUserId();
     const response = await fetch(`${API_BASE}/preferences`, {
       method: 'PUT',
       headers: {
@@ -151,7 +139,7 @@ export const notificationsApi = {
   async getNotifications(
     query: Partial<NotificationsQuery> = {}
   ): Promise<Notification[]> {
-    const userId = getUserId();
+    const userId = getCurrentUserId();
 
     const params = new URLSearchParams();
     params.append('userId', userId);
@@ -180,7 +168,7 @@ export const notificationsApi = {
   async createNotification(
     notificationData: CreateNotificationData
   ): Promise<Notification> {
-    const userId = getUserId();
+    const userId = getCurrentUserId();
     const response = await fetch(`${API_BASE}/notifications`, {
       method: 'POST',
       headers: {
@@ -201,7 +189,7 @@ export const notificationsApi = {
     id: string,
     isRead: boolean = true
   ): Promise<void> {
-    const userId = getUserId();
+    const userId = getCurrentUserId();
     const response = await fetch(`${API_BASE}/notifications`, {
       method: 'PUT',
       headers: {
@@ -217,7 +205,7 @@ export const notificationsApi = {
 
   // Mark all notifications as read
   async markAllNotificationsAsRead(): Promise<void> {
-    const userId = getUserId();
+    const userId = getCurrentUserId();
     const response = await fetch(`${API_BASE}/notifications`, {
       method: 'PUT',
       headers: {
@@ -233,7 +221,7 @@ export const notificationsApi = {
 
   // Delete a notification
   async deleteNotification(id: string): Promise<void> {
-    const userId = getUserId();
+    const userId = getCurrentUserId();
     const response = await fetch(
       `${API_BASE}/notifications?id=${id}&userId=${userId}`,
       {
@@ -252,7 +240,7 @@ export const notificationsApi = {
     unread: number;
     byType: Record<NotificationType, number>;
   }> {
-    const userId = getUserId();
+    const userId = getCurrentUserId();
     const response = await fetch(
       `${API_BASE}/notifications/stats?userId=${userId}`
     );
@@ -266,7 +254,7 @@ export const notificationsApi = {
 
   // Cleanup old notifications
   async cleanupOldNotifications(daysToKeep: number = 30): Promise<void> {
-    const userId = getUserId();
+    const userId = getCurrentUserId();
     const response = await fetch(
       `${API_BASE}/notifications?action=cleanup&userId=${userId}&daysToKeep=${daysToKeep}`,
       {

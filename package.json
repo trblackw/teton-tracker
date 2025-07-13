@@ -18,7 +18,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky",
-    "generate-social-preview": "bun run scripts/generate-social-preview.ts"
+    "generate-social-preview": "bun run scripts/generate-social-preview.ts",
+    "seed": "bun run scripts/seed-data.ts"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

@@ -1,45 +1,21 @@
 import { createClient, type Client } from '@libsql/client';
+import { generateBrowserUserId } from '../user-utils';
 
-// Utility function to generate user IDs
+// Fixed development user ID for consistent seeding
+const DEVELOPMENT_USER_ID = 'user_dev_seed_12345';
+
+// Utility function for getting the appropriate user ID (for database operations)
 export function generateUserId(): string {
-  if (typeof window !== 'undefined') {
-    // Try to get existing user ID from localStorage
-    let userId = window.localStorage.getItem('user-id');
-    if (!userId) {
-      // Generate UUID-based user ID with localStorage + cookie persistence
-      const LS_KEY = 'user_fingerprint';
-      const COOKIE_KEY = 'user_fingerprint';
-
-      const getFromCookie = (): string | null => {
-        const match = document.cookie.match(
-          new RegExp(`(^| )${COOKIE_KEY}=([^;]+)`)
-        );
-        return match ? match[2] : null;
-      };
-
-      const setCookie = (value: string) => {
-        document.cookie = `${COOKIE_KEY}=${value}; path=/; max-age=31536000`; // 1 year
-      };
-
-      let uuid = localStorage.getItem(LS_KEY) || getFromCookie();
-
-      if (!uuid) {
-        uuid = crypto.randomUUID();
-        localStorage.setItem(LS_KEY, uuid);
-        setCookie(uuid);
-      } else {
-        // Sync cookie and localStorage if one is missing
-        if (!localStorage.getItem(LS_KEY)) localStorage.setItem(LS_KEY, uuid);
-        if (!getFromCookie()) setCookie(uuid);
-      }
-
-      userId = `user_${uuid}`;
-      window.localStorage.setItem('user-id', userId);
-    }
-    return userId;
+  // In development mode, use the fixed development user ID for consistency with seed data
+  if (
+    process.env.NODE_ENV === 'development' ||
+    (typeof window !== 'undefined' && window.location.hostname === 'localhost')
+  ) {
+    return DEVELOPMENT_USER_ID;
   }
-  // Server-side fallback
-  return `user_${crypto.randomUUID()}`;
+
+  // In production, use browser-based generation
+  return generateBrowserUserId();
 }
 
 // Get or create user in database

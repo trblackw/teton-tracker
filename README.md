@@ -72,9 +72,24 @@ Teton Tracker is a comprehensive web application designed for managing airport s
    ```
 
 4. **Open your browser**
+
    ```
    http://localhost:3000
    ```
+
+5. **[Optional] Populate with test data**
+
+   ```bash
+   # Generate realistic mock data for development
+   bun run seed
+
+   # This creates:
+   # • 20 mock runs with various statuses
+   # • 40+ notifications
+   # • Realistic Jackson Hole locations and flight data
+   ```
+
+   > **Note:** The seed script only works in development environments and creates data for the current user.
 
 ### Production Deployment
 

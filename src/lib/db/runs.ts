@@ -26,7 +26,7 @@ export async function createRun(
       userId: currentUserId,
       ...runData,
       airline: runData.airline || '',
-      status: 'scheduled',
+      status: (runData as any).status || 'scheduled', // Use provided status or default to scheduled
       createdAt: new Date(now),
       updatedAt: new Date(now),
     };

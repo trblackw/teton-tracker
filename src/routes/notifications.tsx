@@ -512,7 +512,7 @@ function Notifications() {
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                           <span>
                             {formatScheduleTime(
-                              notification.createdAt?.toISOString() || ''
+                              notification.createdAt?.toISOString?.() || ''
                             )}
                           </span>
                           {notification.flightNumber && (
