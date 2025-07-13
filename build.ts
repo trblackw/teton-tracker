@@ -155,14 +155,28 @@ const result = await build({
   ...cliConfig, // Merge in any CLI-provided options
 });
 
-// Copy main HTML file
-console.log('📦 Copying main HTML file...');
-const htmlSrcPath = path.join(process.cwd(), 'index.html');
+// Create production HTML file
+console.log('📦 Creating production HTML file...');
+const productionHtml = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Teton Tracker</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="stylesheet" href="./frontend.css" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./frontend.js"></script>
+  </body>
+</html>`;
+
 const htmlDestPath = path.join(outdir, 'index.html');
-if (existsSync(htmlSrcPath)) {
-  await cp(htmlSrcPath, htmlDestPath);
-  console.log(`📄 Copied index.html to output directory`);
-}
+await Bun.write(htmlDestPath, productionHtml);
+console.log(`📄 Created production index.html`);
 
 // Copy static files from public directory
 const staticFiles = ['manifest.json', 'sw.js', 'logo.svg', 'favicon.ico'];

@@ -96,7 +96,8 @@ async function startServer() {
       }
 
       // Serve static files and SPA routes
-      const filePath = pathname === '/' ? './index.html' : `.${pathname}`;
+      const filePath =
+        pathname === '/' ? './dist/index.html' : `./dist${pathname}`;
 
       try {
         const file = Bun.file(filePath);
@@ -106,7 +107,7 @@ async function startServer() {
           return new Response(file);
         } else {
           // SPA fallback - serve index.html for client-side routing
-          const indexFile = Bun.file('./index.html');
+          const indexFile = Bun.file('./dist/index.html');
           return new Response(indexFile);
         }
       } catch (error) {

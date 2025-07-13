@@ -168,7 +168,7 @@ function Runs() {
               No runs scheduled. Add your first run to get started!
             </p>
             <Link to='/add'>
-              <Button className='mt-2'>
+              <Button className='mt-2 bg-green-500 hover:bg-green-600 text-white'>
                 <Plus className='h-4 w-4' />
                 Add Your First Run
               </Button>

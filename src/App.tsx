@@ -689,8 +689,11 @@ export default function App() {
                   <p className='text-gray-500 text-lg mb-4'>
                     No runs scheduled. Add your first run to get started!
                   </p>
-                  <Button onClick={() => setCurrentTab('add')} className='mt-2'>
-                    <Plus className='h-4 w-4 mr-2' />
+                  <Button
+                    onClick={() => setCurrentTab('add')}
+                    className='mt-2 bg-green-500 hover:bg-green-600 text-white'
+                  >
+                    <Plus className='h-4 w-4 mr-2 ' />
                     Add Your First Run
                   </Button>
                 </CardContent>
