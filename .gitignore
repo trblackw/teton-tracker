@@ -6,6 +6,11 @@ out
 dist
 *.tgz
 
+# Build artifacts (compiled JS/CSS files)
+public/frontend.js
+public/frontend.js.map
+public/frontend.css
+
 # code coverage
 coverage
 *.lcov
