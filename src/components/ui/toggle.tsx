@@ -26,6 +26,37 @@ const toggleVariants = cva(
   }
 );
 
+// iOS-style toggle component
+const IOSToggle = React.forwardRef<
+  React.ElementRef<typeof TogglePrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof TogglePrimitive.Root>
+>(({ className, ...props }, ref) => (
+  <TogglePrimitive.Root
+    ref={ref}
+    className={cn(
+      // Base styles
+      'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50',
+      // Background colors - proper iOS toggle colors
+      'bg-gray-200 dark:bg-gray-600 data-[state=on]:bg-green-500',
+      className
+    )}
+    {...props}
+  >
+    <span
+      aria-hidden="true"
+      className={cn(
+        // Base thumb styles
+        'pointer-events-none inline-block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform duration-200 ease-in-out',
+        // Transform based on state
+        'translate-x-0 data-[state=on]:translate-x-5'
+      )}
+    />
+  </TogglePrimitive.Root>
+));
+
+IOSToggle.displayName = 'IOSToggle';
+
+// Original Toggle component for backward compatibility
 const Toggle = React.forwardRef<
   React.ElementRef<typeof TogglePrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof TogglePrimitive.Root> &
@@ -40,4 +71,4 @@ const Toggle = React.forwardRef<
 
 Toggle.displayName = TogglePrimitive.Root.displayName;
 
-export { Toggle, toggleVariants };
+export { IOSToggle, Toggle, toggleVariants };

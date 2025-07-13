@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import {
   Bell,
-  BellOff,
   Building,
   Clock,
   Monitor,
@@ -24,7 +23,7 @@ import {
   CardTitle,
 } from '../components/ui/card';
 import { TimezoneCombobox } from '../components/ui/timezone-combobox';
-import { Toggle } from '../components/ui/toggle';
+import { IOSToggle } from '../components/ui/toggle';
 import airportsData from '../data/airports-comprehensive.json';
 import timezonesData from '../data/timezones.json';
 import { preferencesApi } from '../lib/api/client';
@@ -180,6 +179,24 @@ function Settings() {
     });
   };
 
+  const handlePushNotificationsToggle = async (value: boolean) => {
+    if (value) {
+      // If enabling, request permission first
+      if (!notificationPermission.enabled) {
+        const permissionResult =
+          await requestNotificationPermission.mutateAsync();
+        if (!permissionResult.enabled) {
+          return; // Permission denied, don't update preference
+        }
+      }
+      // Update preference to enabled
+      handleNotificationToggle('pushNotificationsEnabled', true);
+    } else {
+      // If disabling, just update the preference
+      handleNotificationToggle('pushNotificationsEnabled', false);
+    }
+  };
+
   const handleRequestNotificationPermission = () => {
     requestNotificationPermission.mutate();
   };
@@ -194,28 +211,6 @@ function Settings() {
         'Test notification failed',
         'Please check your notification settings and try again.'
       );
-    }
-  };
-
-  const getPermissionStatusColor = (permission: NotificationPermission) => {
-    switch (permission) {
-      case 'granted':
-        return 'text-green-600';
-      case 'denied':
-        return 'text-red-600';
-      default:
-        return 'text-yellow-600';
-    }
-  };
-
-  const getPermissionStatusText = (permission: NotificationPermission) => {
-    switch (permission) {
-      case 'granted':
-        return 'Enabled';
-      case 'denied':
-        return 'Blocked';
-      default:
-        return 'Not requested';
     }
   };
 
@@ -427,72 +422,56 @@ function Settings() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Notification Permission Status */}
+          {/* Push Notifications Permission */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-              <div className="flex items-center gap-3">
-                {notificationPermission.enabled ? (
-                  <Bell className="h-5 w-5 text-green-600" />
-                ) : (
-                  <BellOff className="h-5 w-5 text-muted-foreground" />
-                )}
-                <div>
-                  <p className="font-medium">Push Notifications</p>
-                  <p
-                    className={`text-sm ${getPermissionStatusColor(notificationPermission.permission)}`}
-                  >
-                    {getPermissionStatusText(notificationPermission.permission)}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium">Push Notifications</p>
+                <p className="text-sm text-muted-foreground">
+                  Enable browser notifications for flight updates and alerts
+                </p>
+                {!notificationPermission.supported && (
+                  <p className="text-sm text-amber-600 mt-1">
+                    Not supported in this browser
                   </p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                {notificationPermission.enabled && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleTestNotification}
-                    className="flex items-center gap-2"
-                  >
-                    <Bell className="h-4 w-4" />
-                    Test
-                  </Button>
                 )}
-                {!notificationPermission.enabled &&
-                  notificationPermission.supported && (
+                {notificationPermission.permission === 'denied' && (
+                  <p className="text-sm text-red-600 mt-1">
+                    Blocked - please enable in browser settings
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <IOSToggle
+                  pressed={
+                    notificationPermission.enabled &&
+                    (preferences?.notificationPreferences
+                      ?.pushNotificationsEnabled ??
+                      true)
+                  }
+                  onPressedChange={handlePushNotificationsToggle}
+                  disabled={
+                    !notificationPermission.supported ||
+                    notificationPermission.permission === 'denied' ||
+                    requestNotificationPermission.isPending ||
+                    updatePreferencesMutation.isPending
+                  }
+                />
+                {notificationPermission.enabled &&
+                  (preferences?.notificationPreferences
+                    ?.pushNotificationsEnabled ??
+                    true) && (
                     <Button
-                      onClick={handleRequestNotificationPermission}
-                      disabled={requestNotificationPermission.isPending}
-                      className="flex items-center gap-2"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleTestNotification}
+                      className="ml-2"
                     >
-                      {requestNotificationPermission.isPending ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                      ) : (
-                        <Bell className="h-4 w-4" />
-                      )}
-                      Enable
+                      Test
                     </Button>
                   )}
               </div>
             </div>
-
-            {!notificationPermission.supported && (
-              <div className="flex items-center gap-2 text-amber-600 text-sm">
-                <BellOff className="h-4 w-4" />
-                <span>
-                  Push notifications are not supported in this browser
-                </span>
-              </div>
-            )}
-
-            {notificationPermission.permission === 'denied' && (
-              <div className="flex items-center gap-2 text-red-600 text-sm">
-                <BellOff className="h-4 w-4" />
-                <span>
-                  Notifications are blocked. Please enable them in your browser
-                  settings.
-                </span>
-              </div>
-            )}
           </div>
 
           {/* Notification Preferences */}
@@ -505,11 +484,11 @@ function Settings() {
                   updates
                 </p>
               </div>
-              <Toggle
+              <IOSToggle
                 pressed={
                   preferences?.notificationPreferences?.flightUpdates ?? true
                 }
-                onPressedChange={value =>
+                onPressedChange={(value: boolean) =>
                   handleNotificationToggle('flightUpdates', value)
                 }
                 disabled={updatePreferencesMutation.isPending}
@@ -523,11 +502,11 @@ function Settings() {
                   routes
                 </p>
               </div>
-              <Toggle
+              <IOSToggle
                 pressed={
                   preferences?.notificationPreferences?.trafficAlerts ?? true
                 }
-                onPressedChange={value =>
+                onPressedChange={(value: boolean) =>
                   handleNotificationToggle('trafficAlerts', value)
                 }
                 disabled={updatePreferencesMutation.isPending}
@@ -540,11 +519,11 @@ function Settings() {
                   Get reminded about upcoming shuttle runs and pickups
                 </p>
               </div>
-              <Toggle
+              <IOSToggle
                 pressed={
                   preferences?.notificationPreferences?.runReminders ?? true
                 }
-                onPressedChange={value =>
+                onPressedChange={(value: boolean) =>
                   handleNotificationToggle('runReminders', value)
                 }
                 disabled={updatePreferencesMutation.isPending}

@@ -508,6 +508,11 @@ export class NotificationService {
 
       const { notificationPreferences } = preferences;
 
+      // Check global push notifications enabled setting first
+      if (notificationPreferences.pushNotificationsEnabled === false) {
+        return false;
+      }
+
       switch (notification.type) {
         case 'flight-status-change':
         case 'flight-departure-reminder':

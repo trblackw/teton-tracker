@@ -6,6 +6,7 @@ export interface UserPreferences {
   theme: 'light' | 'dark' | 'system';
   timezone: string;
   notificationPreferences: {
+    pushNotificationsEnabled: boolean;
     flightUpdates: boolean;
     trafficAlerts: boolean;
     runReminders: boolean;
@@ -54,6 +55,8 @@ export async function getUserPreferences(
       theme: (row.theme as 'light' | 'dark' | 'system') || 'system',
       timezone: (row.timezone as string) || 'UTC',
       notificationPreferences: {
+        pushNotificationsEnabled:
+          notificationPreferences.pushNotificationsEnabled ?? true,
         flightUpdates: notificationPreferences.flightUpdates ?? true,
         trafficAlerts: notificationPreferences.trafficAlerts ?? true,
         runReminders: notificationPreferences.runReminders ?? true,
@@ -117,6 +120,7 @@ export async function updateUserPreferences(
     } else {
       // Create new preferences
       const defaultNotificationPreferences = {
+        pushNotificationsEnabled: true,
         flightUpdates: true,
         trafficAlerts: true,
         runReminders: true,
