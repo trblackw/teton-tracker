@@ -71,6 +71,7 @@ async function startServer() {
 
   const server = Bun.serve({
     port: process.env.PORT || 3000,
+    hostname: '0.0.0.0', // Listen on all interfaces for Railway
 
     async fetch(request) {
       const url = new URL(request.url);
@@ -117,7 +118,7 @@ async function startServer() {
     development: process.env.NODE_ENV !== 'production',
   });
 
-  console.log(`🌐 Server running at http://localhost:${server.port}`);
+  console.log(`🌐 Server running at http://0.0.0.0:${server.port}`);
 }
 
 startServer().catch(console.error);
