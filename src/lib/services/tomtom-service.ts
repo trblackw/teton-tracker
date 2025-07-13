@@ -1,4 +1,8 @@
-import { type TrafficData, transformTomTomToTrafficData, validateTrafficData } from '../schema';
+import {
+  type TrafficData,
+  transformTomTomToTrafficData,
+  validateTrafficData,
+} from '../schema';
 
 // TomTom API configuration
 const TOMTOM_BASE_URL = 'https://api.tomtom.com';
@@ -45,16 +49,18 @@ export class TomTomTrafficService {
    */
   async getTrafficData(request: RouteRequest): Promise<TrafficData> {
     if (!this.apiKey) {
-      throw new Error('TomTom API key is required. Please set it in the service configuration.');
+      throw new Error(
+        'TomTom API key is required. Please set it in the service configuration.'
+      );
     }
 
     try {
       const url = this.buildRouteUrl(request);
-      
+
       const fetchOptions: any = {
         method: 'GET',
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
       };
 
@@ -68,18 +74,19 @@ export class TomTomTrafficService {
       const response = await fetch(url, fetchOptions);
 
       if (!response.ok) {
-        throw new Error(`TomTom API error: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `TomTom API error: ${response.status} ${response.statusText}`
+        );
       }
 
       const data = await response.json();
-      
+
       // Transform TomTom response to our TrafficData format
       const routeKey = `${request.origin}-${request.destination}`;
       const trafficData = transformTomTomToTrafficData(data, routeKey);
-      
+
       // Validate the result
       return validateTrafficData(trafficData);
-      
     } catch (error) {
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
@@ -94,7 +101,9 @@ export class TomTomTrafficService {
   /**
    * Get traffic data with fallback to mock data if API is unavailable
    */
-  async getTrafficDataWithFallback(request: RouteRequest): Promise<TrafficData> {
+  async getTrafficDataWithFallback(
+    request: RouteRequest
+  ): Promise<TrafficData> {
     try {
       if (this.hasApiKey()) {
         return await this.getTrafficData(request);
@@ -111,16 +120,18 @@ export class TomTomTrafficService {
   /**
    * Geocode an address to coordinates (if needed for more precise routing)
    */
-  async geocodeAddress(address: string): Promise<{ lat: number; lon: number } | null> {
+  async geocodeAddress(
+    address: string
+  ): Promise<{ lat: number; lon: number } | null> {
     if (!this.apiKey) {
       return null;
     }
 
     try {
       const url = `${TOMTOM_BASE_URL}/search/2/geocode/${encodeURIComponent(address)}.json?key=${this.apiKey}&limit=1`;
-      
+
       const fetchOptions: any = {};
-      
+
       // Add timeout if AbortController is available
       if (typeof (globalThis as any).AbortController !== 'undefined') {
         const controller = new (globalThis as any).AbortController();
@@ -135,7 +146,7 @@ export class TomTomTrafficService {
       }
 
       const data = await response.json();
-      
+
       if (data.results && data.results.length > 0) {
         const result = data.results[0];
         return {
@@ -167,7 +178,8 @@ export class TomTomTrafficService {
 
     // Convert Map to URLSearchParams-like string
     const paramStrings = Array.from(params.entries()).map(
-      ([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`
+      ([key, value]) =>
+        `${encodeURIComponent(key)}=${encodeURIComponent(value)}`
     );
     const queryString = paramStrings.join('&');
 
@@ -175,7 +187,7 @@ export class TomTomTrafficService {
     // In production, you might want to geocode first for better accuracy
     const origin = encodeURIComponent(request.origin);
     const destination = encodeURIComponent(request.destination);
-    
+
     return `${TOMTOM_BASE_URL}/routing/${ROUTING_VERSION}/calculateRoute/${origin}:${destination}/json?${queryString}`;
   }
 
@@ -186,21 +198,29 @@ export class TomTomTrafficService {
     const routeKey = `${request.origin}-${request.destination}`;
     const baseTime = 20 + Math.random() * 40; // 20-60 minutes base
     const trafficMultiplier = 1 + Math.random() * 0.6; // 1.0-1.6x multiplier
-    
+
     return {
       route: routeKey,
       duration: Math.floor(baseTime),
       durationInTraffic: Math.floor(baseTime * trafficMultiplier),
       distance: `${(Math.random() * 30 + 10).toFixed(1)} miles`,
-      status: trafficMultiplier > 1.4 ? 'heavy' : trafficMultiplier > 1.2 ? 'moderate' : 'good',
+      status:
+        trafficMultiplier > 1.4
+          ? 'heavy'
+          : trafficMultiplier > 1.2
+            ? 'moderate'
+            : 'good',
       lastUpdated: new Date(),
-      incidents: Math.random() > 0.7 ? [
-        {
-          type: 'congestion' as const,
-          description: 'Heavy traffic due to high volume',
-          severity: 'moderate' as const,
-        }
-      ] : undefined,
+      incidents:
+        Math.random() > 0.7
+          ? [
+              {
+                type: 'congestion' as const,
+                description: 'Heavy traffic due to high volume',
+                severity: 'moderate' as const,
+              },
+            ]
+          : undefined,
     };
   }
 }
@@ -209,7 +229,10 @@ export class TomTomTrafficService {
 export const tomtomService = new TomTomTrafficService();
 
 // Utility function for easy access
-export async function getTrafficData(origin: string, destination: string): Promise<TrafficData> {
+export async function getTrafficData(
+  origin: string,
+  destination: string
+): Promise<TrafficData> {
   return tomtomService.getTrafficDataWithFallback({
     origin,
     destination,
@@ -219,16 +242,40 @@ export async function getTrafficData(origin: string, destination: string): Promi
 
 // Environment variable helper
 export function initializeTomTomService(): void {
-  // Check for API key in various possible locations
-  const apiKey = 
-    (typeof process !== 'undefined' && process.env?.TOMTOM_API_KEY) ||
-    (typeof window !== 'undefined' && (window as any).TOMTOM_API_KEY) ||
-    (typeof window !== 'undefined' && window.localStorage?.getItem('tomtom-api-key'));
+  // Check for API key in environment variables only (not localStorage for security)
+  const apiKey = typeof process !== 'undefined' && process.env?.TOMTOM_API_KEY;
 
   if (apiKey) {
     tomtomService.setApiKey(apiKey);
     console.log('✅ TomTom API key configured');
   } else {
-    console.warn('⚠️ TomTom API key not found. Add TOMTOM_API_KEY to environment or localStorage. Using mock data for now.');
+    console.warn(
+      '⚠️ TomTom API key not found. Add TOMTOM_API_KEY to environment. Using mock data for now.'
+    );
   }
-} 
+}
+
+// Enhanced initialization with server config
+export async function initializeTomTomServiceWithConfig(): Promise<void> {
+  try {
+    // Try to get configuration from server
+    const response = await fetch('http://localhost:3001/api/config');
+
+    if (response.ok) {
+      const config = await response.json();
+
+      if (config.tomtomKey) {
+        tomtomService.setApiKey(config.tomtomKey);
+        console.log('✅ TomTom API key configured from server');
+        return;
+      }
+    }
+  } catch (error) {
+    console.warn(
+      '⚠️ Failed to fetch TomTom config from server, trying local env vars'
+    );
+  }
+
+  // Fallback to local initialization
+  initializeTomTomService();
+}

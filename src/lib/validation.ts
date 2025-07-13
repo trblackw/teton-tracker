@@ -75,10 +75,6 @@ export function validateNewRunForm(data: Partial<NewRunForm>): {
   const arrivalError = validateAirportCode(data.arrival || '');
   if (arrivalError) errors.arrival = arrivalError;
 
-  if (data.departure && data.arrival && data.departure === data.arrival) {
-    errors.arrival = 'Departure and arrival airports must be different';
-  }
-
   const pickupLocationError = validateLocation(data.pickupLocation || '');
   if (pickupLocationError) errors.pickupLocation = pickupLocationError;
 

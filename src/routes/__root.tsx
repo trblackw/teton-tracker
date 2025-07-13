@@ -12,12 +12,18 @@ import { ThemeProvider } from '../components/theme-provider';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { queryClient } from '../lib/react-query-client';
+import { initializeTomTomServiceWithConfig } from '../lib/services/tomtom-service';
 import { toasts } from '../lib/toast';
 
 const activeNavClass = 'bg-primary/10 text-primary text-muted-foreground';
 
 function RootComponent() {
   const routerState = useRouterState();
+
+  // Initialize services on app start
+  useEffect(() => {
+    initializeTomTomServiceWithConfig();
+  }, []);
 
   // Auto-dismiss toasts on route change
   useEffect(() => {

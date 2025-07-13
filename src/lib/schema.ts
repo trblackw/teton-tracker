@@ -18,7 +18,7 @@ export const FlightNumberSchema = z
 
 export const LocationSchema = z
   .string()
-  .min(5, 'Location must be at least 5 characters')
+  .min(1, 'Location is required')
   .max(200, 'Location must be at most 200 characters')
   .trim();
 
@@ -162,32 +162,24 @@ export const TrafficDataSchema = z.object({
 });
 
 // Form schemas (for input validation)
-export const NewRunFormSchema = z
-  .object({
-    flightNumber: FlightNumberSchema,
-    airline: z
-      .string()
-      .min(2, 'Airline name must be at least 2 characters')
-      .max(100, 'Airline name must be at most 100 characters')
-      .trim()
-      .optional()
-      .or(z.literal('')),
-    departure: AirportCodeSchema,
-    arrival: AirportCodeSchema,
-    pickupLocation: LocationSchema,
-    dropoffLocation: LocationSchema,
-    scheduledTime: DateTimeSchema,
-    type: RunTypeSchema,
-    price: PriceSchema,
-    notes: z
-      .string()
-      .max(500, 'Notes must be at most 500 characters')
-      .optional(),
-  })
-  .refine(data => data.departure !== data.arrival, {
-    message: 'Departure and arrival airports must be different',
-    path: ['arrival'],
-  });
+export const NewRunFormSchema = z.object({
+  flightNumber: FlightNumberSchema,
+  airline: z
+    .string()
+    .min(2, 'Airline name must be at least 2 characters')
+    .max(100, 'Airline name must be at most 100 characters')
+    .trim()
+    .optional()
+    .or(z.literal('')),
+  departure: AirportCodeSchema,
+  arrival: AirportCodeSchema,
+  pickupLocation: LocationSchema,
+  dropoffLocation: LocationSchema,
+  scheduledTime: DateTimeSchema,
+  type: RunTypeSchema,
+  price: PriceSchema,
+  notes: z.string().max(500, 'Notes must be at most 500 characters').optional(),
+});
 
 // API response schemas
 export const OpenSkyFlightResponseSchema = z.object({

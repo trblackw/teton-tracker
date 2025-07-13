@@ -6,9 +6,7 @@ import { initializeSchema } from './lib/db';
 // Initialize database on server startup
 async function initializeServer() {
   try {
-    console.log('🚀 Initializing Teton Tracker API server...');
     await initializeSchema();
-    console.log('✅ Database schema initialized successfully');
   } catch (error) {
     console.error('❌ Failed to initialize database:', error);
     process.exit(1);
@@ -17,9 +15,13 @@ async function initializeServer() {
 
 // Configuration endpoint
 async function handleConfigRequest(request: Request): Promise<Response> {
+  const aviationStackAPIKey = process.env.AVIATIONSTACK_API_KEY;
+  const tomtomAPIKey = process.env.TOMTOM_API_KEY;
+
   const config = {
-    hasApiKey: !!process.env.AVIATIONSTACK_API_KEY,
-    apiKey: process.env.AVIATIONSTACK_API_KEY || null,
+    hasApiKey: !!aviationStackAPIKey,
+    apiKey: aviationStackAPIKey || null,
+    tomtomKey: tomtomAPIKey || null,
     environment: process.env.NODE_ENV || 'development',
   };
 
