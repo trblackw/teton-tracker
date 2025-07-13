@@ -34,11 +34,8 @@ import {
   SelectValue,
 } from '../components/ui/select';
 import { notificationsApi } from '../lib/api/client';
-import {
-  type Notification,
-  type NotificationType,
-} from '../lib/db/notifications';
 import { useTimezoneFormatters } from '../lib/hooks/use-timezone';
+import { type Notification, type NotificationType } from '../lib/schema';
 import { toasts } from '../lib/toast';
 
 const NOTIFICATION_TYPES: {
@@ -515,7 +512,7 @@ function Notifications() {
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                           <span>
                             {formatScheduleTime(
-                              notification.createdAt.toISOString()
+                              notification.createdAt?.toISOString() || ''
                             )}
                           </span>
                           {notification.flightNumber && (

@@ -1,24 +1,9 @@
 #!/usr/bin/env bun
 import * as preferencesApi from './api/preferences';
 import * as runsApi from './api/runs';
-import { initializeSchema } from './lib/db';
-
-// Initialize database on server startup
-async function initializeServer() {
-  try {
-    console.log('🚀 Initializing Teton Tracker development server...');
-    await initializeSchema();
-    console.log('✅ Database schema initialized successfully');
-  } catch (error) {
-    console.error('❌ Failed to initialize database:', error);
-    process.exit(1);
-  }
-}
 
 // Start minimal development server - let Bun handle everything else
 async function startDevServer() {
-  await initializeServer();
-
   const server = Bun.serve({
     port: process.env.PORT || 3000,
 

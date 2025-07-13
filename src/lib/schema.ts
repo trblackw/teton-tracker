@@ -80,12 +80,68 @@ export const TrafficStatusSchema = z.enum(['good', 'moderate', 'heavy'], {
   }),
 });
 
+export const NotificationTypeSchema = z.enum(
+  ['flight_update', 'traffic_alert', 'run_reminder', 'status_change', 'system'],
+  {
+    errorMap: () => ({ message: 'Invalid notification type' }),
+  }
+);
+
+export const ThemeSchema = z.enum(['light', 'dark', 'system'], {
+  errorMap: () => ({ message: 'Theme must be light, dark, or system' }),
+});
+
+// User schema
+export const UserSchema = z.object({
+  id: z.string().min(1, 'User ID is required'),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+// Notification preferences schema
+export const NotificationPreferencesSchema = z.object({
+  pushNotificationsEnabled: z.boolean().default(true),
+  flightUpdates: z.boolean().default(true),
+  trafficAlerts: z.boolean().default(true),
+  runReminders: z.boolean().default(true),
+});
+
+// User preferences schema
+export const UserPreferencesSchema = z.object({
+  id: z.string().uuid('Invalid preferences ID format'),
+  userId: z.string().min(1, 'User ID is required'),
+  homeAirport: AirportCodeSchema.optional(),
+  theme: ThemeSchema.default('system'),
+  timezone: z.string().min(1, 'Timezone is required').default('UTC'),
+  notificationPreferences: NotificationPreferencesSchema.default({}),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+// Notification schema
+export const NotificationSchema = z.object({
+  id: z.string().uuid('Invalid notification ID format'),
+  userId: z.string().min(1, 'User ID is required'),
+  type: NotificationTypeSchema,
+  title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
+  message: z
+    .string()
+    .min(1, 'Message is required')
+    .max(1000, 'Message too long'),
+  flightNumber: FlightNumberSchema.optional(),
+  pickupLocation: LocationSchema.optional(),
+  dropoffLocation: LocationSchema.optional(),
+  runId: z.string().uuid('Invalid run ID format').optional(),
+  isRead: z.boolean().default(false),
+  metadata: z.record(z.any()).default({}),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
 // Main data model schemas
 export const RunSchema = z.object({
-  id: z
-    .string()
-    .uuid('Invalid UUID format')
-    .or(z.string().min(1, 'ID is required')),
+  id: z.string().uuid('Invalid run ID format'),
+  userId: z.string().min(1, 'User ID is required'),
   flightNumber: FlightNumberSchema,
   airline: z
     .string()
@@ -163,6 +219,7 @@ export const TrafficDataSchema = z.object({
 
 // Form schemas (for input validation)
 export const NewRunFormSchema = z.object({
+  userId: z.string().min(1, 'User ID is required').optional(), // Optional for forms, will be auto-generated
   flightNumber: FlightNumberSchema,
   airline: z
     .string()
@@ -225,6 +282,14 @@ export const TomTomRouteResponseSchema = z.object({
 });
 
 // Utility types (inferred from schemas)
+export type User = z.infer<typeof UserSchema>;
+export type UserPreferences = z.infer<typeof UserPreferencesSchema>;
+export type NotificationPreferences = z.infer<
+  typeof NotificationPreferencesSchema
+>;
+export type Notification = z.infer<typeof NotificationSchema>;
+export type NotificationType = z.infer<typeof NotificationTypeSchema>;
+export type Theme = z.infer<typeof ThemeSchema>;
 export type Run = z.infer<typeof RunSchema>;
 export type FlightStatus = z.infer<typeof FlightStatusSchema>;
 export type TrafficData = z.infer<typeof TrafficDataSchema>;
@@ -237,6 +302,18 @@ export type OpenSkyFlightResponse = z.infer<typeof OpenSkyFlightResponseSchema>;
 export type TomTomRouteResponse = z.infer<typeof TomTomRouteResponseSchema>;
 
 // Validation helper functions
+export const validateUser = (data: unknown): User => {
+  return UserSchema.parse(data);
+};
+
+export const validateUserPreferences = (data: unknown): UserPreferences => {
+  return UserPreferencesSchema.parse(data);
+};
+
+export const validateNotification = (data: unknown): Notification => {
+  return NotificationSchema.parse(data);
+};
+
 export const validateRun = (data: unknown): Run => {
   return RunSchema.parse(data);
 };
@@ -254,6 +331,18 @@ export const validateTrafficData = (data: unknown): TrafficData => {
 };
 
 // Safe validation functions (returns result with error handling)
+export const safeValidateUser = (data: unknown) => {
+  return UserSchema.safeParse(data);
+};
+
+export const safeValidateUserPreferences = (data: unknown) => {
+  return UserPreferencesSchema.safeParse(data);
+};
+
+export const safeValidateNotification = (data: unknown) => {
+  return NotificationSchema.safeParse(data);
+};
+
 export const safeValidateRun = (data: unknown) => {
   return RunSchema.safeParse(data);
 };

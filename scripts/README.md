@@ -48,6 +48,50 @@ bun run dev:frontend
 - **API**: http://localhost:3001
 - **Database**: Turso (remote)
 
+## Database Management
+
+The database schema is managed through dedicated scripts (not baked into the app):
+
+### Setup Database Schema
+
+```bash
+bun run scripts/setup-db.ts
+```
+
+This script:
+
+- Creates all database tables
+- Adds indexes for performance
+- Runs any necessary migrations
+- Should be run when setting up a new environment
+
+### Generate Mock Data (Development)
+
+```bash
+bun run scripts/generate-mock-data.ts
+```
+
+This script:
+
+- Generates realistic test data for development
+- Creates sample runs, notifications, and users
+- Only generates data if tables are empty
+
+### Setup New Environment
+
+For a new development environment:
+
+```bash
+# 1. Setup database schema
+bun run scripts/setup-db.ts
+
+# 2. Generate mock data (optional for development)
+bun run scripts/generate-mock-data.ts
+
+# 3. Start development servers
+bun run dev
+```
+
 ## Troubleshooting
 
 ### Still getting port conflicts?

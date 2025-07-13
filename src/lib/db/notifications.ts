@@ -1,27 +1,5 @@
-import { generateUserId, getDatabase, handleDatabaseError } from './index';
-
-export type NotificationType =
-  | 'flight_update'
-  | 'traffic_alert'
-  | 'run_reminder'
-  | 'status_change'
-  | 'system';
-
-export interface Notification {
-  id: string;
-  userId: string;
-  type: NotificationType;
-  title: string;
-  message: string;
-  flightNumber?: string;
-  pickupLocation?: string;
-  dropoffLocation?: string;
-  runId?: string;
-  isRead: boolean;
-  metadata: Record<string, any>;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { type Notification, type NotificationType } from '../schema';
+import { getDatabase, getOrCreateUser, handleDatabaseError } from './index';
 
 export interface CreateNotificationData {
   type: NotificationType;
@@ -53,7 +31,7 @@ export async function createNotification(
 ): Promise<Notification> {
   try {
     const db = getDatabase();
-    const currentUserId = userId || generateUserId();
+    const currentUserId = userId || (await getOrCreateUser());
     const notificationId = crypto.randomUUID();
     const now = new Date().toISOString();
 
@@ -290,7 +268,7 @@ export async function markAllNotificationsAsRead(
 ): Promise<boolean> {
   try {
     const db = getDatabase();
-    const currentUserId = userId || generateUserId();
+    const currentUserId = userId || (await getOrCreateUser());
     const now = new Date().toISOString();
 
     const result = await db.execute({
@@ -352,7 +330,7 @@ export async function deleteAllNotifications(
 ): Promise<boolean> {
   try {
     const db = getDatabase();
-    const currentUserId = userId || generateUserId();
+    const currentUserId = userId || (await getOrCreateUser());
 
     const result = await db.execute({
       sql: 'DELETE FROM notifications WHERE user_id = ?',
@@ -381,7 +359,7 @@ export async function getNotificationStats(userId?: string): Promise<{
 }> {
   try {
     const db = getDatabase();
-    const currentUserId = userId || generateUserId();
+    const currentUserId = userId || (await getOrCreateUser());
 
     const result = await db.execute({
       sql: `

@@ -1,5 +1,5 @@
 import { notificationsApi, preferencesApi } from '../api/client';
-import { type NotificationType as DbNotificationType } from '../db/notifications';
+import { type NotificationType as DbNotificationType } from '../schema';
 import { toasts } from '../toast';
 
 // Check if we're in development mode

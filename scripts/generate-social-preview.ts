@@ -6,7 +6,7 @@ async function generateSocialPreview() {
   console.log('🎨 Generating social media preview image...');
 
   const browser = await puppeteer.launch({
-    headless: 'new',
+    headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
 
@@ -27,7 +27,7 @@ async function generateSocialPreview() {
     // Take screenshot
     const outputPath = path.join(process.cwd(), 'public', 'social-preview.png');
     await page.screenshot({
-      path: outputPath,
+      path: outputPath as `${string}.png`,
       type: 'png',
       clip: {
         x: 0,
@@ -52,7 +52,7 @@ async function generateSocialPreview() {
       'social-preview-twitter.png'
     );
     await page.screenshot({
-      path: twitterPath,
+      path: twitterPath as `${string}.png`,
       type: 'png',
       clip: {
         x: 0,

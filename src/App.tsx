@@ -25,6 +25,7 @@ import { Input } from './components/ui/input';
 import { RefreshButton } from './components/ui/refresh-button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import './index.css';
+import { useAppContext } from './lib/AppContextProvider';
 import { useMultipleRunsData } from './lib/hooks/use-api-data';
 import IconLogo from './lib/icons/icon-logo';
 import { invalidateAllApiData, queryClient } from './lib/react-query-client';
@@ -43,6 +44,7 @@ import { pollingService } from './lib/services/polling-service';
 import { initializeTomTomService } from './lib/services/tomtom-service';
 
 export default function App() {
+  const { currentUser, isLoading: userLoading } = useAppContext();
   const [runs, setRuns] = useState<Run[]>([]);
   const [newRun, setNewRun] = useState<Partial<NewRunForm>>({
     flightNumber: '',
@@ -311,6 +313,11 @@ export default function App() {
   };
 
   const addRun = () => {
+    if (!currentUser) {
+      console.error('No current user available');
+      return;
+    }
+
     try {
       // Clear previous errors
       setFormErrors({});
@@ -318,6 +325,7 @@ export default function App() {
       // Create the run with additional required fields
       const run: Run = {
         id: crypto.randomUUID(),
+        userId: currentUser.id,
         ...(newRun as NewRunForm), // Safe cast since validation passed
         status: 'scheduled',
         createdAt: new Date(),
@@ -374,6 +382,11 @@ export default function App() {
   };
 
   const handleBulkImport = () => {
+    if (!currentUser) {
+      console.error('No current user available');
+      return;
+    }
+
     if (!parseResult?.success || !parseResult.runs.length) {
       return;
     }
@@ -386,6 +399,7 @@ export default function App() {
         const formData = convertParsedRunToForm(parsedRun, today);
         const run: Run = {
           id: crypto.randomUUID(),
+          userId: currentUser.id,
           ...formData,
           status: parsedRun.notes.includes('CANCELLED')
             ? 'cancelled'
@@ -587,6 +601,18 @@ export default function App() {
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
+
+  // Show loading state while user is being initialized
+  if (userLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Initializing user...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-2 sm:p-4">
@@ -1274,7 +1300,7 @@ export default function App() {
                 <Button
                   onClick={addRun}
                   className="w-full h-12 text-lg"
-                  disabled={runsApiData.isLoading}
+                  disabled={runsApiData.isLoading || !currentUser}
                 >
                   <Plus className="h-5 w-5 mr-2" />
                   Add Run

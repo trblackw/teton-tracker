@@ -1,5 +1,5 @@
 import { type NewRunForm, type Run, type RunStatus } from '../schema';
-import { generateUserId, getDatabase, handleDatabaseError } from './index';
+import { getDatabase, getOrCreateUser, handleDatabaseError } from './index';
 
 export interface RunsQuery {
   userId?: string;
@@ -17,12 +17,13 @@ export async function createRun(
 ): Promise<Run> {
   try {
     const db = getDatabase();
-    const currentUserId = userId || generateUserId();
+    const currentUserId = userId || (await getOrCreateUser());
     const runId = crypto.randomUUID();
     const now = new Date().toISOString();
 
     const run: Run = {
       id: runId,
+      userId: currentUserId,
       ...runData,
       airline: runData.airline || '',
       status: 'scheduled',
@@ -33,13 +34,14 @@ export async function createRun(
     await db.execute({
       sql: `
         INSERT INTO runs (
-          id, flight_number, airline, departure_airport, arrival_airport,
+          id, user_id, flight_number, airline, departure_airport, arrival_airport,
           pickup_location, dropoff_location, scheduled_time, status, type,
-          price, notes, user_id, created_at, updated_at
+          price, notes, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       args: [
         run.id,
+        run.userId,
         run.flightNumber,
         run.airline,
         run.departure,
@@ -51,7 +53,6 @@ export async function createRun(
         run.type,
         run.price,
         run.notes || null,
-        currentUserId,
         now,
         now,
       ],
@@ -123,6 +124,7 @@ export async function getRuns(query: RunsQuery = {}): Promise<Run[]> {
 
     const runs: Run[] = result.rows.map(row => ({
       id: row.id as string,
+      userId: row.user_id as string,
       flightNumber: row.flight_number as string,
       airline: (row.airline as string) || '',
       departure: row.departure_airport as string,
@@ -132,7 +134,7 @@ export async function getRuns(query: RunsQuery = {}): Promise<Run[]> {
       scheduledTime: row.scheduled_time as string,
       status: row.status as RunStatus,
       type: row.type as 'pickup' | 'dropoff',
-      price: (row.price as string) || '0',
+      price: row.price as string,
       notes: row.notes as string | undefined,
       createdAt: new Date(row.created_at as string),
       updatedAt: new Date(row.updated_at as string),
@@ -178,6 +180,7 @@ export async function getRunById(
     const row = result.rows[0];
     return {
       id: row.id as string,
+      userId: row.user_id as string,
       flightNumber: row.flight_number as string,
       airline: (row.airline as string) || '',
       departure: row.departure_airport as string,
@@ -385,7 +388,7 @@ export async function createRunsBatch(
 ): Promise<Run[]> {
   try {
     const db = getDatabase();
-    const currentUserId = userId || generateUserId();
+    const currentUserId = userId || (await getOrCreateUser());
     const now = new Date().toISOString();
     const runs: Run[] = [];
 
@@ -397,6 +400,7 @@ export async function createRunsBatch(
         const runId = crypto.randomUUID();
         const run: Run = {
           id: runId,
+          userId: currentUserId,
           ...runData,
           airline: runData.airline || '',
           status: 'scheduled',
@@ -407,13 +411,14 @@ export async function createRunsBatch(
         await db.execute({
           sql: `
             INSERT INTO runs (
-              id, flight_number, airline, departure_airport, arrival_airport,
+              id, user_id, flight_number, airline, departure_airport, arrival_airport,
               pickup_location, dropoff_location, scheduled_time, status, type,
-              price, notes, user_id, created_at, updated_at
+              price, notes, created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
           args: [
             run.id,
+            run.userId,
             run.flightNumber,
             run.airline,
             run.departure,
@@ -425,7 +430,6 @@ export async function createRunsBatch(
             run.type,
             run.price,
             run.notes || null,
-            currentUserId,
             now,
             now,
           ],

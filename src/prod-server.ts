@@ -1,19 +1,6 @@
 #!/usr/bin/env bun
 import * as preferencesApi from './api/preferences';
 import * as runsApi from './api/runs';
-import { initializeSchema } from './lib/db';
-
-// Initialize database on server startup
-async function initializeServer() {
-  try {
-    console.log('🚀 Initializing Teton Tracker server...');
-    await initializeSchema();
-    console.log('✅ Database schema initialized successfully');
-  } catch (error) {
-    console.error('❌ Failed to initialize database:', error);
-    process.exit(1);
-  }
-}
 
 // API route handlers
 const apiRoutes = {
@@ -67,8 +54,6 @@ function matchRoute(pathname: string): {
 
 // Start server
 async function startServer() {
-  await initializeServer();
-
   const server = Bun.serve({
     port: process.env.PORT || 3000,
     hostname: '0.0.0.0', // Listen on all interfaces for Railway

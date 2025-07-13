@@ -1,11 +1,15 @@
 import {
   type CreateNotificationData,
-  type Notification,
   type NotificationsQuery,
-  type NotificationType,
 } from '../db/notifications';
 import { type UpdatePreferencesData } from '../db/preferences';
-import { type NewRunForm, type Run, type RunStatus } from '../schema';
+import {
+  type NewRunForm,
+  type Notification,
+  type NotificationType,
+  type Run,
+  type RunStatus,
+} from '../schema';
 
 const API_BASE =
   process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:3001/api';

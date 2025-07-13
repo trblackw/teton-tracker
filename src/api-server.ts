@@ -2,17 +2,6 @@
 import * as notificationsApi from './api/notifications';
 import * as preferencesApi from './api/preferences';
 import * as runsApi from './api/runs';
-import { initializeSchema } from './lib/db';
-
-// Initialize database on server startup
-async function initializeServer() {
-  try {
-    await initializeSchema();
-  } catch (error) {
-    console.error('❌ Failed to initialize database:', error);
-    process.exit(1);
-  }
-}
 
 // Configuration endpoint
 async function handleConfigRequest(request: Request): Promise<Response> {
@@ -33,8 +22,6 @@ async function handleConfigRequest(request: Request): Promise<Response> {
 
 // API-only server
 async function startApiServer() {
-  await initializeServer();
-
   const server = Bun.serve({
     port: process.env.API_PORT || 3001,
 

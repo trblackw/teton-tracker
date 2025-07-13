@@ -1,25 +1,11 @@
-import { generateUserId, getDatabase, handleDatabaseError } from './index';
-
-export interface UserPreferences {
-  id: string;
-  homeAirport?: string;
-  theme: 'light' | 'dark' | 'system';
-  timezone: string;
-  notificationPreferences: {
-    pushNotificationsEnabled: boolean;
-    flightUpdates: boolean;
-    trafficAlerts: boolean;
-    runReminders: boolean;
-  };
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { type NotificationPreferences, type UserPreferences } from '../schema';
+import { getDatabase, getOrCreateUser, handleDatabaseError } from './index';
 
 export interface UpdatePreferencesData {
   homeAirport?: string;
   theme?: 'light' | 'dark' | 'system';
   timezone?: string;
-  notificationPreferences?: Partial<UserPreferences['notificationPreferences']>;
+  notificationPreferences?: Partial<NotificationPreferences>;
 }
 
 // Get user preferences
@@ -28,14 +14,14 @@ export async function getUserPreferences(
 ): Promise<UserPreferences | null> {
   try {
     const db = getDatabase();
-    const currentUserId = userId || generateUserId();
+    const currentUserId = userId || (await getOrCreateUser());
 
     const result = await db.execute({
       sql: `
-        SELECT id, home_airport, theme, timezone, notification_preferences, 
+        SELECT id, user_id, home_airport, theme, timezone, notification_preferences, 
                created_at, updated_at
         FROM user_preferences 
-        WHERE id = ?
+        WHERE user_id = ?
       `,
       args: [currentUserId],
     });
@@ -51,6 +37,7 @@ export async function getUserPreferences(
 
     return {
       id: row.id as string,
+      userId: row.user_id as string,
       homeAirport: row.home_airport as string | undefined,
       theme: (row.theme as 'light' | 'dark' | 'system') || 'system',
       timezone: (row.timezone as string) || 'UTC',
@@ -77,7 +64,7 @@ export async function updateUserPreferences(
 ): Promise<UserPreferences> {
   try {
     const db = getDatabase();
-    const currentUserId = userId || generateUserId();
+    const currentUserId = userId || (await getOrCreateUser());
     const now = new Date().toISOString();
 
     // First, try to get existing preferences
@@ -94,7 +81,7 @@ export async function updateUserPreferences(
         sql: `
           UPDATE user_preferences 
           SET home_airport = ?, theme = ?, timezone = ?, notification_preferences = ?, updated_at = ?
-          WHERE id = ?
+          WHERE user_id = ?
         `,
         args: [
           data.homeAirport ?? existing.homeAirport ?? null,
@@ -118,22 +105,25 @@ export async function updateUserPreferences(
         updatedAt: new Date(now),
       };
     } else {
-      // Create new preferences
+      // User doesn't have preferences yet - create them
       const defaultNotificationPreferences = {
-        pushNotificationsEnabled: true,
-        flightUpdates: true,
-        trafficAlerts: true,
-        runReminders: true,
-        ...data.notificationPreferences,
+        pushNotificationsEnabled:
+          data.notificationPreferences?.pushNotificationsEnabled ?? true,
+        flightUpdates: data.notificationPreferences?.flightUpdates ?? true,
+        trafficAlerts: data.notificationPreferences?.trafficAlerts ?? true,
+        runReminders: data.notificationPreferences?.runReminders ?? true,
       };
+
+      const preferencesId = crypto.randomUUID();
 
       await db.execute({
         sql: `
           INSERT INTO user_preferences 
-          (id, home_airport, theme, timezone, notification_preferences, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          (id, user_id, home_airport, theme, timezone, notification_preferences, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `,
         args: [
+          preferencesId,
           currentUserId,
           data.homeAirport || null,
           data.theme || 'system',
@@ -147,7 +137,8 @@ export async function updateUserPreferences(
       console.log(`✅ Created preferences for user: ${currentUserId}`);
 
       return {
-        id: currentUserId,
+        id: preferencesId,
+        userId: currentUserId,
         homeAirport: data.homeAirport,
         theme: data.theme || 'system',
         timezone: data.timezone || 'UTC',
@@ -218,7 +209,7 @@ export async function deleteUserPreferences(userId: string): Promise<boolean> {
     const db = getDatabase();
 
     const result = await db.execute({
-      sql: 'DELETE FROM user_preferences WHERE id = ?',
+      sql: 'DELETE FROM user_preferences WHERE user_id = ?',
       args: [userId],
     });
 
