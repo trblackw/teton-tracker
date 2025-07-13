@@ -1,5 +1,6 @@
 import type { FlightStatus, Run, TrafficData } from '../schema';
 import { getFlightServiceWithConfig } from './flight-service';
+import { notifications } from './notification-service';
 import { getTrafficData } from './tomtom-service';
 
 export interface PollingConfig {
@@ -11,6 +12,8 @@ export interface PollingConfig {
   onError?: (error: Error, context: string) => void;
   // New callback for React Query integration
   onDataInvalidation?: (type: 'flight' | 'traffic', key: string) => void;
+  // New callback for notifications
+  enableNotifications?: boolean;
 }
 
 export interface PollingDebugInfo {
@@ -20,20 +23,29 @@ export interface PollingDebugInfo {
   apiCallsBlocked: number;
   lastApiCallTime: Date | null;
   errors: Array<{ time: Date; message: string; context: string }>;
+  notificationsSent: number;
+  statusChangesDetected: number;
 }
 
 export class IntelligentPollingService {
   public config: PollingConfig;
-  private intervalId: number | null = null;
+  private intervalId: NodeJS.Timeout | null = null;
   private isPolling = false;
   private debugInfo: PollingDebugInfo;
   private currentRuns: Run[] = [];
+
+  // Track previous flight statuses to detect changes
+  private previousFlightStatuses: Map<string, FlightStatus> = new Map();
+
+  // Track previous traffic data to detect changes
+  private previousTrafficData: Map<string, TrafficData> = new Map();
 
   constructor(config: Partial<PollingConfig> = {}) {
     this.config = {
       intervalMs: 5 * 60 * 1000, // 5 minutes
       enableDebugMode: this.isDebugMode(),
       enablePolling: true,
+      enableNotifications: true,
       ...config,
     };
 
@@ -44,12 +56,15 @@ export class IntelligentPollingService {
       apiCallsBlocked: 0,
       lastApiCallTime: null,
       errors: [],
+      notificationsSent: 0,
+      statusChangesDetected: 0,
     };
 
     this.logDebug('🔧 Intelligent Polling Service initialized', {
       intervalMs: this.config.intervalMs,
       debugMode: this.config.enableDebugMode,
       pollingEnabled: this.config.enablePolling,
+      notificationsEnabled: this.config.enableNotifications,
     });
   }
 
@@ -58,102 +73,73 @@ export class IntelligentPollingService {
    */
   private isDebugMode(): boolean {
     // Check multiple indicators of development mode
-    const isDev =
-      // Hot reloading indicators
-      !!(globalThis as any).__webpack_require__ ||
-      !!(globalThis as any).__webpack_hot_module_replacement__ ||
-      !!(globalThis as any).__vite_hot_module_replacement__ ||
-      // Development server indicators
+    return (
       (typeof window !== 'undefined' &&
-        window.location.hostname === 'localhost') ||
-      (typeof window !== 'undefined' &&
-        window.location.hostname === '127.0.0.1') ||
-      (typeof window !== 'undefined' && window.location.port !== '') ||
-      // Build environment indicators
+        (window.location.hostname === 'localhost' ||
+          window.location.hostname === '127.0.0.1' ||
+          window.location.port === '3000')) ||
+      // Also check for explicit environment variable if available
       (typeof process !== 'undefined' &&
-        process.env?.NODE_ENV === 'development') ||
-      // Manual debug flag
-      (typeof window !== 'undefined' && (window as any).DEBUG_MODE === true);
-
-    this.logDebug('🔍 Debug mode detection', {
-      isDev,
-      hostname:
-        typeof window !== 'undefined' ? window.location.hostname : 'unknown',
-      port: typeof window !== 'undefined' ? window.location.port : 'unknown',
-      nodeEnv:
-        typeof process !== 'undefined' ? process.env?.NODE_ENV : 'unknown',
-      hasWebpack: !!(globalThis as any).__webpack_require__,
-      hasViteHMR: !!(globalThis as any).__vite_hot_module_replacement__,
-    });
-
-    return isDev;
+        process.env?.NODE_ENV === 'development')
+    );
   }
 
   /**
-   * Start intelligent polling for active runs
+   * Start polling for active runs
    */
   start(): void {
-    if (this.isPolling) {
+    if (this.intervalId) {
       this.logDebug('⚠️ Polling already started');
       return;
     }
 
     if (!this.config.enablePolling) {
-      this.logDebug('⏸️ Polling disabled in config');
+      this.logDebug('⚠️ Polling disabled in config');
       return;
     }
 
-    this.logDebug('🚀 Starting intelligent polling', {
-      intervalMs: this.config.intervalMs,
-      debugMode: this.config.enableDebugMode,
-    });
+    this.logDebug('▶️ Starting intelligent polling service');
 
-    this.isPolling = true;
-    this.intervalId = window.setInterval(() => {
-      this.pollActiveRuns();
+    // Run initial poll
+    this.triggerPoll();
+
+    // Set up interval polling
+    this.intervalId = setInterval(() => {
+      this.triggerPoll();
     }, this.config.intervalMs);
 
-    // Initial poll
-    this.pollActiveRuns();
+    this.logDebug('✅ Polling service started', {
+      intervalMs: this.config.intervalMs,
+    });
   }
 
   /**
    * Stop polling
    */
   stop(): void {
-    if (!this.isPolling) {
-      this.logDebug('⚠️ Polling not running');
-      return;
-    }
-
-    this.logDebug('🛑 Stopping intelligent polling');
-
-    this.isPolling = false;
-    if (this.intervalId !== null) {
-      window.clearInterval(this.intervalId);
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
       this.intervalId = null;
+      this.logDebug('⏹️ Polling service stopped');
     }
   }
 
   /**
-   * Update the runs list that the polling service should monitor
+   * Update the list of runs to monitor
    */
   updateRuns(runs: Run[]): void {
     this.currentRuns = runs;
-    const activeRuns = runs.filter(run => run.status === 'active');
-    this.debugInfo.activeRuns = activeRuns.length;
+    this.debugInfo.activeRuns = runs.length;
 
-    this.logDebug('📋 Updated runs list', {
-      totalRuns: runs.length,
-      activeRuns: activeRuns.length,
-      statuses: runs.reduce(
-        (acc, run) => {
-          acc[run.status] = (acc[run.status] || 0) + 1;
-          return acc;
-        },
-        {} as Record<string, number>
-      ),
+    this.logDebug('📝 Updated runs', {
+      count: runs.length,
+      flights: runs.map(r => r.flightNumber).join(', '),
     });
+
+    // If we have runs and polling isn't started, start it
+    if (runs.length > 0 && !this.intervalId) {
+      this.start();
+    }
   }
 
   /**
@@ -164,39 +150,44 @@ export class IntelligentPollingService {
   }
 
   /**
-   * Manual trigger for polling (for testing/debugging)
+   * Trigger a poll manually (for testing/debugging)
    */
   triggerPoll(): void {
-    this.logDebug('🔄 Manual poll trigger');
-    this.pollActiveRuns();
+    if (this.isPolling) {
+      this.logDebug('⚠️ Poll already in progress, skipping');
+      return;
+    }
+
+    this.pollActiveRuns().catch(error => {
+      this.handleError(error, 'Manual poll trigger');
+    });
   }
 
   /**
-   * Core polling logic - only polls for active runs
+   * Main polling logic
    */
   private async pollActiveRuns(): Promise<void> {
+    if (!this.config.enablePolling) {
+      this.logDebug('⚠️ Polling disabled');
+      return;
+    }
+
+    this.isPolling = true;
+    this.debugInfo.lastPolled = new Date();
+
     const activeRuns = this.currentRuns.filter(run => run.status === 'active');
 
-    if (activeRuns.length === 0) {
-      this.logDebug('⏸️ No active runs to poll');
-      return;
-    }
-
-    if (this.config.enableDebugMode) {
-      this.debugInfo.apiCallsBlocked += activeRuns.length * 2; // Each run = 2 API calls
-      this.logDebug('🚫 Debug mode: Blocking API calls', {
-        activeRuns: activeRuns.length,
-        totalBlocked: this.debugInfo.apiCallsBlocked,
-      });
-      return;
-    }
-
     this.logDebug('🔄 Polling active runs', {
+      totalRuns: this.currentRuns.length,
       activeRuns: activeRuns.length,
-      runIds: activeRuns.map(r => r.id.substring(0, 8)),
     });
 
-    this.debugInfo.lastPolled = new Date();
+    if (activeRuns.length === 0) {
+      this.logDebug('📭 No active runs to poll');
+      this.isPolling = false;
+      return;
+    }
+
     this.debugInfo.pollCount++;
 
     // Poll each active run
@@ -216,6 +207,7 @@ export class IntelligentPollingService {
     }
 
     this.debugInfo.lastApiCallTime = new Date();
+    this.isPolling = false;
   }
 
   /**
@@ -232,6 +224,11 @@ export class IntelligentPollingService {
       const flightStatus = await flightService.getFlightStatus({
         flightNumber: run.flightNumber,
       });
+
+      // Check for flight status changes and send notifications
+      if (this.config.enableNotifications) {
+        await this.checkFlightStatusChanges(run, flightStatus);
+      }
 
       // Use React Query cache invalidation instead of direct updates
       if (this.config.onDataInvalidation) {
@@ -254,6 +251,130 @@ export class IntelligentPollingService {
   }
 
   /**
+   * Check for flight status changes and send notifications
+   */
+  private async checkFlightStatusChanges(
+    run: Run,
+    newStatus: FlightStatus
+  ): Promise<void> {
+    const flightNumber = run.flightNumber;
+    const previousStatus = this.previousFlightStatuses.get(flightNumber);
+
+    if (!previousStatus) {
+      // First time seeing this flight - store it but don't notify
+      this.previousFlightStatuses.set(flightNumber, newStatus);
+      return;
+    }
+
+    // Check if status has changed
+    if (previousStatus.status !== newStatus.status) {
+      this.debugInfo.statusChangesDetected++;
+
+      this.logDebug('🔔 Flight status changed', {
+        flightNumber,
+        oldStatus: previousStatus.status,
+        newStatus: newStatus.status,
+      });
+
+      // Send notification about status change
+      try {
+        await notifications.flightStatusChanged(
+          flightNumber,
+          previousStatus.status,
+          newStatus.status,
+          {
+            airport: run.departure,
+            gate: newStatus.gate,
+            terminal: newStatus.terminal,
+            delay: newStatus.delay,
+          }
+        );
+
+        this.debugInfo.notificationsSent++;
+      } catch (error) {
+        this.handleError(
+          error,
+          `Sending flight status notification for ${flightNumber}`
+        );
+      }
+    }
+
+    // Check for gate/terminal changes
+    if (
+      previousStatus.gate !== newStatus.gate ||
+      previousStatus.terminal !== newStatus.terminal
+    ) {
+      this.logDebug('🚪 Gate/terminal changed', {
+        flightNumber,
+        oldGate: previousStatus.gate,
+        newGate: newStatus.gate,
+        oldTerminal: previousStatus.terminal,
+        newTerminal: newStatus.terminal,
+      });
+
+      // Send notification about gate/terminal change
+      try {
+        await notifications.flightStatusChanged(
+          flightNumber,
+          `Gate ${previousStatus.gate || 'TBD'}`,
+          `Gate ${newStatus.gate || 'TBD'}`,
+          {
+            airport: run.departure,
+            gate: newStatus.gate,
+            terminal: newStatus.terminal,
+          }
+        );
+
+        this.debugInfo.notificationsSent++;
+      } catch (error) {
+        this.handleError(
+          error,
+          `Sending gate change notification for ${flightNumber}`
+        );
+      }
+    }
+
+    // Check for significant delay changes (more than 15 minutes)
+    if (previousStatus.delay !== newStatus.delay) {
+      const delayDiff = (newStatus.delay || 0) - (previousStatus.delay || 0);
+
+      if (Math.abs(delayDiff) >= 15) {
+        this.logDebug('⏰ Significant delay change detected', {
+          flightNumber,
+          oldDelay: previousStatus.delay,
+          newDelay: newStatus.delay,
+          delayDiff,
+        });
+
+        // Send notification about delay change
+        try {
+          await notifications.flightStatusChanged(
+            flightNumber,
+            `${previousStatus.delay || 0}min delay`,
+            `${newStatus.delay || 0}min delay`,
+            {
+              airport: run.departure,
+              gate: newStatus.gate,
+              terminal: newStatus.terminal,
+              delay: newStatus.delay,
+            }
+          );
+
+          this.debugInfo.notificationsSent++;
+        } catch (error) {
+          this.handleError(
+            error,
+            `Sending delay change notification for ${flightNumber}`
+          );
+        }
+      }
+    }
+
+    // Update the stored status
+    this.previousFlightStatuses.set(flightNumber, newStatus);
+  }
+
+  /**
    * Poll traffic data for a specific run
    */
   private async pollTrafficData(run: Run): Promise<void> {
@@ -268,6 +389,11 @@ export class IntelligentPollingService {
         run.dropoffLocation
       );
       const routeKey = `${run.pickupLocation}-${run.dropoffLocation}`;
+
+      // Check for traffic condition changes and send notifications
+      if (this.config.enableNotifications) {
+        await this.checkTrafficChanges(run, trafficData, routeKey);
+      }
 
       // Use React Query cache invalidation instead of direct updates
       if (this.config.onDataInvalidation) {
@@ -284,8 +410,9 @@ export class IntelligentPollingService {
 
       this.logDebug('✅ Traffic data updated', {
         route: routeKey,
-        duration: trafficData.duration,
         status: trafficData.status,
+        duration: trafficData.duration,
+        durationInTraffic: trafficData.durationInTraffic,
       });
     } catch (error) {
       this.handleError(
@@ -296,10 +423,106 @@ export class IntelligentPollingService {
   }
 
   /**
-   * Handle and log errors
+   * Check for traffic condition changes and send notifications
+   */
+  private async checkTrafficChanges(
+    run: Run,
+    newTrafficData: TrafficData,
+    routeKey: string
+  ): Promise<void> {
+    const previousTrafficData = this.previousTrafficData.get(routeKey);
+
+    if (!previousTrafficData) {
+      // First time seeing this route - store it but don't notify
+      this.previousTrafficData.set(routeKey, newTrafficData);
+      return;
+    }
+
+    // Check if traffic status has worsened significantly
+    const statusPriority = { good: 0, moderate: 1, heavy: 2 };
+    const oldPriority = statusPriority[previousTrafficData.status];
+    const newPriority = statusPriority[newTrafficData.status];
+
+    if (newPriority > oldPriority) {
+      this.logDebug('🚨 Traffic conditions worsened', {
+        route: routeKey,
+        oldStatus: previousTrafficData.status,
+        newStatus: newTrafficData.status,
+      });
+
+      // Send traffic alert notification
+      try {
+        const delayIncrease =
+          newTrafficData.durationInTraffic -
+          previousTrafficData.durationInTraffic;
+
+        await notifications.trafficAlert(
+          routeKey,
+          newTrafficData.status as 'light' | 'moderate' | 'heavy' | 'severe',
+          delayIncrease * 60, // Convert to seconds
+          [
+            {
+              type: 'congestion',
+              description: `Traffic conditions changed from ${previousTrafficData.status} to ${newTrafficData.status}`,
+              impact: `Additional ${delayIncrease} minutes expected`,
+            },
+          ]
+        );
+
+        this.debugInfo.notificationsSent++;
+      } catch (error) {
+        this.handleError(
+          error,
+          `Sending traffic alert notification for ${routeKey}`
+        );
+      }
+    }
+
+    // Check for significant delay increases (more than 10 minutes)
+    const delayIncrease =
+      newTrafficData.durationInTraffic - previousTrafficData.durationInTraffic;
+    if (delayIncrease >= 10) {
+      this.logDebug('⏰ Significant traffic delay increase', {
+        route: routeKey,
+        delayIncrease,
+        oldDuration: previousTrafficData.durationInTraffic,
+        newDuration: newTrafficData.durationInTraffic,
+      });
+
+      // Send delay alert notification
+      try {
+        await notifications.trafficAlert(
+          routeKey,
+          'moderate',
+          delayIncrease * 60, // Convert to seconds
+          [
+            {
+              type: 'congestion',
+              description: `Traffic delays increased significantly on your route`,
+              impact: `Additional ${delayIncrease} minutes expected`,
+            },
+          ]
+        );
+
+        this.debugInfo.notificationsSent++;
+      } catch (error) {
+        this.handleError(
+          error,
+          `Sending traffic delay notification for ${routeKey}`
+        );
+      }
+    }
+
+    // Update the stored traffic data
+    this.previousTrafficData.set(routeKey, newTrafficData);
+  }
+
+  /**
+   * Handle errors during polling
    */
   private handleError(error: unknown, context: string): void {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
 
     this.debugInfo.errors.push({
       time: new Date(),
@@ -315,8 +538,10 @@ export class IntelligentPollingService {
     this.logDebug('❌ Polling error', {
       context,
       error: errorMessage,
+      errorCount: this.debugInfo.errors.length,
     });
 
+    // Call error handler if provided
     if (this.config.onError) {
       this.config.onError(
         error instanceof Error ? error : new Error(errorMessage),
@@ -326,17 +551,19 @@ export class IntelligentPollingService {
   }
 
   /**
-   * Utility delay function
+   * Utility function to add delays
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => window.setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
-   * Debug logging
+   * Debug logging helper
    */
   private logDebug(message: string, data?: any): void {
-    console.log(`[PollingService] ${message}`, data || '');
+    if (this.config.enableDebugMode) {
+      console.log(`[PollingService] ${message}`, data || '');
+    }
   }
 }
 

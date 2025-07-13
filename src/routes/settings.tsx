@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import {
+  Bell,
+  BellOff,
   Building,
   Clock,
   Monitor,
@@ -11,6 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { useEffect, useState } from 'react';
 import { AirportCombobox } from '../components/ui/airport-combobox';
 import { Button } from '../components/ui/button';
 import {
@@ -26,6 +29,10 @@ import airportsData from '../data/airports-comprehensive.json';
 import timezonesData from '../data/timezones.json';
 import { preferencesApi } from '../lib/api/client';
 import { type UpdatePreferencesData } from '../lib/db/preferences';
+import {
+  notifications,
+  type NotificationPermissionState,
+} from '../lib/services/notification-service';
 import { toasts } from '../lib/toast';
 
 // Convert airport data from object to array format expected by AirportCombobox
@@ -49,6 +56,12 @@ const timezones = timezonesData.timezones;
 function Settings() {
   const { theme, setTheme } = useTheme();
   const queryClient = useQueryClient();
+  const [notificationPermission, setNotificationPermission] =
+    useState<NotificationPermissionState>({
+      permission: 'default',
+      supported: false,
+      enabled: false,
+    });
 
   // Query for user preferences from API
   const {
@@ -61,6 +74,15 @@ function Settings() {
     queryFn: () => preferencesApi.getPreferences(),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
+
+  // Load notification permission state on mount
+  useEffect(() => {
+    const loadNotificationState = async () => {
+      const state = await notifications.getPermissionState();
+      setNotificationPermission(state);
+    };
+    loadNotificationState();
+  }, []);
 
   // Mutation for updating preferences
   const updatePreferencesMutation = useMutation({
@@ -118,6 +140,22 @@ function Settings() {
     },
   });
 
+  // Mutation for requesting notification permissions
+  const requestNotificationPermission = useMutation({
+    mutationFn: async () => {
+      const state = await notifications.requestPermission();
+      setNotificationPermission(state);
+      return state;
+    },
+    onError: error => {
+      console.error('Failed to request notification permission:', error);
+      toasts.error(
+        'Permission request failed',
+        'Could not request notification permission. Please try again.'
+      );
+    },
+  });
+
   const handleHomeAirportChange = (airport: string) => {
     updatePreferencesMutation.mutate({ homeAirport: airport });
   };
@@ -142,19 +180,58 @@ function Settings() {
     });
   };
 
+  const handleRequestNotificationPermission = () => {
+    requestNotificationPermission.mutate();
+  };
+
+  const handleTestNotification = async () => {
+    try {
+      await notifications.test();
+      toasts.success('Test notification sent', 'Check your notifications!');
+    } catch (error) {
+      console.error('Failed to send test notification:', error);
+      toasts.error(
+        'Test notification failed',
+        'Please check your notification settings and try again.'
+      );
+    }
+  };
+
+  const getPermissionStatusColor = (permission: NotificationPermission) => {
+    switch (permission) {
+      case 'granted':
+        return 'text-green-600';
+      case 'denied':
+        return 'text-red-600';
+      default:
+        return 'text-yellow-600';
+    }
+  };
+
+  const getPermissionStatusText = (permission: NotificationPermission) => {
+    switch (permission) {
+      case 'granted':
+        return 'Enabled';
+      case 'denied':
+        return 'Blocked';
+      default:
+        return 'Not requested';
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className='space-y-6 px-4 sm:px-0'>
+      <div className="space-y-6 px-4 sm:px-0">
         <div>
-          <h2 className='text-2xl font-bold text-foreground'>Settings</h2>
-          <p className='text-muted-foreground mt-1'>
+          <h2 className="text-2xl font-bold text-foreground">Settings</h2>
+          <p className="text-muted-foreground mt-1">
             Loading your preferences...
           </p>
         </div>
         <Card>
-          <CardContent className='p-8 text-center'>
-            <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4'></div>
-            <p className='text-muted-foreground'>Loading settings...</p>
+          <CardContent className="p-8 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading settings...</p>
           </CardContent>
         </Card>
       </div>
@@ -163,17 +240,17 @@ function Settings() {
 
   if (isError) {
     return (
-      <div className='space-y-6 px-4 sm:px-0'>
+      <div className="space-y-6 px-4 sm:px-0">
         <div>
-          <h2 className='text-2xl font-bold text-foreground'>Settings</h2>
-          <p className='text-muted-foreground mt-1'>
+          <h2 className="text-2xl font-bold text-foreground">Settings</h2>
+          <p className="text-muted-foreground mt-1">
             Failed to load preferences
           </p>
         </div>
-        <Card className='border-destructive'>
-          <CardContent className='p-8 text-center'>
-            <SettingsIcon className='h-16 w-16 text-destructive mx-auto mb-6' />
-            <p className='text-destructive text-lg mb-4'>
+        <Card className="border-destructive">
+          <CardContent className="p-8 text-center">
+            <SettingsIcon className="h-16 w-16 text-destructive mx-auto mb-6" />
+            <p className="text-destructive text-lg mb-4">
               Failed to load settings from database
             </p>
             <Button onClick={() => refetch()}>Retry</Button>
@@ -184,10 +261,10 @@ function Settings() {
   }
 
   return (
-    <div className='space-y-6 px-4 sm:px-0'>
+    <div className="space-y-6 px-4 sm:px-0">
       <div>
-        <h2 className='text-2xl font-bold text-foreground'>Settings</h2>
-        <p className='text-muted-foreground mt-1'>
+        <h2 className="text-2xl font-bold text-foreground">Settings</h2>
+        <p className="text-muted-foreground mt-1">
           Configure your preferences & settings
         </p>
       </div>
@@ -195,42 +272,42 @@ function Settings() {
       {/* Home Airport */}
       <Card>
         <CardHeader>
-          <CardTitle className='flex items-center gap-2'>
-            <Building className='h-5 w-5' />
+          <CardTitle className="flex items-center gap-2">
+            <Building className="h-5 w-5" />
             Home Airport
           </CardTitle>
           <CardDescription>
             Set your primary airport for flight tracking
           </CardDescription>
         </CardHeader>
-        <CardContent className='space-y-4'>
-          <div className='flex flex-col gap-2'>
-            <div className='flex gap-2'>
-              <div className='flex-1'>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <div className="flex-1">
                 <AirportCombobox
                   airports={airports}
                   value={preferences?.homeAirport || ''}
                   onValueChange={handleHomeAirportChange}
-                  placeholder='Search for your home airport...'
-                  emptyMessage='No airports found matching your search.'
+                  placeholder="Search for your home airport..."
+                  emptyMessage="No airports found matching your search."
                 />
               </div>
               {preferences?.homeAirport && (
                 <Button
-                  variant='outline'
-                  size='icon'
+                  variant="outline"
+                  size="icon"
                   onClick={() => handleHomeAirportChange('')}
                   disabled={updatePreferencesMutation.isPending}
-                  title='Clear home airport'
+                  title="Clear home airport"
                 >
-                  <X className='h-4 w-4 text-destructive hover:text-destructive/80' />
+                  <X className="h-4 w-4 text-destructive hover:text-destructive/80" />
                 </Button>
               )}
             </div>
             {preferences?.homeAirport && (
-              <p className='text-sm text-muted-foreground'>
+              <p className="text-sm text-muted-foreground">
                 Current home airport:{' '}
-                <span className='font-bold text-foreground'>
+                <span className="font-bold text-foreground">
                   {preferences.homeAirport}
                 </span>
               </p>
@@ -242,44 +319,44 @@ function Settings() {
       {/* Timezone Settings */}
       <Card>
         <CardHeader>
-          <CardTitle className='flex items-center gap-2'>
-            <Clock className='h-5 w-5' />
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
             Timezone
           </CardTitle>
           <CardDescription>
             Set your preferred timezone for flight times
           </CardDescription>
         </CardHeader>
-        <CardContent className='space-y-4'>
-          <div className='flex flex-col gap-2'>
-            <div className='flex gap-2'>
-              <div className='flex-1 min-w-0'>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <div className="flex-1 min-w-0">
                 <TimezoneCombobox
                   timezones={timezones}
                   value={preferences?.timezone || ''}
                   onValueChange={handleTimezoneChange}
-                  placeholder='Select your timezone...'
-                  emptyMessage='No timezones found matching your search.'
+                  placeholder="Select your timezone..."
+                  emptyMessage="No timezones found matching your search."
                 />
               </div>
               {preferences?.timezone && preferences.timezone !== 'UTC' && (
                 <Button
-                  variant='outline'
-                  size='icon'
+                  variant="outline"
+                  size="icon"
                   onClick={() => handleTimezoneChange('UTC')}
                   disabled={updatePreferencesMutation.isPending}
-                  title='Reset to UTC'
+                  title="Reset to UTC"
                 >
-                  <X className='h-4 w-4 text-destructive hover:text-destructive/80' />
+                  <X className="h-4 w-4 text-destructive hover:text-destructive/80" />
                 </Button>
               )}
             </div>
             {preferences?.timezone && (
-              <div className='flex flex-col gap-2'>
-              <p className='text-sm text-muted-foreground'>
-                Current timezone:{' '}
-              </p>
-                <span className='font-bold text-foreground block'>
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-muted-foreground">
+                  Current timezone:{' '}
+                </p>
+                <span className="font-bold text-foreground block">
                   {timezones.find(tz => tz.id === preferences.timezone)
                     ?.label || preferences.timezone}
                 </span>
@@ -292,45 +369,45 @@ function Settings() {
       {/* Theme Settings */}
       <Card>
         <CardHeader>
-          <CardTitle className='flex items-center gap-2'>
-            <Palette className='h-5 w-5' />
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="h-5 w-5" />
             Theme
           </CardTitle>
           <CardDescription>
             Choose your preferred theme appearance
           </CardDescription>
         </CardHeader>
-        <CardContent className='space-y-4'>
-          <div className='flex flex-col gap-3'>
-            <div className='flex flex-col sm:flex-row gap-3'>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 variant={theme === 'light' ? 'default' : 'outline'}
-                size='sm'
+                size="sm"
                 onClick={() => handleThemeChange('light')}
                 disabled={updatePreferencesMutation.isPending}
-                className='flex items-center gap-2 justify-center'
+                className="flex items-center gap-2 justify-center"
               >
-                <Sun className='h-4 w-4' />
+                <Sun className="h-4 w-4" />
                 Light
               </Button>
               <Button
                 variant={theme === 'dark' ? 'default' : 'outline'}
-                size='sm'
+                size="sm"
                 onClick={() => handleThemeChange('dark')}
                 disabled={updatePreferencesMutation.isPending}
-                className='flex items-center gap-2 justify-center'
+                className="flex items-center gap-2 justify-center"
               >
-                <Moon className='h-4 w-4' />
+                <Moon className="h-4 w-4" />
                 Dark
               </Button>
               <Button
                 variant={theme === 'system' ? 'default' : 'outline'}
-                size='sm'
+                size="sm"
                 onClick={() => handleThemeChange('system')}
                 disabled={updatePreferencesMutation.isPending}
-                className='flex items-center gap-2 justify-center'
+                className="flex items-center gap-2 justify-center"
               >
-                <Monitor className='h-4 w-4' />
+                <Monitor className="h-4 w-4" />
                 System
               </Button>
             </div>
@@ -341,21 +418,91 @@ function Settings() {
       {/* Notification Settings */}
       <Card>
         <CardHeader>
-          <CardTitle className='flex items-center gap-2'>
-            <SettingsIcon className='h-5 w-5' />
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
             Notifications
           </CardTitle>
           <CardDescription>
-            Configure what notifications you want to receive
+            Configure push notifications for flight updates and alerts
           </CardDescription>
         </CardHeader>
-        <CardContent className='space-y-4'>
-          <div className='space-y-4'>
-            <div className='flex items-start justify-between gap-4'>
-              <div className='flex-1 min-w-0'>
-                <p className='font-medium'>Flight Updates</p>
-                <p className='text-sm text-muted-foreground'>
-                  Get notified about flight status changes
+        <CardContent className="space-y-6">
+          {/* Notification Permission Status */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-3">
+                {notificationPermission.enabled ? (
+                  <Bell className="h-5 w-5 text-green-600" />
+                ) : (
+                  <BellOff className="h-5 w-5 text-muted-foreground" />
+                )}
+                <div>
+                  <p className="font-medium">Push Notifications</p>
+                  <p
+                    className={`text-sm ${getPermissionStatusColor(notificationPermission.permission)}`}
+                  >
+                    {getPermissionStatusText(notificationPermission.permission)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {notificationPermission.enabled && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleTestNotification}
+                    className="flex items-center gap-2"
+                  >
+                    <Bell className="h-4 w-4" />
+                    Test
+                  </Button>
+                )}
+                {!notificationPermission.enabled &&
+                  notificationPermission.supported && (
+                    <Button
+                      onClick={handleRequestNotificationPermission}
+                      disabled={requestNotificationPermission.isPending}
+                      className="flex items-center gap-2"
+                    >
+                      {requestNotificationPermission.isPending ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                      ) : (
+                        <Bell className="h-4 w-4" />
+                      )}
+                      Enable
+                    </Button>
+                  )}
+              </div>
+            </div>
+
+            {!notificationPermission.supported && (
+              <div className="flex items-center gap-2 text-amber-600 text-sm">
+                <BellOff className="h-4 w-4" />
+                <span>
+                  Push notifications are not supported in this browser
+                </span>
+              </div>
+            )}
+
+            {notificationPermission.permission === 'denied' && (
+              <div className="flex items-center gap-2 text-red-600 text-sm">
+                <BellOff className="h-4 w-4" />
+                <span>
+                  Notifications are blocked. Please enable them in your browser
+                  settings.
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Notification Preferences */}
+          <div className="space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium">Flight Updates</p>
+                <p className="text-sm text-muted-foreground">
+                  Get notified about flight status changes, delays, and gate
+                  updates
                 </p>
               </div>
               <Toggle
@@ -368,11 +515,12 @@ function Settings() {
                 disabled={updatePreferencesMutation.isPending}
               />
             </div>
-            <div className='flex items-start justify-between gap-4'>
-              <div className='flex-1 min-w-0'>
-                <p className='font-medium'>Traffic Alerts</p>
-                <p className='text-sm text-muted-foreground'>
-                  Get notified about traffic conditions
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium">Traffic Alerts</p>
+                <p className="text-sm text-muted-foreground">
+                  Get notified about traffic conditions and delays on your
+                  routes
                 </p>
               </div>
               <Toggle
@@ -385,11 +533,11 @@ function Settings() {
                 disabled={updatePreferencesMutation.isPending}
               />
             </div>
-            <div className='flex items-start justify-between gap-4'>
-              <div className='flex-1 min-w-0'>
-                <p className='font-medium'>Run Reminders</p>
-                <p className='text-sm text-muted-foreground'>
-                  Get reminded about upcoming runs
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium">Run Reminders</p>
+                <p className="text-sm text-muted-foreground">
+                  Get reminded about upcoming shuttle runs and pickups
                 </p>
               </div>
               <Toggle
@@ -408,11 +556,11 @@ function Settings() {
 
       {/* Status */}
       {updatePreferencesMutation.isPending && (
-        <Card className='border-primary/20 bg-primary/5'>
-          <CardContent className='p-4'>
-            <div className='flex items-center gap-2'>
-              <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-primary'></div>
-              <p className='text-primary text-sm'>Saving preferences...</p>
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+              <p className="text-primary text-sm">Saving preferences...</p>
             </div>
           </CardContent>
         </Card>
