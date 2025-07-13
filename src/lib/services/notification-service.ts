@@ -794,6 +794,86 @@ export class NotificationService {
 // Export singleton instance
 export const notificationService = NotificationService.getInstance();
 
+// Development testing helper - attach to window in dev mode
+if (isDevelopmentMode() && typeof window !== 'undefined') {
+  (window as any).testNotifications = {
+    // Test basic notification
+    test: () => notifications.test(),
+
+    // Test flight status change
+    flightStatus: (
+      flightNumber = 'AA1234',
+      oldStatus = 'Scheduled',
+      newStatus = 'Boarding'
+    ) =>
+      notifications.flightStatusChanged(flightNumber, oldStatus, newStatus, {
+        airport: 'JAC',
+        gate: 'A12',
+        delay: 15,
+      }),
+
+    // Test traffic alert
+    traffic: (route = 'Jackson → Airport', severity = 'heavy') =>
+      notifications.trafficAlert(route, severity as any, 600, [
+        {
+          type: 'congestion',
+          description: 'Heavy traffic detected',
+          impact: 'Adds 10 minutes to travel time',
+        },
+      ]),
+
+    // Test run reminder
+    runReminder: (location = 'Hotel Jackson', passengers = 3) => {
+      const pickupTime = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+      return notifications.runReminder(
+        'run-123',
+        pickupTime,
+        location,
+        passengers
+      );
+    },
+
+    // Test permission request
+    requestPermission: () => notifications.requestPermission(),
+
+    // Get permission state
+    getPermissionState: () => notifications.getPermissionState(),
+
+    // Help text
+    help: () => {
+      console.log(`
+🔔 Notification Testing Commands:
+══════════════════════════════════
+
+Basic test:
+  testNotifications.test()
+
+Flight notifications:
+  testNotifications.flightStatus()
+  testNotifications.flightStatus('UA456', 'On Time', 'Delayed')
+
+Traffic alerts:
+  testNotifications.traffic()
+  testNotifications.traffic('Downtown → Airport', 'moderate')
+
+Run reminders:
+  testNotifications.runReminder()
+  testNotifications.runReminder('Four Seasons', 2)
+
+Permissions:
+  testNotifications.requestPermission()
+  testNotifications.getPermissionState()
+
+All notifications show as toasts in development mode!
+      `);
+    },
+  };
+
+  console.log(
+    '🔔 Notification testing helper loaded! Run testNotifications.help() for commands.'
+  );
+}
+
 // Utility functions for common notification scenarios
 export const notifications = {
   /**

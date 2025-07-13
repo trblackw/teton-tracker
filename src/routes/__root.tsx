@@ -141,7 +141,7 @@ function RootComponent() {
                     className: activeNavClass,
                   }}
                 >
-                  <Activity className="h-4 w-4" />
+                  <Activity className="size-5" />
                   <span className="text-xs">Runs</span>
                 </Link>
               </Button>
@@ -158,7 +158,7 @@ function RootComponent() {
                     className: activeNavClass,
                   }}
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="size-5" />
                   <span className="text-xs">Add</span>
                 </Link>
               </Button>
@@ -175,7 +175,7 @@ function RootComponent() {
                     className: activeNavClass,
                   }}
                 >
-                  <Plane className="h-4 w-4" />
+                  <Plane className="size-5" />
                   <span className="text-xs">Flights</span>
                 </Link>
               </Button>
@@ -192,7 +192,7 @@ function RootComponent() {
                     className: activeNavClass,
                   }}
                 >
-                  <Settings className="h-4 w-4" />
+                  <Settings className="size-5" />
                   <span className="text-xs">Settings</span>
                 </Link>
               </Button>

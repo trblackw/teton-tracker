@@ -597,27 +597,12 @@ function UpcomingFlights() {
 
   return (
     <div className="space-y-6">
-      {/* Update Section */}
-      <Button
-        onClick={handleManualUpdate}
-        disabled={isLoading || !homeAirport}
-        className="flex items-center gap-2"
-        variant={isDebugModeEnabled ? 'secondary' : 'default'}
-      >
-        <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-        {isLoading ? 'Refreshing...' : 'Refresh'}
-      </Button>
-      {lastUpdateTime && (
-        <div className="text-xs text-muted-foreground ml-1">
-          Last updated: {formatDateTime(lastUpdateTime.toISOString())}
-        </div>
-      )}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-foreground">
             Upcoming Flights
           </h2>
-          <div className="mt-1 min-h-[3.5rem]">
+          <div className="mt-1 min-h-[2.5rem]">
             <p className="text-muted-foreground">
               Next{' '}
               <Select
@@ -665,8 +650,25 @@ function UpcomingFlights() {
             )}
           </div>
         </div>
+        <div className="flex flex-col items-end gap-2">
+          <Button
+            onClick={handleManualUpdate}
+            disabled={isLoading || !homeAirport}
+            className="flex items-center gap-2"
+            variant={isDebugModeEnabled ? 'secondary' : 'default'}
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
+            />
+            {isLoading ? 'Refreshing...' : 'Refresh'}
+          </Button>
+        </div>
       </div>
-
+      {lastUpdateTime && (
+        <div className="text-xs text-muted-foreground text-center">
+          Last updated: {formatDateTime(lastUpdateTime.toISOString())}
+        </div>
+      )}
       {/* Temporal Status Alert */}
       {temporalStatus?.hasStaleData &&
         shouldShowTemporalAlert(temporalStatus) && (
