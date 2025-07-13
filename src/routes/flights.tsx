@@ -34,6 +34,7 @@ import {
 import { TimePicker } from '../components/ui/time-picker';
 import airlinesData from '../data/airlines.json';
 import airportsData from '../data/airports-comprehensive.json';
+import { usePullToRefresh } from '../hooks/usePullDownRefresh';
 import { preferencesApi } from '../lib/api/client';
 import { isDebugMode } from '../lib/debug';
 import { useTimezone, useTimezoneFormatters } from '../lib/hooks/use-timezone';
@@ -362,9 +363,6 @@ function UpcomingFlights() {
         flightNumber:
           searchMode === 'all' ? searchTerm || undefined : undefined,
         limit: flightLimit,
-        // Only include timeFrame in API call when searchMode is 'all'
-        // When searchMode is 'selected', time filtering is done client-side
-        // This optimizes API usage by only hitting the server when fetching all flights
         timeFrame:
           searchMode === 'all' && filterTime
             ? {
@@ -389,10 +387,10 @@ function UpcomingFlights() {
 
       // Simulate loading delay
       await new Promise(resolve =>
-        setTimeout(resolve, 1000 + Math.random() * 2000)
+        setTimeout(resolve, 500 + Math.random() * 1000)
       );
 
-      // Update debug counter and timestamp
+      // Update timestamp
       setLastUpdateTime(new Date());
 
       // Force a refetch to trigger the mock data
@@ -409,6 +407,14 @@ function UpcomingFlights() {
       console.error('Failed to update flight data:', error);
     }
   };
+
+  // Pull-to-refresh hook
+  const { isMobile, containerProps, PullIndicator, StaticIndicator } =
+    usePullToRefresh({
+      onRefresh: handleManualUpdate,
+      isLoading,
+      includeIndicator: true,
+    });
 
   // Extract flights and temporal status from response
   const upcomingFlights = flightResponse?.flights || [];
@@ -596,22 +602,70 @@ function UpcomingFlights() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Update Section */}
-      <Button
-        onClick={handleManualUpdate}
-        disabled={isLoading || !homeAirport}
-        className="flex items-center gap-2"
-        variant={isDebugModeEnabled ? 'secondary' : 'default'}
-      >
-        <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-        {isLoading ? 'Refreshing...' : 'Refresh'}
-      </Button>
-      {lastUpdateTime && (
-        <div className="text-xs text-muted-foreground ml-1">
-          Last updated: {formatDateTime(lastUpdateTime.toISOString())}
+    <div
+      {...containerProps}
+      className={`space-y-6 ${containerProps.className}`}
+    >
+      {/* Pull-to-refresh indicator */}
+      <PullIndicator />
+
+      {/* Static pull-down indicator */}
+      <StaticIndicator />
+
+      {/* Desktop refresh button - hidden on mobile */}
+      {!isMobile && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex flex-col items-start">
+                  <Button
+                    onClick={handleManualUpdate}
+                    disabled={isLoading || !homeAirport}
+                    className="flex items-center gap-2"
+                  >
+                    <RefreshCw
+                      className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
+                    />
+                    {isLoading ? 'Refreshing...' : 'Refresh'}
+                  </Button>
+
+                  {lastUpdateTime && (
+                    <div className="text-xs text-muted-foreground mt-1 ml-1">
+                      Last updated:{' '}
+                      {formatDateTime(lastUpdateTime.toISOString())}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {!homeAirport && (
+                  <div className="text-sm text-muted-foreground">
+                    <a
+                      href="/settings"
+                      className="text-blue-500 hover:underline"
+                    >
+                      Set home airport in settings
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Mobile timestamp - shown when not pulling */}
+      {isMobile && lastUpdateTime && (
+        <div className="text-center">
+          <div className="text-xs text-muted-foreground">
+            Last updated: {formatDateTime(lastUpdateTime.toISOString())}
+          </div>
         </div>
       )}
+
+      {/* Rest of existing content... */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-foreground">
@@ -990,8 +1044,10 @@ function UpcomingFlights() {
             </p>
             {homeAirport && (
               <Button onClick={handleManualUpdate} disabled={isLoading}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
+                <RefreshCw
+                  className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`}
+                />
+                {isLoading ? 'Refreshing...' : 'Refresh'}
               </Button>
             )}
           </CardContent>
@@ -1004,11 +1060,7 @@ function UpcomingFlights() {
           <CardContent className="p-8 text-center">
             <div className="flex items-center justify-center gap-2">
               <RefreshCw className="h-5 w-5 animate-spin" />
-              <span>
-                {isDebugModeEnabled
-                  ? 'Simulating flight data refresh...'
-                  : 'Loading upcoming flights...'}
-              </span>
+              <span>Loading upcoming flights...</span>
             </div>
           </CardContent>
         </Card>
@@ -1021,7 +1073,12 @@ function UpcomingFlights() {
             <p className="text-destructive mb-4">
               Failed to load upcoming flights. Please try again.
             </p>
-            <Button onClick={handleManualUpdate}>Retry</Button>
+            <Button onClick={handleManualUpdate} disabled={isLoading}>
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`}
+              />
+              {isLoading ? 'Retrying...' : 'Retry'}
+            </Button>
           </CardContent>
         </Card>
       )}
