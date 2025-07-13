@@ -5,7 +5,7 @@ import airportData from '../data/airports-comprehensive.json';
 
 interface AirportData {
   icao: string;
-  iata: string;
+  iata: string | null;
   name: string;
   city: string;
   state?: string;

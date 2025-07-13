@@ -4,18 +4,18 @@ import { type FlightStatus } from '../schema';
 // AviationStack API configuration
 const AVIATIONSTACK_BASE_URL = 'https://api.aviationstack.com/v1';
 
-// Development mode configuration
+// Development mode configuration - use build-time constants
 const DEV_MODE = {
   // Set to true to force mock data in development (easy toggle)
-  FORCE_MOCK_DATA: true,
+  FORCE_MOCK_DATA: false, // Only enable via constructor parameter
   // Set to true to enable debug logging
-  DEBUG_LOGGING: true,
+  DEBUG_LOGGING: false, // Only enable via constructor parameter
   // Set to true to test API key loading
-  TEST_API_KEY_LOADING: true,
+  TEST_API_KEY_LOADING: false, // Only enable via constructor parameter
 };
 
-// Log development mode status
-console.log('🔧 Flight Service Development Mode:', DEV_MODE);
+// Development mode is now controlled via constructor parameters
+// No runtime environment checks needed in browser code
 
 export interface FlightRequest {
   flightNumber: string;
@@ -243,7 +243,8 @@ export class FlightService {
     const airline = flight.airline.name || flight.airline.iata || 'Unknown';
 
     // Preserve full ISO datetime strings for timezone-aware formatting
-    const scheduledDeparture = flight.departure.scheduled || new Date().toISOString();
+    const scheduledDeparture =
+      flight.departure.scheduled || new Date().toISOString();
     const estimatedDeparture = flight.departure.estimated;
 
     // Get destination with proper formatting
@@ -267,8 +268,6 @@ export class FlightService {
       terminal: flight.departure.terminal,
     };
   }
-
-
 
   /**
    * Convert AviationStack flight status to readable format

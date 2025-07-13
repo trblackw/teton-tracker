@@ -4,13 +4,19 @@ import type { NewRunForm } from '../schema';
 // Development mode configuration
 const DEV_MODE = {
   // Set to true to force mock data in development
-  FORCE_MOCK_RUNS: true,
+  FORCE_MOCK_RUNS:
+    process.env.NODE_ENV === 'development' &&
+    process.env.FORCE_MOCK_RUNS === 'true',
   // Set to true to enable debug logging
-  DEBUG_LOGGING: true,
+  DEBUG_LOGGING:
+    process.env.NODE_ENV === 'development' &&
+    process.env.DEBUG_LOGGING === 'true',
 };
 
-// Log development mode status
-console.log('🔧 Database Development Mode:', DEV_MODE);
+// Log development mode status only in development
+if (process.env.NODE_ENV === 'development') {
+  console.log('🔧 Database Development Mode:', DEV_MODE);
+}
 
 // Utility function to generate user IDs
 export function generateUserId(): string {

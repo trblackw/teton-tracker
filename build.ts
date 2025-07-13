@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { $, build, type BuildConfig } from 'bun';
+import { build, type BuildConfig } from 'bun';
 import plugin from 'bun-plugin-tailwind';
 import { existsSync } from 'fs';
 import { cp, rm } from 'fs/promises';
@@ -137,15 +137,11 @@ if (existsSync(outdir)) {
 
 const start = performance.now();
 
-// Scan for all HTML files in the project
-const entrypoints = [...new Bun.Glob('**.html').scanSync('src')]
-  .map(a => path.resolve('src', a))
-  .filter(dir => !dir.includes('node_modules'));
-console.log(
-  `📄 Found ${entrypoints.length} HTML ${entrypoints.length === 1 ? 'file' : 'files'} to process\n`
-);
+// Build the frontend entry point
+const entrypoints = ['./src/frontend.tsx'];
+console.log(`📄 Building frontend entry point: ${entrypoints[0]}\n`);
 
-// Build all the HTML files
+// Build the frontend
 const result = await build({
   entrypoints,
   outdir,
@@ -159,12 +155,17 @@ const result = await build({
   ...cliConfig, // Merge in any CLI-provided options
 });
 
-// Build frontend and copy all static files from public directory
-console.log('📦 Building frontend...');
-await $`bun build src/frontend.tsx --outdir=${outdir} --target=browser`;
+// Copy main HTML file
+console.log('📦 Copying main HTML file...');
+const htmlSrcPath = path.join(process.cwd(), 'index.html');
+const htmlDestPath = path.join(outdir, 'index.html');
+if (existsSync(htmlSrcPath)) {
+  await cp(htmlSrcPath, htmlDestPath);
+  console.log(`📄 Copied index.html to output directory`);
+}
 
-// Copy static files to output directory
-const staticFiles = ['manifest.json', 'sw.js', 'logo.svg', 'index.html'];
+// Copy static files from public directory
+const staticFiles = ['manifest.json', 'sw.js', 'logo.svg', 'favicon.ico'];
 for (const file of staticFiles) {
   const srcPath = path.join('public', file);
   const destPath = path.join(outdir, file);
