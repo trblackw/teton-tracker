@@ -24,6 +24,7 @@ import {
   CardTitle,
 } from '../components/ui/card';
 import { Input } from '../components/ui/input';
+import { RefreshButton } from '../components/ui/refresh-button';
 import {
   Select,
   SelectContent,
@@ -603,13 +604,13 @@ function UpcomingFlights() {
             Upcoming Flights
           </h2>
           <div className="mt-1 min-h-[2.5rem]">
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Next{' '}
               <Select
                 value={flightLimit.toString()}
                 onValueChange={value => setFlightLimit(parseInt(value))}
               >
-                <SelectTrigger className="inline-flex h-auto w-auto border-0 bg-transparent p-0 font-bold text-foreground underline hover:text-blue-500">
+                <SelectTrigger className="inline-flex min-w-fit w-1 border-0 bg-transparent p-0 pr-1 pl-2 font-bold text-foreground underline hover:text-blue-500">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -618,7 +619,7 @@ function UpcomingFlights() {
                   <SelectItem value="20">20</SelectItem>
                 </SelectContent>
               </Select>{' '}
-              departures from{' '}
+              departures from
               <Button
                 variant="link"
                 className="font-bold text-foreground px-0 underline hover:text-blue-500"
@@ -651,17 +652,12 @@ function UpcomingFlights() {
           </div>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <Button
-            onClick={handleManualUpdate}
-            disabled={isLoading || !homeAirport}
+          <RefreshButton
+            onRefresh={handleManualUpdate}
+            disabled={!homeAirport}
             className="flex items-center gap-2"
             variant={isDebugModeEnabled ? 'secondary' : 'default'}
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
-            />
-            {isLoading ? 'Refreshing...' : 'Refresh'}
-          </Button>
+          />
         </div>
       </div>
       {lastUpdateTime && (
@@ -724,10 +720,7 @@ function UpcomingFlights() {
                 )}
               </CardTitle>
               <CardDescription>
-                Search{' '}
-                <span className="font-bold text-foreground/70">selected</span>{' '}
-                or <span className="font-bold text-foreground/70">all</span>{' '}
-                flights from{' '}
+                Search flights from{' '}
                 {homeAirport ? (
                   <span className="font-bold text-foreground/90">
                     {homeAirport}
@@ -738,9 +731,9 @@ function UpcomingFlights() {
               </CardDescription>
             </div>
             {isSearchExpanded ? (
-              <ChevronUp className="h-5 w-5 text-muted-foreground" />
+              <ChevronUp className="size-5 text-muted-foreground" />
             ) : (
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              <ChevronDown className="size-5 text-muted-foreground" />
             )}
           </div>
         </CardHeader>
@@ -854,13 +847,20 @@ function UpcomingFlights() {
                 )}
               </CardTitle>
               <CardDescription>
-                Filter flights by airline, status, or departure time frame
+                Filter flights from{' '}
+                {homeAirport ? (
+                  <span className="font-bold text-foreground/90">
+                    {homeAirport}
+                  </span>
+                ) : (
+                  'your home airport'
+                )}
               </CardDescription>
             </div>
             {isFilterExpanded ? (
-              <ChevronUp className="h-5 w-5 text-muted-foreground" />
+              <ChevronUp className="size-5 text-muted-foreground" />
             ) : (
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              <ChevronDown className="size-5 text-muted-foreground" />
             )}
           </div>
         </CardHeader>
@@ -982,19 +982,16 @@ function UpcomingFlights() {
       {/* No data loaded yet state */}
       {!isLoading && !isError && !flightResponse && (
         <Card>
-          <CardContent className="p-8 text-center">
+          <CardContent className="p-6 text-center">
             <Plane className="h-16 w-16 text-muted-foreground mx-auto mb-6" />
             <p className="text-muted-foreground text-lg mb-4">
               No flight data loaded yet
             </p>
-            <p className="text-sm text-muted-foreground mb-6">
-              Click "Refresh" to get the latest flight information
+            <p className="text-sm text-muted-foreground/70 mb-6">
+              Refresh to get latest flight information
             </p>
             {homeAirport && (
-              <Button onClick={handleManualUpdate} disabled={isLoading}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </Button>
+              <RefreshButton onRefresh={handleManualUpdate} className="mr-2" />
             )}
           </CardContent>
         </Card>

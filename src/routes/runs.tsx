@@ -10,7 +10,6 @@ import {
   Navigation,
   Plane,
   Plus,
-  RefreshCcw,
   Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -31,6 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog';
+import { RefreshButton } from '../components/ui/refresh-button';
 import {
   Tabs,
   TabsContent,
@@ -188,7 +188,7 @@ function Runs() {
               No current runs scheduled. Add your first run to get started!
             </p>
             <Link to="/add">
-              <Button className="mt-2 bg-green-500 hover:bg-green-600 text-white">
+              <Button className="mt-2 bg-green-600 hover:bg-green-700 text-white">
                 <Plus className="h-4 w-4" />
                 Add Your First Run
               </Button>
@@ -260,12 +260,9 @@ function Runs() {
           <p className="text-muted-foreground mt-1">{subtitle}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={refreshAllData}>
-            <RefreshCcw className="h-4 w-4" />
-            Refresh
-          </Button>
+          <RefreshButton onRefresh={refreshAllData} />
           <Link to="/add">
-            <Button className="bg-green-500 hover:bg-green-600 text-white">
+            <Button className="bg-green-600 hover:bg-green-700 text-white">
               Add Run
             </Button>
           </Link>
@@ -289,10 +286,18 @@ function Runs() {
         onValueChange={value => setActiveTab(value as 'current' | 'past')}
       >
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="current" className="mb-1">
-            Current ({currentRuns.length})
+          <TabsTrigger value="current">
+            Current{' '}
+            <span className="text-sm text-muted-foreground ml-1">
+              ({currentRuns.length})
+            </span>
           </TabsTrigger>
-          <TabsTrigger value="past">Past ({pastRuns.length})</TabsTrigger>
+          <TabsTrigger value="past">
+            Past{' '}
+            <span className="text-sm text-muted-foreground ml-1">
+              ({pastRuns.length})
+            </span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="current" className="space-y-4">
@@ -324,9 +329,7 @@ function Runs() {
                               </span>
                             )}
                           </CardTitle>
-                          <CardDescription>
-                            {run.airline} • {run.departure} → {run.arrival}
-                          </CardDescription>
+                          <CardDescription>{run.airline}</CardDescription>
                         </div>
                         <div className="flex items-center">
                           <Badge
@@ -342,9 +345,10 @@ function Runs() {
                               handleEditRun(run);
                             }}
                             className="text-muted-foreground"
+                            style={{ padding: 0 }}
                             title="Edit run"
                           >
-                            <Edit className="h-4 w-4" />
+                            <Edit className="size-4" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -355,8 +359,9 @@ function Runs() {
                             }}
                             disabled={deleteRunMutation.isPending}
                             title="Delete run"
+                            style={{ padding: 0 }}
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <Trash2 className="size-4 text-destructive" />
                           </Button>
                         </div>
                       </div>
@@ -436,19 +441,13 @@ function Runs() {
 
                       <div className="flex flex-wrap justify-between gap-2 mt-4">
                         {activeTab === 'current' && (
-                          <Button
+                          <RefreshButton
                             variant="secondary"
                             size="sm"
-                            onClick={e => {
-                              e.stopPropagation();
-                              refreshRunData(run);
-                            }}
-                            disabled={runsApiData.isLoading}
+                            onRefresh={() => refreshRunData(run)}
+                            onClick={e => e.stopPropagation()}
                             className="min-w-0"
-                          >
-                            <RefreshCcw className="h-4 w-4" />
-                            {runsApiData.isLoading ? 'Loading...' : 'Refresh'}
-                          </Button>
+                          />
                         )}
                         {run.status === 'scheduled' && (
                           <Button
@@ -458,7 +457,7 @@ function Runs() {
                               handleUpdateStatus(run.id, 'active');
                             }}
                             disabled={updateStatusMutation.isPending}
-                            className="min-w-0 bg-green-500 hover:bg-green-600 text-white"
+                            className="min-w-0 bg-green-600 hover:bg-green-700 text-white"
                           >
                             <Clock10 className="h-4 w-4" />
                             Start Run
@@ -652,8 +651,9 @@ function Runs() {
               Cancel
             </Button>
             <Button
-              variant="destructive"
+              variant="ghost"
               onClick={confirmDelete}
+              className="text-destructive hover:text-destructive-foreground border-destructive"
               disabled={deleteRunMutation.isPending}
             >
               {deleteRunMutation.isPending ? 'Deleting...' : 'Delete'}

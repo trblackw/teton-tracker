@@ -855,7 +855,7 @@ function AddRun() {
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-green-500/40 text-white hover:bg-green-600/60"
+                  className="bg-green-600 text-white hover:bg-green-700"
                   disabled={createRunMutation.isPending}
                 >
                   {createRunMutation.isPending ? (

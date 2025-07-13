@@ -135,7 +135,10 @@ function RootComponent() {
               </aside>
 
               {/* Main Content */}
-              <main className="flex-1 lg:max-w-4xl pb-20 lg:pb-0">
+              <main
+                className="flex-1 lg:max-w-4xl pb-20 lg:pb-0"
+                data-scrollable
+              >
                 <Outlet />
               </main>
             </div>
@@ -148,7 +151,7 @@ function RootComponent() {
                 asChild
                 variant="ghost"
                 size="sm"
-                className="flex-col h-auto p-3 min-w-[60px]"
+                className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
               >
                 <Link
                   to="/runs"
@@ -164,7 +167,7 @@ function RootComponent() {
                 asChild
                 variant="ghost"
                 size="sm"
-                className="flex-col h-auto p-3 min-w-[60px]"
+                className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
               >
                 <Link
                   to="/add"
@@ -173,14 +176,14 @@ function RootComponent() {
                     className: activeNavClass,
                   }}
                 >
-                  <Plus className="size-5" />
+                  <Plus className="size-6" />
                 </Link>
               </Button>
               <Button
                 asChild
                 variant="ghost"
                 size="sm"
-                className="flex-col h-auto p-3 min-w-[60px]"
+                className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
               >
                 <Link
                   to="/flights"
@@ -196,7 +199,7 @@ function RootComponent() {
                 asChild
                 variant="ghost"
                 size="sm"
-                className="flex-col h-auto p-3 min-w-[60px]"
+                className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
               >
                 <Link
                   to="/notifications"
@@ -212,7 +215,7 @@ function RootComponent() {
                 asChild
                 variant="ghost"
                 size="sm"
-                className="flex-col h-auto p-3 min-w-[60px]"
+                className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
               >
                 <Link
                   to="/settings"

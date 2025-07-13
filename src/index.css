@@ -50,8 +50,8 @@
     }
 
     [data-sonner-toast] [data-title] {
-      font-weight: 600 !important;
-      margin-bottom: 4px !important;
+      font-size: 14px !important;
+      font-weight: 500 !important;
     }
 
     [data-sonner-toast] [data-description] {
@@ -60,16 +60,16 @@
     }
   }
 
-  /* For extra large screens, make toasts even wider and better spaced */
+  /* 2XL screens */
   @media (min-width: 1280px) {
     [data-sonner-toaster][data-theme] {
-      max-width: 750px !important;
-      min-width: 550px !important;
+      max-width: 700px !important;
+      min-width: 500px !important;
     }
 
     [data-sonner-toaster] [data-sonner-toast] {
-      min-width: 550px !important;
-      max-width: 750px !important;
+      min-width: 500px !important;
+      max-width: 700px !important;
       padding: 18px 24px !important;
       font-size: 15px !important;
     }
@@ -79,22 +79,137 @@
     }
   }
 
-  /* For ultra-wide screens */
+  /* 3XL screens */
   @media (min-width: 1536px) {
     [data-sonner-toaster][data-theme] {
       max-width: 800px !important;
-      min-width: 600px !important;
+      min-width: 550px !important;
     }
 
     [data-sonner-toaster] [data-sonner-toast] {
-      min-width: 600px !important;
+      min-width: 550px !important;
       max-width: 800px !important;
       padding: 20px 28px !important;
-      font-size: 15px !important;
+      font-size: 16px !important;
     }
 
     [data-sonner-toast] [data-description] {
-      font-size: 14px !important;
+      font-size: 15px !important;
+    }
+  }
+
+  /* Native App Behavior - Touch Optimizations */
+
+  /* Prevent zoom on inputs (iOS) */
+  input[type='text'],
+  input[type='email'],
+  input[type='tel'],
+  input[type='number'],
+  input[type='search'],
+  input[type='password'],
+  input[type='url'],
+  textarea,
+  select {
+    font-size: 16px !important;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+  }
+
+  /* Touch action optimizations */
+  button,
+  [role='button'],
+  input[type='submit'],
+  input[type='button'],
+  input[type='reset'],
+  a {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent text selection on UI elements */
+  button,
+  [role='button'],
+  .cursor-pointer,
+  [data-radix-collection-item] {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+  }
+
+  /* Better touch targets */
+  button,
+  [role='button'],
+  input[type='submit'],
+  input[type='button'],
+  input[type='reset'] {
+    min-height: 36px;
+    min-width: 36px;
+  }
+
+  /* Active states for better touch feedback */
+  button:active,
+  [role='button']:active,
+  input[type='submit']:active,
+  input[type='button']:active,
+  input[type='reset']:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+
+  /* Card active states */
+  .cursor-pointer:active {
+    transform: scale(0.995);
+    transition: transform 0.1s ease;
+  }
+
+  /* Prevent iOS bounce scroll */
+  body {
+    position: fixed;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Allow scrolling within the app container */
+  #root {
+    position: relative;
+    overflow-y: auto;
+    height: 100vh;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Remove default outline and add custom focus states */
+  input:focus,
+  textarea:focus,
+  select:focus,
+  button:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 2px hsl(var(--ring)) !important;
+  }
+
+  /* Smooth scrolling for better UX */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Prevent double-tap zoom */
+  * {
+    touch-action: manipulation;
+  }
+
+  /* Allow pan and zoom only on specific elements if needed */
+  [data-allow-zoom] {
+    touch-action: pan-x pan-y pinch-zoom;
+  }
+
+  /* Optimize for PWA */
+  @media (display-mode: standalone) {
+    body {
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
     }
   }
 }

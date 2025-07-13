@@ -22,6 +22,7 @@ import {
   CardTitle,
 } from './components/ui/card';
 import { Input } from './components/ui/input';
+import { RefreshButton } from './components/ui/refresh-button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import './index.css';
 import { useMultipleRunsData } from './lib/hooks/use-api-data';
@@ -484,6 +485,109 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    // Register service worker for PWA functionality
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/sw.js', { scope: '/' })
+        .then(registration => {
+          console.log('Service Worker registered successfully:', registration);
+        })
+        .catch(error => {
+          console.log('Service Worker registration failed:', error);
+        });
+    }
+
+    // Prevent context menu on long press (native app behavior)
+    const handleContextMenu = (e: Event) => {
+      e.preventDefault();
+    };
+
+    // Prevent text selection on long press
+    const handleSelectStart = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return;
+      }
+      if (
+        target.closest('button') ||
+        target.closest('[role="button"]') ||
+        target.closest('.cursor-pointer')
+      ) {
+        e.preventDefault();
+      }
+    };
+
+    // Prevent drag operations on images and other elements
+    const handleDragStart = (e: DragEvent) => {
+      e.preventDefault();
+    };
+
+    // Prevent pull-to-refresh on mobile
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length > 1) {
+        e.preventDefault();
+      }
+    };
+
+    // Add event listeners
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('selectstart', handleSelectStart);
+    document.addEventListener('dragstart', handleDragStart);
+    document.addEventListener('touchstart', handleTouchStart, {
+      passive: false,
+    });
+
+    // iOS specific: prevent rubber band scrolling
+    const handleTouchMove = (e: TouchEvent) => {
+      const target = e.target as HTMLElement;
+      const scrollable =
+        target.closest('[data-scrollable]') || target.closest('#root');
+
+      if (!scrollable) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+
+    // Handle PWA install prompt
+    let deferredPrompt: any;
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later
+      deferredPrompt = e;
+      // Update UI to notify the user they can install the PWA
+      console.log('PWA install prompt available');
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Handle PWA installation
+    const handleAppInstalled = () => {
+      console.log('PWA was installed');
+      deferredPrompt = null;
+    };
+
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('selectstart', handleSelectStart);
+      document.removeEventListener('dragstart', handleDragStart);
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener(
+        'beforeinstallprompt',
+        handleBeforeInstallPrompt
+      );
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 p-2 sm:p-4">
       <div className="max-w-3xl mx-auto">
@@ -523,18 +627,15 @@ export default function App() {
                   {pollingEnabled ? 'Disable' : 'Enable'} Polling
                 </span>
               </Button>
-              <Button
-                variant="outline"
+              <RefreshButton
+                onRefresh={refreshAllData}
                 size="sm"
-                onClick={refreshAllData}
-                disabled={runsApiData.isLoading}
                 className="p-2 sm:px-3"
+                defaultText="Refresh All"
               >
                 <Settings className="h-4 w-4" />
-                <span className="hidden sm:inline ml-2">
-                  {runsApiData.isLoading ? 'Refreshing...' : 'Refresh All'}
-                </span>
-              </Button>
+                <span className="hidden sm:inline ml-2">Refresh All</span>
+              </RefreshButton>
             </div>
           </div>
           <p className="text-gray-600 text-sm sm:text-base">
@@ -691,7 +792,7 @@ export default function App() {
                   </p>
                   <Button
                     onClick={() => setCurrentTab('add')}
-                    className="mt-2 bg-green-500 hover:bg-green-600 text-white"
+                    className="mt-2 bg-green-600 hover:bg-green-700 text-white"
                   >
                     <Plus className="h-4 w-4 mr-2 " />
                     Add Your First Run
@@ -809,17 +910,13 @@ export default function App() {
                         </div>
 
                         <div className="flex flex-wrap gap-2 mt-4">
-                          <Button
+                          <RefreshButton
                             variant="outline"
                             size="sm"
-                            onClick={() => refreshRunData(run)}
-                            disabled={runsApiData.isLoading}
+                            onRefresh={() => refreshRunData(run)}
                             className="min-w-0"
-                          >
-                            {runsApiData.isLoading
-                              ? 'Loading...'
-                              : 'Refresh Data'}
-                          </Button>
+                            defaultText="Refresh Data"
+                          />
                           {run.status === 'scheduled' && (
                             <Button
                               size="sm"
