@@ -1,5 +1,5 @@
 import type { FlightStatus, Run, TrafficData } from '../schema';
-import { getFlightService } from './flight-service';
+import { getFlightServiceWithConfig } from './flight-service';
 import { getTrafficData } from './tomtom-service';
 
 export interface PollingConfig {
@@ -228,7 +228,8 @@ export class IntelligentPollingService {
         flightNumber: run.flightNumber,
       });
 
-      const flightStatus = await getFlightService().getFlightStatus({
+      const flightService = await getFlightServiceWithConfig();
+      const flightStatus = await flightService.getFlightStatus({
         flightNumber: run.flightNumber,
       });
 

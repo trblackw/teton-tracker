@@ -102,8 +102,11 @@ export const prefetchFlightStatus = (flightNumber: string) => {
   return queryClient.prefetchQuery({
     queryKey: queryKeys.flightStatus(flightNumber),
     queryFn: () =>
-      import('./services/flight-service').then(({ getFlightService }) =>
-        getFlightService().getFlightStatus({ flightNumber })
+      import('./services/flight-service').then(
+        async ({ getFlightServiceWithConfig }) => {
+          const flightService = await getFlightServiceWithConfig();
+          return flightService.getFlightStatus({ flightNumber });
+        }
       ),
   });
 };

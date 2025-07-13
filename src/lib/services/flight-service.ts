@@ -959,8 +959,13 @@ export class FlightService {
    */
   async getFlightStatus(request: FlightRequest): Promise<FlightStatus> {
     try {
-      if (this.forceMockData) {
-        console.log('🎭 Development mode: Using mock flight status data');
+      // Determine if we should use mock data
+      const useMockData = this.forceMockData || shouldUseMockData();
+
+      if (useMockData) {
+        console.log(
+          '🎭 Development mode: Using mock flight status data. To use real API, add ?realapi=true to URL or set ENABLE_REAL_API=true'
+        );
         return this.getMockFlightStatus(request.flightNumber);
       }
 
@@ -1124,7 +1129,10 @@ export class FlightService {
    * Test API connectivity
    */
   async testConnection(): Promise<boolean> {
-    if (!this.apiKey || this.forceMockData) {
+    // Determine if we should use mock data
+    const useMockData = this.forceMockData || shouldUseMockData();
+
+    if (!this.apiKey || useMockData) {
       return false;
     }
 

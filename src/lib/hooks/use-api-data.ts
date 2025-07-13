@@ -1,14 +1,21 @@
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../react-query-client';
 import type { Run } from '../schema';
-import { getFlightService } from '../services/flight-service';
-import { getTrafficData } from '../services/tomtom-service';
+import { getFlightServiceWithConfig } from '../services/flight-service';
+import {
+  getTrafficData,
+  planShuttleRoute,
+  type ShuttleRouteResponse,
+} from '../services/tomtom-service';
 
 // Hook for fetching flight status
 export function useFlightStatus(flightNumber: string, enabled: boolean = true) {
   return useQuery({
     queryKey: ['flight-status', flightNumber],
-    queryFn: () => getFlightService().getFlightStatus({ flightNumber }),
+    queryFn: async () => {
+      const flightService = await getFlightServiceWithConfig();
+      return flightService.getFlightStatus({ flightNumber });
+    },
     enabled: enabled && !!flightNumber,
     staleTime: 2 * 60 * 1000, // 2 minutes
     retry: 2,
@@ -22,22 +29,41 @@ export function useTrafficData(
   enabled: boolean = true
 ) {
   return useQuery({
-    queryKey: queryKeys.trafficData(origin, destination),
+    queryKey: ['traffic-data', origin, destination],
     queryFn: () => getTrafficData(origin, destination),
     enabled: enabled && !!origin && !!destination,
-    staleTime: 3 * 60 * 1000, // 3 minutes (traffic changes more frequently)
-    gcTime: 15 * 60 * 1000, // 15 minutes
-    retry: (failureCount, error) => {
-      // Don't retry on API key errors
-      if (error instanceof Error && error.message.includes('API key')) {
-        return false;
-      }
-      return failureCount < 2;
-    },
-    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 10000),
-    meta: {
-      errorMessage: `Failed to fetch traffic data for ${origin} → ${destination}`,
-    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+  });
+}
+
+// Enhanced hook for shuttle route planning
+export function useShuttleRoute(
+  currentLocation: string,
+  pickupLocation: string,
+  dropoffLocation: string,
+  departureTime?: string,
+  enabled: boolean = true
+) {
+  return useQuery<ShuttleRouteResponse>({
+    queryKey: [
+      'shuttle-route',
+      currentLocation,
+      pickupLocation,
+      dropoffLocation,
+      departureTime,
+    ],
+    queryFn: () =>
+      planShuttleRoute(
+        currentLocation,
+        pickupLocation,
+        dropoffLocation,
+        departureTime
+      ),
+    enabled:
+      enabled && !!currentLocation && !!pickupLocation && !!dropoffLocation,
+    staleTime: 3 * 60 * 1000, // 3 minutes
+    retry: 2,
   });
 }
 
@@ -46,7 +72,10 @@ export function useMultipleFlightStatuses(flightNumbers: string[]) {
   return useQueries({
     queries: flightNumbers.map(flightNumber => ({
       queryKey: queryKeys.flightStatus(flightNumber),
-      queryFn: () => getFlightService().getFlightStatus({ flightNumber }),
+      queryFn: () =>
+        getFlightServiceWithConfig().then(service =>
+          service.getFlightStatus({ flightNumber })
+        ),
       enabled: !!flightNumber,
       staleTime: 2 * 60 * 1000,
       gcTime: 10 * 60 * 1000,
@@ -108,44 +137,49 @@ export function useRunData(run: Run, enabled: boolean = true) {
   };
 }
 
-// Hook for fetching data for multiple runs
+// Hook for fetching multiple runs data
 export function useMultipleRunsData(runs: Run[]) {
-  const flightNumbers = runs.map(run => run.flightNumber);
-  const routes = runs.map(run => ({
-    origin: run.pickupLocation,
-    destination: run.dropoffLocation,
-  }));
+  const runDataQueries = useQueries({
+    queries: runs.map(run => ({
+      queryKey: queryKeys.runData(run.id),
+      queryFn: async () => {
+        // Fetch flight status with server config
+        const flightService = await getFlightServiceWithConfig();
+        const flightStatus = await flightService.getFlightStatus({
+          flightNumber: run.flightNumber,
+        });
 
-  const flightQueries = useMultipleFlightStatuses(flightNumbers);
-  const trafficQueries = useMultipleTrafficData(routes);
+        // Fetch traffic data
+        const trafficData = await getTrafficData(
+          run.pickupLocation,
+          run.dropoffLocation
+        );
 
-  // Combine results
-  const combinedData = runs.map((run, index) => ({
-    run,
-    flightStatus: flightQueries[index]?.data,
-    trafficData: trafficQueries[index]?.data,
-    isLoading:
-      flightQueries[index]?.isLoading || trafficQueries[index]?.isLoading,
-    isFetching:
-      flightQueries[index]?.isFetching || trafficQueries[index]?.isFetching,
-    isError: flightQueries[index]?.isError || trafficQueries[index]?.isError,
-    error: flightQueries[index]?.error || trafficQueries[index]?.error,
-  }));
+        return {
+          run,
+          flightStatus,
+          trafficData,
+        };
+      },
+      staleTime: 2 * 60 * 1000, // 2 minutes
+    })),
+  });
+
+  const isLoading = runDataQueries.some(query => query.isLoading);
+  const isError = runDataQueries.some(query => query.isError);
+  const data = runDataQueries
+    .map(query => query.data)
+    .filter(data => data !== undefined);
+
+  const refetchAll = () => {
+    runDataQueries.forEach(query => query.refetch());
+  };
 
   return {
-    data: combinedData,
-    isLoading:
-      flightQueries.some(q => q.isLoading) ||
-      trafficQueries.some(q => q.isLoading),
-    isFetching:
-      flightQueries.some(q => q.isFetching) ||
-      trafficQueries.some(q => q.isFetching),
-    isError:
-      flightQueries.some(q => q.isError) || trafficQueries.some(q => q.isError),
-    refetchAll: () => {
-      flightQueries.forEach(q => q.refetch());
-      trafficQueries.forEach(q => q.refetch());
-    },
+    data,
+    isLoading,
+    isError,
+    refetchAll,
   };
 }
 
@@ -180,7 +214,10 @@ export function useCachedApiData(
 ) {
   const flightQuery = useQuery({
     queryKey: queryKeys.flightStatus(flightNumber),
-    queryFn: () => getFlightService().getFlightStatus({ flightNumber }),
+    queryFn: () =>
+      getFlightServiceWithConfig().then(service =>
+        service.getFlightStatus({ flightNumber })
+      ),
     enabled: false, // Don't fetch, just get cached data
   });
 
