@@ -6,9 +6,10 @@
   "main": "src/index.tsx",
   "module": "src/index.tsx",
   "scripts": {
-    "dev": "bun run src/api-server.ts & bun --hot index.html",
+    "dev": "./scripts/dev.sh",
     "dev:api": "bun run src/api-server.ts",
     "dev:frontend": "bun --hot index.html",
+    "dev:cleanup": "./scripts/cleanup.sh",
     "build": "bun run build.ts",
     "start": "bun run src/prod-server.ts",
     "preview": "bun run src/prod-server.ts",

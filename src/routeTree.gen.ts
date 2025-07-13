@@ -9,32 +9,36 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root';
-import { Route as SettingsRouteImport } from './routes/settings';
-import { Route as RunsRouteImport } from './routes/runs';
-import { Route as FlightsRouteImport } from './routes/flights';
 import { Route as AddRouteImport } from './routes/add';
+import { Route as FlightsRouteImport } from './routes/flights';
 import { Route as IndexRouteImport } from './routes/index';
+import { Route as RunsRouteImport } from './routes/runs';
+import { Route as SettingsRouteImport } from './routes/settings';
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any);
+
 const RunsRoute = RunsRouteImport.update({
   id: '/runs',
   path: '/runs',
   getParentRoute: () => rootRouteImport,
 } as any);
+
 const FlightsRoute = FlightsRouteImport.update({
   id: '/flights',
   path: '/flights',
   getParentRoute: () => rootRouteImport,
 } as any);
+
 const AddRoute = AddRouteImport.update({
   id: '/add',
   path: '/add',
   getParentRoute: () => rootRouteImport,
 } as any);
+
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -48,6 +52,7 @@ export interface FileRoutesByFullPath {
   '/runs': typeof RunsRoute;
   '/settings': typeof SettingsRoute;
 }
+
 export interface FileRoutesByTo {
   '/': typeof IndexRoute;
   '/add': typeof AddRoute;
@@ -55,6 +60,7 @@ export interface FileRoutesByTo {
   '/runs': typeof RunsRoute;
   '/settings': typeof SettingsRoute;
 }
+
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   '/': typeof IndexRoute;
@@ -63,6 +69,7 @@ export interface FileRoutesById {
   '/runs': typeof RunsRoute;
   '/settings': typeof SettingsRoute;
 }
+
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths: '/' | '/add' | '/flights' | '/runs' | '/settings';
@@ -71,6 +78,7 @@ export interface FileRouteTypes {
   id: '__root__' | '/' | '/add' | '/flights' | '/runs' | '/settings';
   fileRoutesById: FileRoutesById;
 }
+
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
   AddRoute: typeof AddRoute;
@@ -126,6 +134,7 @@ const rootRouteChildren: RootRouteChildren = {
   RunsRoute: RunsRoute,
   SettingsRoute: SettingsRoute,
 };
+
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>();

@@ -294,7 +294,7 @@ function UpcomingFlights() {
           <div className='flex items-center justify-between'>
             <div>
               <CardTitle className='flex items-center gap-2 mb-1'>
-                <Search className='h-5 w-5 text-muted-foreground' />
+                <Search className='h-5 w-4 text-muted-foreground' />
                 Search Flights
                 {searchTerm && (
                   <span className='text-sm font-normal text-muted-foreground'>
@@ -303,7 +303,7 @@ function UpcomingFlights() {
                 )}
               </CardTitle>
               <CardDescription>
-                Search selected flights or query all flights from the airport
+                Search <span className='font-bold text-foreground/70'>selected</span> or <span className='font-bold text-foreground/70'>all</span> flights from {homeAirport ? <span className='font-bold text-foreground/90'>{homeAirport}</span> : 'your home airport'}
               </CardDescription>
             </div>
             {isSearchExpanded ? (
