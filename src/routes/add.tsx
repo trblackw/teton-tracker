@@ -64,6 +64,20 @@ interface FlightStatusState {
   isHistorical: boolean;
 }
 
+// Helper function to check if a flight is historical (separate from API call)
+const checkIsHistorical = (scheduledTime: string): boolean => {
+  if (!scheduledTime) return false;
+  
+  try {
+    const scheduledDate = new Date(scheduledTime);
+    const now = new Date();
+    return scheduledDate < now;
+  } catch (error) {
+    console.warn('Error checking if flight is historical:', error);
+    return false;
+  }
+};
+
 // Helper function to detect if pasted text looks like a schedule message
 function isScheduleMessage(text: string): boolean {
   if (!text || text.length < 20) {
@@ -167,7 +181,15 @@ function AddRun() {
     flightNumber: string,
     scheduledTime: string
   ) => {
+    // Always check if flight is historical, regardless of debug mode
+    const isHistorical = checkIsHistorical(scheduledTime);
+    
     if (!flightNumber || isDebugMode()) {
+      // Even in debug mode, we still set the historical state
+      setFlightStatusState(prev => ({
+        ...prev,
+        isHistorical,
+      }));
       return;
     }
 
@@ -178,11 +200,6 @@ function AddRun() {
       const flightStatus = await flightService.getFlightStatus({
         flightNumber,
       });
-
-      // Determine if flight is historical based on scheduled time
-      const scheduledDate = new Date(scheduledTime);
-      const now = new Date();
-      const isHistorical = scheduledDate < now;
 
       setFlightStatusState({
         isLoading: false,
@@ -195,6 +212,7 @@ function AddRun() {
         ...prev,
         isLoading: false,
         error: 'Failed to fetch flight status',
+        isHistorical,
       }));
       console.warn('Could not check flight status:', error);
     }
@@ -206,6 +224,14 @@ function AddRun() {
 
   useEffect(() => {
     if (watchedFlightNumber && watchedScheduledTime) {
+      // Immediately check if flight is historical
+      const isHistorical = checkIsHistorical(watchedScheduledTime);
+      setFlightStatusState(prev => ({
+        ...prev,
+        isHistorical,
+      }));
+
+      // Then debounce the API call
       const timeoutId = setTimeout(() => {
         checkFlightStatus(watchedFlightNumber, watchedScheduledTime);
       }, 1000); // Debounce for 1 second
@@ -253,9 +279,23 @@ function AddRun() {
           // Set form values
           form.reset(formData);
 
+          // Immediately check if the flight is historical
+          if (formData.scheduledTime) {
+            const isHistorical = checkIsHistorical(formData.scheduledTime);
+            setFlightStatusState(prev => ({
+              ...prev,
+              isHistorical,
+            }));
+          }
+
           // Create undo function that resets form to defaults
           const handleUndo = () => {
             form.reset(defaultFormValues);
+            // Reset historical state when undoing
+            setFlightStatusState(prev => ({
+              ...prev,
+              isHistorical: false,
+            }));
           };
 
           // Show enhanced toast with undo action
@@ -363,9 +403,23 @@ function AddRun() {
           // Set form values
           form.reset(formData);
 
+          // Immediately check if the flight is historical
+          if (formData.scheduledTime) {
+            const isHistorical = checkIsHistorical(formData.scheduledTime);
+            setFlightStatusState(prev => ({
+              ...prev,
+              isHistorical,
+            }));
+          }
+
           // Create undo function that resets form to defaults
           const handleUndo = () => {
             form.reset(defaultFormValues);
+            // Reset historical state when undoing
+            setFlightStatusState(prev => ({
+              ...prev,
+              isHistorical: false,
+            }));
           };
 
           // Show enhanced toast with undo action

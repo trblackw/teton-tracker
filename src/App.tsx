@@ -320,6 +320,7 @@ export default function App() {
         ...(newRun as NewRunForm), // Safe cast since validation passed
         status: 'scheduled',
         createdAt: new Date(),
+        airline: newRun.airline || '',
         updatedAt: new Date(),
       };
 
@@ -390,6 +391,7 @@ export default function App() {
             : 'scheduled',
           createdAt: new Date(),
           updatedAt: new Date(),
+          airline: formData.airline || '',
         };
         newRuns.push(run);
       });

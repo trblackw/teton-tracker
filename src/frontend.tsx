@@ -15,6 +15,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ThemeProvider } from './components/theme-provider';
 import { isDebugMode } from './lib/debug';
+// @ts-ignore
 import { routeTree } from './routeTree.gen';
 
 // Create a new query client instance

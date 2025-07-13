@@ -269,6 +269,66 @@ function parseScheduleBlock(
   }
 }
 
+// Helper function to detect date patterns in schedule messages
+function extractDateFromMessage(message: string): string | null {
+  const lines = message.split('\n').map(line => line.trim());
+  
+  // Look for common date patterns
+  const datePatterns = [
+    /\b(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\b/,  // MM/DD/YYYY or MM-DD-YYYY
+    /\b(\d{2,4}[\/\-]\d{1,2}[\/\-]\d{1,2})\b/,  // YYYY/MM/DD or YYYY-MM-DD
+    /\b(yesterday|today|tomorrow)\b/i,            // Relative dates
+    /\b(\d{1,2}\/\d{1,2})\b/,                    // MM/DD (current year)
+    /\b(\w{3,9}\s+\d{1,2})\b/,                   // "December 15" or "Dec 15"
+  ];
+
+  for (const line of lines) {
+    for (const pattern of datePatterns) {
+      const match = line.match(pattern);
+      if (match) {
+        const dateStr = match[1];
+        
+        // Handle relative dates
+        if (dateStr.toLowerCase() === 'yesterday') {
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          return yesterday.toISOString().split('T')[0];
+        } else if (dateStr.toLowerCase() === 'today') {
+          return new Date().toISOString().split('T')[0];
+        } else if (dateStr.toLowerCase() === 'tomorrow') {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          return tomorrow.toISOString().split('T')[0];
+        }
+        
+        // Try to parse the date
+        try {
+          let parsedDate: Date;
+          
+          // Handle MM/DD format (assume current year)
+          if (/^\d{1,2}\/\d{1,2}$/.test(dateStr)) {
+            const [month, day] = dateStr.split('/');
+            const currentYear = new Date().getFullYear();
+            parsedDate = new Date(currentYear, parseInt(month, 10) - 1, parseInt(day, 10));
+          } else {
+            parsedDate = new Date(dateStr);
+          }
+          
+          // Validate the date
+          if (!isNaN(parsedDate.getTime())) {
+            return parsedDate.toISOString().split('T')[0];
+          }
+        } catch (error) {
+          // Continue searching if this date couldn't be parsed
+          continue;
+        }
+      }
+    }
+  }
+  
+  return null;
+}
+
 export function parseScheduleMessage(message: string): ParseResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -284,6 +344,9 @@ export function parseScheduleMessage(message: string): ParseResult {
   }
 
   try {
+    // Try to extract date from the message
+    const extractedDate = extractDateFromMessage(message);
+    
     // Split message into blocks (each run is separated by multiple newlines or specific patterns)
     const lines = message
       .split('\n')
@@ -334,6 +397,10 @@ export function parseScheduleMessage(message: string): ParseResult {
 
       const parsedRun = parseScheduleBlock(block, index);
       if (parsedRun) {
+        // Add extracted date to the parsed run for later use
+        if (extractedDate) {
+          parsedRun.notes = `${parsedRun.notes} | Detected date: ${extractedDate}`;
+        }
         runs.push(parsedRun);
       } else {
         errors.push(`Failed to parse block ${index + 1}`);
@@ -362,8 +429,10 @@ export function convertParsedRunToForm(
   parsedRun: ParsedScheduleRun,
   baseDate: string = ''
 ): NewRunForm {
-  // Convert time to datetime-local format
-  const today = baseDate || new Date().toISOString().split('T')[0];
+  // Check if there's a detected date in the notes
+  const detectedDateMatch = parsedRun.notes.match(/Detected date: (\d{4}-\d{2}-\d{2})/);
+  const useDate = detectedDateMatch ? detectedDateMatch[1] : (baseDate || new Date().toISOString().split('T')[0]);
+  
   let scheduledTime = '';
 
   if (parsedRun.time) {
@@ -373,7 +442,7 @@ export function convertParsedRunToForm(
         const now = new Date();
         const hours = now.getHours().toString().padStart(2, '0');
         const minutes = now.getMinutes().toString().padStart(2, '0');
-        scheduledTime = `${today}T${hours}:${minutes}`;
+        scheduledTime = `${useDate}T${hours}:${minutes}`;
       } else {
         // Parse time like "11:00 AM" and convert to 24-hour format
         const timeMatch = parsedRun.time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
@@ -387,7 +456,7 @@ export function convertParsedRunToForm(
             hour24 = 0;
           }
 
-          scheduledTime = `${today}T${hour24.toString().padStart(2, '0')}:${minutes}`;
+          scheduledTime = `${useDate}T${hour24.toString().padStart(2, '0')}:${minutes}`;
         }
       }
     } catch (error) {
@@ -404,7 +473,10 @@ export function convertParsedRunToForm(
     }
   }
 
-    return {
+  // Clean up notes to remove the detected date marker
+  const cleanNotes = parsedRun.notes.replace(/\s*\|\s*Detected date: \d{4}-\d{2}-\d{2}/, '');
+
+  return {
     flightNumber: parsedRun.flightNumber,
     airline: parsedRun.airline,
     departure: parsedRun.departure,
@@ -414,7 +486,7 @@ export function convertParsedRunToForm(
     scheduledTime,
     type: parsedRun.type,
     price: cleanPrice,
-    notes: parsedRun.notes,
+    notes: cleanNotes,
   };
 }
 
