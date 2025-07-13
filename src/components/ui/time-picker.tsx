@@ -28,6 +28,7 @@ export function TimePicker({
   const [hours, setHours] = useState('00');
   const [minutes, setMinutes] = useState('00');
   const [isOpen, setIsOpen] = useState(false);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Parse initial value
@@ -36,10 +37,12 @@ export function TimePicker({
       const [h, m] = value.split(':');
       setHours(h || '00');
       setMinutes(m || '00');
+      setHasUserInteracted(false); // Reset interaction flag when value is set from outside
     } else {
       // Reset to 00:00 when value is cleared
       setHours('00');
       setMinutes('00');
+      setHasUserInteracted(false); // Reset interaction flag when cleared
     }
   }, [value]);
 
@@ -68,13 +71,15 @@ export function TimePicker({
     return `${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
   }, []);
 
-  // Update parent when time changes
+  // Update parent when time changes (only if user has interacted)
   useEffect(() => {
-    const timeString = formatTime(hours, minutes);
-    if (onChange && timeString !== value) {
-      onChange(timeString);
+    if (hasUserInteracted) {
+      const timeString = formatTime(hours, minutes);
+      if (onChange && timeString !== value) {
+        onChange(timeString);
+      }
     }
-  }, [hours, minutes, formatTime, onChange, value]);
+  }, [hours, minutes, formatTime, onChange, value, hasUserInteracted]);
 
   // Increment/decrement hours
   const adjustHours = (direction: 'up' | 'down') => {
@@ -88,6 +93,7 @@ export function TimePicker({
     }
 
     setHours(newHours.toString().padStart(2, '0'));
+    setHasUserInteracted(true); // Mark as user interaction
   };
 
   // Increment/decrement minutes
@@ -110,6 +116,7 @@ export function TimePicker({
     }
 
     setMinutes(newMinutes.toString().padStart(2, '0'));
+    setHasUserInteracted(true); // Mark as user interaction
   };
 
   // Handle manual input
@@ -117,6 +124,7 @@ export function TimePicker({
     const val = e.target.value.replace(/\D/g, '');
     if (val === '' || (parseInt(val) >= 0 && parseInt(val) <= 23)) {
       setHours(val);
+      setHasUserInteracted(true);
     }
   };
 
@@ -124,6 +132,7 @@ export function TimePicker({
     const val = e.target.value.replace(/\D/g, '');
     if (val === '' || (parseInt(val) >= 0 && parseInt(val) <= 59)) {
       setMinutes(val);
+      setHasUserInteracted(true);
     }
   };
 
@@ -140,7 +149,13 @@ export function TimePicker({
           <Button
             type='button'
             variant='outline'
-            onClick={() => setIsOpen(!isOpen)}
+            onClick={() => {
+              setIsOpen(!isOpen);
+              if (!isOpen) {
+                // Mark as user interaction when opening the dropdown
+                setHasUserInteracted(true);
+              }
+            }}
             disabled={disabled}
             className='justify-start text-left font-normal w-full'
           >

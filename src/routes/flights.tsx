@@ -701,14 +701,13 @@ function UpcomingFlights() {
                     Time Frame
                   </label>
                   <p className='text-xs text-muted-foreground mb-2'>
-                    Filter flights by departure time in your timezone (
-                    {userTimezone})
-                    {filterTime && (
-                      <span className='inline-block ml-1'>
-                        • {searchMode === 'all' ? 'Server-side' : 'Client-side'}{' '}
-                        filtering
-                      </span>
-                    )}
+                    Filter flights by departure time in your timezone
+                    <Button
+                      asChild
+                      className='ml-2 underline pb-1 bg-transparent border-none text-primary px-0 text-xs'
+                    >
+                      <a href='/settings'>{userTimezone}</a>
+                    </Button>
                   </p>
                   <div className='space-y-2'>
                     <div className='flex gap-2'>
