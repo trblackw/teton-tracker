@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
+import { TimePicker } from '../components/ui/time-picker';
 import airlinesData from '../data/airlines.json';
 import airportsData from '../data/airports-comprehensive.json';
 import { preferencesApi } from '../lib/api/client';
@@ -198,13 +199,17 @@ function UpcomingFlights() {
         flightNumber:
           searchMode === 'all' ? searchTerm || undefined : undefined,
         limit: flightLimit,
-        timeFrame: filterTime
-          ? {
-              time: filterTime,
-              timezone: userTimezone,
-              isAfter: isAfterTime,
-            }
-          : undefined,
+        // Only include timeFrame in API call when searchMode is 'all'
+        // When searchMode is 'selected', time filtering is done client-side
+        // This optimizes API usage by only hitting the server when fetching all flights
+        timeFrame:
+          searchMode === 'all' && filterTime
+            ? {
+                time: filterTime,
+                timezone: userTimezone,
+                isAfter: isAfterTime,
+              }
+            : undefined,
       });
     },
     enabled: !!homeAirport,
@@ -233,6 +238,63 @@ function UpcomingFlights() {
     filteredFlights = filteredFlights.filter(
       flight => flight.status.toLowerCase() === selectedStatus.toLowerCase()
     );
+  }
+
+  // Apply time filter client-side when in "selected" mode
+  if (searchMode === 'selected' && filterTime) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🔍 Applying time filter client-side: ${formatTimeFilter()}`);
+    }
+
+    filteredFlights = filteredFlights.filter(flight => {
+      try {
+        // Parse the flight's scheduled departure time
+        const flightTime = new Date(flight.scheduledDeparture);
+
+        // Create a date object for today with the filter time in the user's timezone
+        const today = new Date();
+        const [hours, minutes] = filterTime.split(':');
+        const filterDateTime = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate(),
+          parseInt(hours),
+          parseInt(minutes),
+          0
+        );
+
+        // Convert flight time to user's timezone for comparison
+        const flightTimeInUserTz = new Date(
+          flightTime.toLocaleString('en-US', { timeZone: userTimezone })
+        );
+        const filterTimeInUserTz = new Date(
+          filterDateTime.toLocaleString('en-US', { timeZone: userTimezone })
+        );
+
+        // Extract just the time portion for comparison (ignore date)
+        const flightTimeOfDay =
+          flightTimeInUserTz.getHours() * 60 + flightTimeInUserTz.getMinutes();
+        const filterTimeOfDay =
+          filterTimeInUserTz.getHours() * 60 + filterTimeInUserTz.getMinutes();
+
+        if (isAfterTime) {
+          // Filter for flights at or after the specified time
+          return flightTimeOfDay >= filterTimeOfDay;
+        } else {
+          // Filter for flights before the specified time
+          return flightTimeOfDay < filterTimeOfDay;
+        }
+      } catch (error) {
+        console.warn('Error filtering flight by time:', error);
+        return true; // Include flight if there's an error parsing time
+      }
+    });
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log(
+        `📊 Client-side time filtering result: ${filteredFlights.length} flights match`
+      );
+    }
   }
 
   // Get available statuses from current flights
@@ -641,32 +703,23 @@ function UpcomingFlights() {
                   <p className='text-xs text-muted-foreground mb-2'>
                     Filter flights by departure time in your timezone (
                     {userTimezone})
+                    {filterTime && (
+                      <span className='inline-block ml-1'>
+                        • {searchMode === 'all' ? 'Server-side' : 'Client-side'}{' '}
+                        filtering
+                      </span>
+                    )}
                   </p>
                   <div className='space-y-2'>
                     <div className='flex gap-2'>
                       <div className='flex-1'>
-                        <Input
-                          type='time'
+                        <TimePicker
                           value={filterTime}
-                          onChange={e => setFilterTime(e.target.value)}
-                          placeholder='Time'
-                          className='w-full'
+                          onChange={setFilterTime}
+                          placeholder='Select time'
+                          isAfterTime={isAfterTime}
+                          onIsAfterTimeChange={setIsAfterTime}
                         />
-                      </div>
-                      <div className='flex items-center gap-1'>
-                        <input
-                          type='checkbox'
-                          id='isAfterTime'
-                          checked={isAfterTime}
-                          onChange={e => setIsAfterTime(e.target.checked)}
-                          className='h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded'
-                        />
-                        <label
-                          htmlFor='isAfterTime'
-                          className='text-sm text-foreground'
-                        >
-                          {isAfterTime ? 'At/after time' : 'Before time'}
-                        </label>
                       </div>
                     </div>
                     {filterTime && (

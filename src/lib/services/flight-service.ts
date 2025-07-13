@@ -4,18 +4,73 @@ import { type FlightStatus } from '../schema';
 // AviationStack API configuration
 const AVIATIONSTACK_BASE_URL = 'https://api.aviationstack.com/v1';
 
-// Development mode configuration - use build-time constants
+/**
+ * Development Mode Configuration
+ *
+ * In development (localhost), the FlightService automatically uses mock data
+ * unless explicitly overridden. This prevents unnecessary API calls during development.
+ *
+ * To use real API in development:
+ * 1. Add ?realapi=true to your URL (e.g., http://localhost:3000/flights?realapi=true)
+ * 2. Set ENABLE_REAL_API=true environment variable
+ * 3. Pass forceMockData=false to FlightService constructor
+ *
+ * In production, real API is always used (if API key is available).
+ */
 const DEV_MODE = {
-  // Set to true to force mock data in development (easy toggle)
-  FORCE_MOCK_DATA: false, // Only enable via constructor parameter
+  // Default to mock data in development (override with ENABLE_REAL_API=true)
+  USE_MOCK_DATA_BY_DEFAULT: true,
   // Set to true to enable debug logging
-  DEBUG_LOGGING: true, // Enable to see detailed API interactions
+  DEBUG_LOGGING: true,
   // Set to true to test API key loading
-  TEST_API_KEY_LOADING: true, // Enable to verify API key configuration
+  TEST_API_KEY_LOADING: true,
 };
 
-// Development mode is now controlled via constructor parameters
-// No runtime environment checks needed in browser code
+// Check if we're in development mode
+function isDevelopmentMode(): boolean {
+  // Check various indicators that we're in development
+  return (
+    (typeof window !== 'undefined' &&
+      (window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        window.location.port === '3000')) ||
+    // Also check for explicit environment variable if available
+    (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development')
+  );
+}
+
+// Check if real API is explicitly enabled
+function isRealApiEnabled(): boolean {
+  // Check for explicit override via environment variable or URL parameter
+  if (typeof window !== 'undefined') {
+    // Check URL parameter: ?realapi=true
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('realapi') === 'true') {
+      return true;
+    }
+  }
+
+  // Check environment variable if available
+  if (
+    typeof process !== 'undefined' &&
+    process.env?.ENABLE_REAL_API === 'true'
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+// Determine if we should use mock data
+function shouldUseMockData(): boolean {
+  if (isDevelopmentMode() && DEV_MODE.USE_MOCK_DATA_BY_DEFAULT) {
+    // In development, use mock data by default unless explicitly enabled
+    return !isRealApiEnabled();
+  }
+
+  // In production, always use real API
+  return false;
+}
 
 export interface FlightRequest {
   flightNumber: string;
@@ -135,25 +190,106 @@ export class FlightService {
   private apiKey: string | null = null;
   private forceMockData: boolean = false;
 
-  constructor(apiKey?: string, timeout?: number, forceMockData?: boolean) {
+  // Cache for API responses
+  private cache = new Map<
+    string,
+    { data: UpcomingFlightsResponse; timestamp: number }
+  >();
+  private cacheTimeout = 2 * 60 * 1000; // 2 minutes TTL
+
+  constructor(
+    apiKey?: string,
+    timeout?: number,
+    forceMockData?: boolean,
+    cacheTimeout?: number
+  ) {
     this.apiKey = apiKey || null;
     this.timeout = timeout || 15000;
-    this.forceMockData = forceMockData || DEV_MODE.FORCE_MOCK_DATA;
+    this.forceMockData = forceMockData || false;
+    this.cacheTimeout = cacheTimeout || 2 * 60 * 1000; // Default 2 minutes
+
+    // Determine if we should use mock data
+    const useMockData = this.forceMockData || shouldUseMockData();
 
     if (DEV_MODE.DEBUG_LOGGING) {
-      console.log('🔧 FlightService initialized:', {
+      console.log('🛫 FlightService initialized', {
         hasApiKey: !!this.apiKey,
-        forceMockData: this.forceMockData,
-        apiKeyLength: this.apiKey?.length || 0,
+        timeout: this.timeout,
+        isDevelopmentMode: isDevelopmentMode(),
+        isRealApiEnabled: isRealApiEnabled(),
+        useMockData,
+        cacheTimeout: this.cacheTimeout / 1000 + 's',
       });
+
+      if (useMockData) {
+        console.log(
+          '🎭 Using mock data in development mode. To use real API, add ?realapi=true to URL or set ENABLE_REAL_API=true'
+        );
+      }
     }
   }
 
   setApiKey(apiKey: string): void {
     this.apiKey = apiKey;
     if (DEV_MODE.DEBUG_LOGGING) {
-      console.log('🔧 API key set, length:', apiKey?.length || 0);
+      console.log('🔑 API key updated');
     }
+  }
+
+  // Generate cache key from request parameters
+  private generateCacheKey(request: UpcomingFlightsRequest): string {
+    const key = [
+      request.airport,
+      request.airline || '',
+      request.flightNumber || '',
+      request.limit || 50,
+      request.timeFrame?.time || '',
+      request.timeFrame?.timezone || '',
+      request.timeFrame?.isAfter || true,
+    ].join('|');
+
+    return `flights:${key}`;
+  }
+
+  // Check if cache entry is still valid
+  private isCacheValid(cacheKey: string): boolean {
+    const cached = this.cache.get(cacheKey);
+    if (!cached) return false;
+
+    const now = Date.now();
+    const isValid = now - cached.timestamp < this.cacheTimeout;
+
+    if (!isValid) {
+      this.cache.delete(cacheKey);
+    }
+
+    return isValid;
+  }
+
+  // Get cached response if valid
+  private getCachedResponse(cacheKey: string): UpcomingFlightsResponse | null {
+    if (!this.isCacheValid(cacheKey)) return null;
+
+    const cached = this.cache.get(cacheKey);
+    if (cached) {
+      console.log('📦 Using cached flight data');
+      return cached.data;
+    }
+
+    return null;
+  }
+
+  // Cache response
+  private setCachedResponse(
+    cacheKey: string,
+    data: UpcomingFlightsResponse
+  ): void {
+    this.cache.set(cacheKey, {
+      data,
+      timestamp: Date.now(),
+    });
+
+    console.log(`💾 Cached flight data (TTL: ${this.cacheTimeout / 1000}s)`);
   }
 
   /**
@@ -167,13 +303,23 @@ export class FlightService {
         `🛫 Fetching upcoming departures from ${request.airport}${request.airline ? ` for airline ${request.airline}` : ''}${request.flightNumber ? ` with flight number ${request.flightNumber}` : ''}`
       );
 
+      // Check cache first
+      const cacheKey = this.generateCacheKey(request);
+      const cachedResponse = this.getCachedResponse(cacheKey);
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+
+      // Determine if we should use mock data
+      const useMockData = this.forceMockData || shouldUseMockData();
+
       // Check if we should use mock data
-      if (this.forceMockData) {
+      if (useMockData) {
         console.log(
-          '🎭 Development mode: Using mock data (DEV_MODE.FORCE_MOCK_DATA = true)'
+          '🎭 Development mode: Using mock data. To use real API, add ?realapi=true to URL or set ENABLE_REAL_API=true'
         );
         const mockFlights = this.getMockUpcomingFlights(request);
-        return {
+        const mockResponse = {
           flights: mockFlights,
           temporalStatus: {
             hasStaleData: false,
@@ -181,15 +327,21 @@ export class FlightService {
             staleFlights: 0,
             staleDates: [],
             currentLocalTime: new Date().toLocaleString(),
-            message: 'Using mock data - no temporal filtering applied',
+            message: 'Using mock data in development mode',
           },
         };
+
+        // Cache mock response too
+        this.setCachedResponse(cacheKey, mockResponse);
+        return mockResponse;
       }
 
       if (!this.apiKey) {
-        console.warn('⚠️ No AviationStack API key provided, using mock data');
+        console.warn(
+          '⚠️ No AviationStack API key provided, falling back to mock data'
+        );
         const mockFlights = this.getMockUpcomingFlights(request);
-        return {
+        const mockResponse = {
           flights: mockFlights,
           temporalStatus: {
             hasStaleData: false,
@@ -197,34 +349,111 @@ export class FlightService {
             staleFlights: 0,
             staleDates: [],
             currentLocalTime: new Date().toLocaleString(),
-            message: 'Using mock data - no temporal filtering applied',
+            message: 'No API key available - using mock data',
           },
         };
+
+        // Cache mock response too
+        this.setCachedResponse(cacheKey, mockResponse);
+        return mockResponse;
       }
 
       // Fetch flights with multiple statuses to get comprehensive real-time data
-      const statuses = ['scheduled', 'active', 'delayed'];
-      const allFlights: AviationStackFlight[] = [];
+      // Try optimized single API call first, fall back to multiple calls if needed
+      let allFlights: AviationStackFlight[] = [];
+      let rateLimitedStatuses: string[] = [];
+      let successfulApiCalls = 0;
 
-      for (const status of statuses) {
-        try {
-          const flights = await this.fetchFlightsByStatus(request, status);
-          allFlights.push(...flights);
-        } catch (error) {
-          console.warn(
-            `⚠️ Failed to fetch flights with status ${status}:`,
-            error
+      try {
+        // First try: Single API call without status filter to get all flights
+        console.log('🚀 Attempting optimized single API call...');
+        const singleCallFlights = await this.fetchAllFlights(request);
+
+        if (singleCallFlights.length > 0) {
+          allFlights = singleCallFlights;
+          successfulApiCalls = 1;
+          console.log(
+            `✅ Single API call succeeded: ${allFlights.length} flights`
           );
+        } else {
+          throw new Error('Single API call returned no results');
+        }
+      } catch (singleCallError) {
+        console.warn(
+          '⚠️ Single API call failed, falling back to multiple calls:',
+          singleCallError
+        );
+
+        // Fallback: Multiple API calls with different statuses
+        const statuses = ['scheduled', 'active', 'delayed'];
+
+        for (const status of statuses) {
+          try {
+            const flights = await this.fetchFlightsByStatus(request, status);
+            allFlights.push(...flights);
+
+            if (flights.length === 0) {
+              console.log(
+                `📭 No ${status} flights returned (may be rate limited)`
+              );
+            } else {
+              successfulApiCalls++;
+            }
+          } catch (error) {
+            console.warn(
+              `⚠️ Failed to fetch flights with status ${status}:`,
+              error
+            );
+
+            if (
+              error instanceof Error &&
+              error.message.includes('rate limit')
+            ) {
+              rateLimitedStatuses.push(status);
+            }
+          }
         }
       }
 
+      // If all API calls failed due to rate limiting, fall back to mock data
+      if (successfulApiCalls === 0 && rateLimitedStatuses.length > 0) {
+        console.warn(
+          '🚫 All API calls rate limited. Falling back to mock data...'
+        );
+        const mockFlights = this.getMockUpcomingFlights(request);
+        const mockResponse = {
+          flights: mockFlights,
+          temporalStatus: {
+            hasStaleData: false,
+            totalFlights: mockFlights.length,
+            staleFlights: 0,
+            staleDates: [],
+            currentLocalTime: new Date().toLocaleString(),
+            message:
+              '⚠️ API rate limit exceeded. Showing sample data. Please try again later.',
+          },
+        };
+        this.setCachedResponse(cacheKey, mockResponse);
+        return mockResponse;
+      }
+
+      // Log API call results
+      if (rateLimitedStatuses.length > 0) {
+        console.warn(
+          `⚠️ Some API calls were rate limited: ${rateLimitedStatuses.join(', ')}`
+        );
+      }
+
+      // Calculate total possible API calls (1 for single call, 3 for multi-call)
+      const totalPossibleCalls = successfulApiCalls === 1 ? 1 : 3;
+
       console.log(
-        `📊 AviationStack returned ${allFlights.length} total flights across all statuses`
+        `📊 API Results: ${successfulApiCalls}/${totalPossibleCalls} successful calls, ${allFlights.length} total flights fetched`
       );
 
       if (allFlights.length === 0) {
         console.log('📭 No flights found from AviationStack');
-        return {
+        const noFlightsResponse: UpcomingFlightsResponse = {
           flights: [],
           temporalStatus: {
             hasStaleData: false,
@@ -235,6 +464,8 @@ export class FlightService {
             message: 'No flights found from API',
           },
         };
+        this.setCachedResponse(cacheKey, noFlightsResponse);
+        return noFlightsResponse;
       }
 
       // Remove duplicates based on flight IATA code and date
@@ -267,18 +498,20 @@ export class FlightService {
         message = `Found ${staleDataDetected.staleFlights} outdated flights that were filtered out. Showing only current flights.`;
       }
 
-      return {
+      const response: UpcomingFlightsResponse = {
         flights: upcomingFlights,
         temporalStatus: {
           ...staleDataDetected,
           message,
         },
       };
+      this.setCachedResponse(cacheKey, response);
+      return response;
     } catch (error) {
       console.error('❌ Failed to fetch upcoming departures:', error);
       // Return mock data as fallback
       const fallbackFlights = this.getMockUpcomingFlights(request);
-      return {
+      const fallbackResponse: UpcomingFlightsResponse = {
         flights: fallbackFlights,
         temporalStatus: {
           hasStaleData: false,
@@ -289,66 +522,48 @@ export class FlightService {
           message: 'Using fallback mock data due to API error',
         },
       };
+      this.setCachedResponse(this.generateCacheKey(request), fallbackResponse);
+      return fallbackResponse;
     }
   }
 
-  /**
-   * Fetch flights by specific status
-   */
-  private async fetchFlightsByStatus(
-    request: UpcomingFlightsRequest,
-    status: string
+  // Fetch all flights in a single API call (no status filter)
+  private async fetchAllFlights(
+    request: UpcomingFlightsRequest
   ): Promise<AviationStackFlight[]> {
-    // Build API request parameters
+    const baseUrl = `${AVIATIONSTACK_BASE_URL}/flights`;
     const params = new URLSearchParams({
       access_key: this.apiKey!,
       dep_iata: request.airport,
-      flight_status: status,
-      limit: String(request.limit || 10),
+      limit: (request.limit || 50).toString(),
     });
 
-    // Add airline filter if specified
-    if (request.airline && request.airline.trim()) {
-      params.append('airline_iata', request.airline.toUpperCase());
+    if (request.airline) {
+      params.append('airline_iata', request.airline);
     }
 
-    // Add flight number filter if specified
-    if (request.flightNumber && request.flightNumber.trim()) {
-      params.append('flight_iata', request.flightNumber.toUpperCase());
+    if (request.flightNumber) {
+      params.append('flight_iata', request.flightNumber);
     }
 
-    // Add time frame filter if specified
-    if (request.timeFrame?.time && request.timeFrame?.timezone) {
-      // Convert time to the current date with user's timezone
-      const today = new Date();
-      const userTimeStr = `${today.toISOString().split('T')[0]}T${request.timeFrame.time}:00`;
+    // Add time filtering if specified
+    if (request.timeFrame?.time) {
+      const { time, timezone = 'UTC', isAfter = true } = request.timeFrame;
+      const [hours, minutes] = time.split(':');
+      const userDate = new Date();
+      userDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      const utcTime = userDate.toISOString().substring(11, 16);
 
-      // Convert to UTC for API
-      const userDate = new Date(userTimeStr);
-      const timezoneOffset = this.getTimezoneOffset(request.timeFrame.timezone);
-      const utcTime = new Date(userDate.getTime() - timezoneOffset * 60 * 1000);
-
-      // Use the time portion for filtering
-      const timeStr = utcTime.toISOString().split('T')[1].substring(0, 5); // HH:MM format
-
-      if (request.timeFrame.isAfter !== false) {
-        // Filter for flights at or after specified time
-        params.append('dep_time_from', timeStr);
+      if (isAfter) {
+        params.append('dep_time_from', utcTime);
       } else {
-        // Filter for flights before specified time
-        params.append('dep_time_to', timeStr);
-      }
-
-      if (DEV_MODE.DEBUG_LOGGING) {
-        console.log(
-          `🕐 Time filter applied: ${request.timeFrame.isAfter !== false ? 'after' : 'before'} ${request.timeFrame.time} (${request.timeFrame.timezone}) = ${timeStr} UTC`
-        );
+        params.append('dep_time_to', utcTime);
       }
     }
 
-    const url = `${AVIATIONSTACK_BASE_URL}/flights?${params.toString()}`;
+    const url = `${baseUrl}?${params.toString()}`;
     console.log(
-      `🔍 Fetching ${status} flights from AviationStack: ${url.replace(this.apiKey!, '[API_KEY]')}`
+      `🔍 Fetching all flights from AviationStack: ${url.replace(this.apiKey!, '[API_KEY]')}`
     );
 
     const fetchOptions: RequestInit = {
@@ -378,6 +593,123 @@ export class FlightService {
 
     const data: AviationStackResponse = await response.json();
     return data.data || [];
+  }
+
+  private async fetchFlightsByStatus(
+    request: UpcomingFlightsRequest,
+    status: string
+  ): Promise<AviationStackFlight[]> {
+    const baseUrl = `${AVIATIONSTACK_BASE_URL}/flights`;
+    const params = new URLSearchParams({
+      access_key: this.apiKey!,
+      dep_iata: request.airport,
+      flight_status: status,
+      limit: (request.limit || 50).toString(),
+    });
+
+    if (request.airline) {
+      params.append('airline_iata', request.airline);
+    }
+
+    if (request.flightNumber) {
+      params.append('flight_iata', request.flightNumber);
+    }
+
+    // Add time filtering if specified
+    if (request.timeFrame?.time) {
+      const { time, timezone = 'UTC', isAfter = true } = request.timeFrame;
+
+      // Convert user's local time to UTC for the API
+      const [hours, minutes] = time.split(':');
+      const userDate = new Date();
+      userDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+      // Convert to UTC
+      const utcTime = userDate.toISOString().substring(11, 16); // Extract HH:MM from ISO string
+
+      if (isAfter) {
+        params.append('dep_time_from', utcTime);
+      } else {
+        params.append('dep_time_to', utcTime);
+      }
+    }
+
+    const url = `${baseUrl}?${params.toString()}`;
+
+    console.log(
+      `🔍 Fetching ${status} flights from AviationStack: ${url.replace(this.apiKey!, '[API_KEY]')}`
+    );
+
+    // Exponential backoff retry logic
+    const maxRetries = 3;
+    let retryCount = 0;
+
+    while (retryCount <= maxRetries) {
+      try {
+        const fetchOptions: RequestInit = {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+          },
+        };
+
+        if (typeof AbortController !== 'undefined') {
+          const controller = new AbortController();
+          setTimeout(() => controller.abort(), this.timeout);
+          fetchOptions.signal = controller.signal;
+        }
+
+        const response = await fetch(url, fetchOptions);
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Invalid AviationStack API key');
+          } else if (response.status === 429) {
+            console.warn(
+              `⚠️ Rate limit exceeded (attempt ${retryCount + 1}/${maxRetries + 1})`
+            );
+
+            if (retryCount < maxRetries) {
+              // Exponential backoff: wait 1s, 2s, 4s
+              const delay = Math.pow(2, retryCount) * 1000;
+              console.log(`⏰ Retrying in ${delay}ms...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+              retryCount++;
+              continue;
+            } else {
+              // Max retries reached, return empty array instead of throwing
+              console.warn(
+                '🚫 Max retries reached for rate limit. Returning empty results.'
+              );
+              return [];
+            }
+          } else {
+            throw new Error(`AviationStack API error: ${response.status}`);
+          }
+        }
+
+        const data: AviationStackResponse = await response.json();
+        return data.data || [];
+      } catch (error) {
+        if (
+          retryCount < maxRetries &&
+          error instanceof Error &&
+          error.message.includes('rate limit')
+        ) {
+          const delay = Math.pow(2, retryCount) * 1000;
+          console.log(`⏰ Retrying in ${delay}ms due to error...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          retryCount++;
+          continue;
+        }
+
+        // If not a rate limit error or max retries reached, throw the error
+        throw error;
+      }
+    }
+
+    // This shouldn't be reached, but just in case
+    return [];
   }
 
   /**
@@ -837,9 +1169,12 @@ export class FlightService {
   }
 }
 
-// Default service instance
-let flightService: FlightService | null = null;
-let configPromise: Promise<any> | null = null;
+// Cache for configuration promise to avoid multiple fetches
+let configPromise: Promise<{
+  hasApiKey: boolean;
+  apiKey: string | null;
+  environment: string;
+}> | null = null;
 
 // Fetch configuration from server
 async function fetchConfig(): Promise<{
@@ -886,105 +1221,64 @@ async function fetchConfig(): Promise<{
 }
 
 export function getFlightService(apiKey?: string): FlightService {
-  if (!flightService) {
-    // Get API key from multiple sources with better error handling
-    let envApiKey = apiKey;
+  // Use intelligent development mode detection
+  const useMockData = shouldUseMockData();
 
-    // Try to get from environment in different contexts
-    if (!envApiKey) {
-      try {
-        // In Node.js/Bun server context
-        if (typeof process !== 'undefined' && process.env) {
-          envApiKey = process.env.AVIATIONSTACK_API_KEY;
-          if (DEV_MODE.DEBUG_LOGGING) {
-            console.log('🔧 Server context - API key from process.env:', {
-              hasApiKey: !!envApiKey,
-              length: envApiKey?.length || 0,
-              first4: envApiKey?.substring(0, 4) || 'none',
-            });
-          }
-        }
-
-        // In browser context, we'll need to fetch from server
-        if (!envApiKey && typeof window !== 'undefined') {
-          // For browser context, we'll handle this asynchronously
-          if (DEV_MODE.DEBUG_LOGGING) {
-            console.log(
-              '🔧 Browser context detected, will fetch API key from server'
-            );
-          }
-        }
-      } catch (error) {
-        console.warn('⚠️ Error accessing environment variables:', error);
-      }
-    }
-
-    flightService = new FlightService(envApiKey);
-
-    if (!envApiKey && !DEV_MODE.FORCE_MOCK_DATA) {
-      console.warn(
-        '⚠️ No AviationStack API key found. Set AVIATIONSTACK_API_KEY environment variable or pass apiKey parameter. Using mock data.'
-      );
-    }
-
-    if (DEV_MODE.DEBUG_LOGGING) {
-      console.log('🔧 FlightService instance created:', {
-        hasApiKey: !!envApiKey,
-        forceMockData: DEV_MODE.FORCE_MOCK_DATA,
-        isConfigured: flightService.isConfigured(),
-      });
-    }
-  } else if (apiKey && !flightService.isConfigured()) {
-    flightService.setApiKey(apiKey);
+  if (DEV_MODE.DEBUG_LOGGING) {
+    console.log('🔧 Creating FlightService instance:', {
+      hasApiKey: !!apiKey,
+      isDevelopmentMode: isDevelopmentMode(),
+      isRealApiEnabled: isRealApiEnabled(),
+      useMockData,
+    });
   }
-  return flightService;
+
+  // Create service instance - it will automatically handle mock data based on environment
+  return new FlightService(apiKey);
 }
 
 // Enhanced function to get flight service with server config
 export async function getFlightServiceWithConfig(
   apiKey?: string
 ): Promise<FlightService> {
-  // If we already have a configured service, return it
-  if (flightService && flightService.isConfigured()) {
-    return flightService;
-  }
+  try {
+    // Get configuration from server
+    const config = await fetchConfig();
 
-  // If an API key is provided, use it directly
-  if (apiKey) {
-    if (!flightService) {
-      flightService = new FlightService(apiKey);
-    } else {
-      flightService.setApiKey(apiKey);
+    // Use provided API key or fallback to server config
+    const finalApiKey = apiKey || config.apiKey || undefined;
+
+    // Use intelligent development mode detection
+    const useMockData = shouldUseMockData();
+
+    if (DEV_MODE.DEBUG_LOGGING) {
+      console.log('🔧 Creating FlightService with config:', {
+        hasProvidedApiKey: !!apiKey,
+        hasConfigApiKey: !!config.apiKey,
+        hasFinalApiKey: !!finalApiKey,
+        isDevelopmentMode: isDevelopmentMode(),
+        isRealApiEnabled: isRealApiEnabled(),
+        useMockData,
+        environment: config.environment,
+      });
     }
-    return flightService;
-  }
 
-  // Try to get API key from server config (for browser context)
-  if (
-    typeof window !== 'undefined' &&
-    (!flightService || !flightService.isConfigured())
-  ) {
-    try {
-      if (!configPromise) {
-        configPromise = fetchConfig();
-      }
-      const config = await configPromise;
+    // Create service instance
+    const service = new FlightService(finalApiKey);
 
-      if (config.apiKey) {
-        if (!flightService) {
-          flightService = new FlightService(config.apiKey);
-        } else {
-          flightService.setApiKey(config.apiKey);
-        }
-        return flightService;
-      }
-    } catch (error) {
-      console.warn('⚠️ Failed to get API key from server config:', error);
+    if (!finalApiKey && !useMockData) {
+      console.warn(
+        '⚠️ No AviationStack API key found. Set AVIATIONSTACK_API_KEY environment variable or pass apiKey parameter. Using mock data.'
+      );
     }
-  }
 
-  // Fallback to regular initialization
-  return getFlightService();
+    return service;
+  } catch (error) {
+    console.warn('⚠️ Failed to fetch API configuration:', error);
+
+    // Fallback to basic service
+    return new FlightService(apiKey);
+  }
 }
 
 // Legacy compatibility functions
