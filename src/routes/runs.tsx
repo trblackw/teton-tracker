@@ -2,17 +2,24 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import {
   AlertCircle,
+  ArrowDown,
+  ArrowUp,
   CheckCircle,
+  ChevronDown,
+  ChevronUp,
   Clock,
   Clock10,
   Edit,
   FileText,
+  Filter,
   MapPin,
   Navigation,
   Plane,
   Play,
   Plus,
+  Search,
   Trash2,
+  X,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '../components/ui/badge';
@@ -32,18 +39,30 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog';
+import { Input } from '../components/ui/input';
 import { RefreshButton } from '../components/ui/refresh-button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from '../components/ui/tabs';
+import airlinesData from '../data/airlines.json';
 import { runsApi } from '../lib/api/client';
 import { useMultipleRunsData } from '../lib/hooks/use-api-data';
 import { useTimezoneFormatters } from '../lib/hooks/use-timezone';
 import { type Run, type RunStatus } from '../lib/schema';
 import { toasts } from '../lib/toast';
+
+// Convert the airlines data for compatibility
+const airlines = airlinesData;
 
 function Runs() {
   const queryClient = useQueryClient();
@@ -56,6 +75,16 @@ function Runs() {
   // Delete confirmation dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [runToDelete, setRunToDelete] = useState<string | null>(null);
+
+  // Search and filter state
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedAirline, setSelectedAirline] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [selectedType, setSelectedType] = useState<string>('');
+  const [sortBy, setSortBy] = useState<string>('scheduledTime');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [isSearchExpanded, setIsSearchExpanded] = useState<boolean>(false);
+  const [isFilterExpanded, setIsFilterExpanded] = useState<boolean>(false);
 
   // Query for runs from API
   const {
@@ -71,14 +100,128 @@ function Runs() {
 
   const runsApiData = useMultipleRunsData(runs);
 
-  // Filter runs based on tab
-  const currentRuns = runs.filter(
+  // Helper function to filter runs based on search and filters
+  const filterRuns = (runsToFilter: Run[]) => {
+    let filtered = runsToFilter;
+
+    // Apply search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        run =>
+          run.flightNumber.toLowerCase().includes(searchLower) ||
+          run.airline.toLowerCase().includes(searchLower) ||
+          run.pickupLocation.toLowerCase().includes(searchLower) ||
+          run.dropoffLocation.toLowerCase().includes(searchLower) ||
+          run.departure.toLowerCase().includes(searchLower) ||
+          run.arrival.toLowerCase().includes(searchLower) ||
+          (run.notes && run.notes.toLowerCase().includes(searchLower))
+      );
+    }
+
+    // Apply airline filter
+    if (selectedAirline) {
+      filtered = filtered.filter(run => run.airline === selectedAirline);
+    }
+
+    // Apply status filter
+    if (selectedStatus) {
+      filtered = filtered.filter(run => run.status === selectedStatus);
+    }
+
+    // Apply type filter
+    if (selectedType) {
+      filtered = filtered.filter(run => run.type === selectedType);
+    }
+
+    return filtered;
+  };
+
+  // Helper function to sort runs
+  const sortRuns = (runsToSort: Run[]) => {
+    return [...runsToSort].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortBy) {
+        case 'scheduledTime':
+          aValue = new Date(a.scheduledTime);
+          bValue = new Date(b.scheduledTime);
+          break;
+        case 'createdAt':
+          aValue = a.createdAt || new Date(0);
+          bValue = b.createdAt || new Date(0);
+          break;
+        case 'updatedAt':
+          aValue = a.updatedAt || new Date(0);
+          bValue = b.updatedAt || new Date(0);
+          break;
+        case 'completedAt':
+          aValue = a.completedAt || new Date(0);
+          bValue = b.completedAt || new Date(0);
+          break;
+        case 'price':
+          aValue = parseInt(a.price);
+          bValue = parseInt(b.price);
+          break;
+        case 'estimatedDuration':
+          aValue = a.estimatedDuration;
+          bValue = b.estimatedDuration;
+          break;
+        case 'actualDuration':
+          aValue = a.actualDuration || 0;
+          bValue = b.actualDuration || 0;
+          break;
+        case 'flightNumber':
+          aValue = a.flightNumber.toLowerCase();
+          bValue = b.flightNumber.toLowerCase();
+          break;
+        case 'airline':
+          aValue = a.airline.toLowerCase();
+          bValue = b.airline.toLowerCase();
+          break;
+        default:
+          aValue = a.scheduledTime;
+          bValue = b.scheduledTime;
+      }
+
+      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  // Filter and sort runs based on tab
+  const baseCurrentRuns = runs.filter(
     run => run.status === 'scheduled' || run.status === 'active'
   );
-
-  const pastRuns = runs.filter(
+  const basePastRuns = runs.filter(
     run => run.status === 'completed' || run.status === 'cancelled'
   );
+
+  const currentRuns = sortRuns(filterRuns(baseCurrentRuns));
+  const pastRuns = sortRuns(filterRuns(basePastRuns));
+
+  // Get available filter options based on current tab
+  const activeRuns = activeTab === 'current' ? baseCurrentRuns : basePastRuns;
+  const availableAirlines = Array.from(
+    new Set(activeRuns.map(run => run.airline))
+  ).sort();
+  const availableStatuses = Array.from(
+    new Set(activeRuns.map(run => run.status))
+  ).sort();
+
+  // Clear filters when switching tabs
+  const handleTabChange = (value: string) => {
+    const newTab = value as 'current' | 'past';
+    setActiveTab(newTab);
+    setSearchTerm('');
+    setSelectedAirline('');
+    setSelectedStatus('');
+    setSelectedType('');
+    setSortBy('scheduledTime');
+    setSortOrder('asc');
+  };
 
   // Mutation for updating run status
   const updateStatusMutation = useMutation({
@@ -329,10 +472,7 @@ function Runs() {
         </div>
       )}
 
-      <Tabs
-        value={activeTab}
-        onValueChange={value => setActiveTab(value as 'current' | 'past')}
-      >
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="current">
             Current{' '}
@@ -348,9 +488,333 @@ function Runs() {
           </TabsTrigger>
         </TabsList>
 
+        {/* Search and Filter UI */}
+        <div className="space-y-4 mt-4">
+          {/* Collapsible Search */}
+          <Card className="pb-2 pt-3">
+            <CardHeader
+              className="cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => setIsSearchExpanded(!isSearchExpanded)}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 mb-1">
+                    <Search className="h-5 w-4 text-muted-foreground" />
+                    Search Runs
+                    {searchTerm && (
+                      <span className="text-sm font-normal text-muted-foreground">
+                        ({searchTerm})
+                      </span>
+                    )}
+                  </CardTitle>
+                  <CardDescription>
+                    Search by flight number, airline, locations, or notes
+                  </CardDescription>
+                </div>
+                {isSearchExpanded ? (
+                  <ChevronUp className="size-5 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="size-5 text-muted-foreground" />
+                )}
+              </div>
+            </CardHeader>
+            {isSearchExpanded && (
+              <div className="animate-in slide-in-from-top-2 duration-300">
+                <CardContent className="pt-0">
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Input
+                        type="text"
+                        placeholder="Search flights, airlines, locations..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="flex-1"
+                      />
+                    </div>
+                    {searchTerm && (
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setSearchTerm('')}
+                        title="Clear search"
+                      >
+                        <X className="h-4 w-4 text-destructive hover:text-destructive/80" />
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </div>
+            )}
+          </Card>
+
+          {/* Collapsible Filter */}
+          <Card className="pb-2 pt-3">
+            <CardHeader
+              className="cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 mb-1">
+                    <Filter className="h-5 w-5 text-muted-foreground" />
+                    Filter & Sort
+                    {(selectedAirline || selectedStatus || selectedType) && (
+                      <span className="text-sm font-normal text-muted-foreground">
+                        (
+                        {[selectedAirline, selectedStatus, selectedType]
+                          .filter(Boolean)
+                          .join(', ')}
+                        )
+                      </span>
+                    )}
+                  </CardTitle>
+                  <CardDescription>
+                    Filter and sort your {activeTab} runs
+                  </CardDescription>
+                </div>
+                {isFilterExpanded ? (
+                  <ChevronUp className="size-5 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="size-5 text-muted-foreground" />
+                )}
+              </div>
+            </CardHeader>
+            {isFilterExpanded && (
+              <div className="animate-in slide-in-from-top-2 duration-300">
+                <CardContent className="pt-0">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Airline Filter */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">
+                        Airline
+                      </label>
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <Select
+                            value={selectedAirline}
+                            onValueChange={setSelectedAirline}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="All airlines" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableAirlines.map(airline => (
+                                <SelectItem key={airline} value={airline}>
+                                  {airline}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {selectedAirline && (
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setSelectedAirline('')}
+                            title="Clear airline filter"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Status Filter */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">
+                        Status
+                      </label>
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <Select
+                            value={selectedStatus}
+                            onValueChange={setSelectedStatus}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="All statuses" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableStatuses.map(status => (
+                                <SelectItem key={status} value={status}>
+                                  <div className="flex items-center gap-2">
+                                    <Badge
+                                      className={`text-xs ${getStatusColor(status)}`}
+                                    >
+                                      {status}
+                                    </Badge>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {selectedStatus && (
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setSelectedStatus('')}
+                            title="Clear status filter"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Type Filter */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">
+                        Type
+                      </label>
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <Select
+                            value={selectedType}
+                            onValueChange={setSelectedType}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="All types" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pickup">Pickup</SelectItem>
+                              <SelectItem value="dropoff">Dropoff</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {selectedType && (
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setSelectedType('')}
+                            title="Clear type filter"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Sort Options */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-foreground">
+                        Sort by
+                      </label>
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <Select value={sortBy} onValueChange={setSortBy}>
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="scheduledTime">
+                                Scheduled Time
+                              </SelectItem>
+                              <SelectItem value="createdAt">Created</SelectItem>
+                              <SelectItem value="updatedAt">Updated</SelectItem>
+                              {activeTab === 'past' && (
+                                <SelectItem value="completedAt">
+                                  Completed
+                                </SelectItem>
+                              )}
+                              <SelectItem value="price">Price</SelectItem>
+                              <SelectItem value="estimatedDuration">
+                                Est. Duration
+                              </SelectItem>
+                              {activeTab === 'past' && (
+                                <SelectItem value="actualDuration">
+                                  Actual Duration
+                                </SelectItem>
+                              )}
+                              <SelectItem value="flightNumber">
+                                Flight Number
+                              </SelectItem>
+                              <SelectItem value="airline">Airline</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() =>
+                            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+                          }
+                          title={`Sort ${sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+                        >
+                          {sortOrder === 'asc' ? (
+                            <ArrowUp className="size-4" />
+                          ) : (
+                            <ArrowDown className="size-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Clear All Filters Button */}
+                  {(searchTerm ||
+                    selectedAirline ||
+                    selectedStatus ||
+                    selectedType) && (
+                    <div className="mt-4 pt-4 border-t">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setSearchTerm('');
+                          setSelectedAirline('');
+                          setSelectedStatus('');
+                          setSelectedType('');
+                        }}
+                        className="w-full"
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Clear All Filters
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </div>
+            )}
+          </Card>
+        </div>
+
         <TabsContent value="current" className="space-y-4">
           {currentRuns.length === 0 ? (
-            renderEmptyState()
+            // Check if it's due to filtering
+            (searchTerm || selectedAirline || selectedStatus || selectedType) &&
+            baseCurrentRuns.length > 0 ? (
+              <Card className="text-center py-12">
+                <CardContent>
+                  <div className="flex flex-col items-center justify-center space-y-4">
+                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+                      <Search className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-xl font-medium text-foreground">
+                        No matching runs found
+                      </h3>
+                      <p className="text-muted-foreground max-w-md">
+                        No current runs match your search criteria. Try
+                        adjusting your filters.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        setSearchTerm('');
+                        setSelectedAirline('');
+                        setSelectedStatus('');
+                        setSelectedType('');
+                      }}
+                      variant="outline"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Clear Filters
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              renderEmptyState()
+            )
           ) : (
             <div className="grid gap-4">
               {runsApiData.data
@@ -541,7 +1005,42 @@ function Runs() {
 
         <TabsContent value="past" className="space-y-4">
           {pastRuns.length === 0 ? (
-            renderEmptyState()
+            // Check if it's due to filtering
+            (searchTerm || selectedAirline || selectedStatus || selectedType) &&
+            basePastRuns.length > 0 ? (
+              <Card className="text-center py-12">
+                <CardContent>
+                  <div className="flex flex-col items-center justify-center space-y-4">
+                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+                      <Search className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-xl font-medium text-foreground">
+                        No matching runs found
+                      </h3>
+                      <p className="text-muted-foreground max-w-md">
+                        No past runs match your search criteria. Try adjusting
+                        your filters.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        setSearchTerm('');
+                        setSelectedAirline('');
+                        setSelectedStatus('');
+                        setSelectedType('');
+                      }}
+                      variant="outline"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Clear Filters
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              renderEmptyState()
+            )
           ) : (
             <div className="grid gap-4">
               {runsApiData.data
