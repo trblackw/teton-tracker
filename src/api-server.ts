@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import * as authApi from './api/auth';
 import * as notificationsApi from './api/notifications';
 import * as preferencesApi from './api/preferences';
 import * as runsApi from './api/runs';
@@ -42,6 +43,23 @@ async function startApiServer() {
       // Configuration endpoint
       if (url.pathname === '/api/config') {
         const response = await handleConfigRequest(request);
+
+        // Add CORS headers to response
+        const headers = new Headers(response.headers);
+        Object.entries(corsHeaders).forEach(([key, value]) => {
+          headers.set(key, value);
+        });
+
+        return new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers,
+        });
+      }
+
+      // Auth endpoint for password validation
+      if (url.pathname === '/api/auth/validate-password') {
+        const response = await authApi.passwordValidationHandler(request);
 
         // Add CORS headers to response
         const headers = new Headers(response.headers);
