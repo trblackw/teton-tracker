@@ -6,8 +6,8 @@ import {
   useSearch,
 } from '@tanstack/react-router';
 import {
-  Activity,
   AlertTriangle,
+  Car,
   CheckCircle,
   Clock,
   MapPin,
@@ -198,7 +198,7 @@ function ActiveRunPage() {
           <CardContent className="py-12 text-center">
             <div className="space-y-4">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
-                <Activity className="h-8 w-8 text-gray-400" />
+                <Car className="h-8 w-8 text-gray-400" />
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-foreground">
@@ -434,7 +434,7 @@ function ActiveRunPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
+              <Car className="h-5 w-5" />
               Run Details
             </CardTitle>
             <CardDescription>

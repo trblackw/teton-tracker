@@ -5,7 +5,7 @@ import {
   Outlet,
   useRouterState,
 } from '@tanstack/react-router';
-import { Activity, Bell, Plane, Plus, Settings } from 'lucide-react';
+import { Bell, Car, Plane, Plus, Settings } from 'lucide-react';
 import { useEffect } from 'react';
 import { Toaster } from 'sonner';
 import { ActiveRunBanner } from '../components/active-run-banner';
@@ -69,7 +69,7 @@ function RootComponent() {
                                 className: activeNavClass,
                               }}
                             >
-                              <Activity className="h-4 w-4" />
+                              <Car className="h-4 w-4" />
                               Current Runs
                             </Link>
                           </Button>
@@ -168,7 +168,7 @@ function RootComponent() {
                         className: activeNavClass,
                       }}
                     >
-                      <Activity className="size-5" />
+                      <Car className="size-8" />
                     </Link>
                   </Button>
                   <Button

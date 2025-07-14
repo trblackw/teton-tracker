@@ -173,12 +173,12 @@ function Runs() {
     if (activeTab === 'current') {
       return {
         title: 'Current Runs',
-        subtitle: 'View and manage your scheduled and active runs',
+        subtitle: 'Manage scheduled & active runs',
       };
     } else {
       return {
         title: 'Past Runs',
-        subtitle: 'View your completed and cancelled runs',
+        subtitle: 'View completed & cancelled runs',
       };
     }
   };
@@ -588,6 +588,17 @@ function Runs() {
                               {formatScheduleTime(run.scheduledTime)}
                             </span>
                           </div>
+                          {run.completedAt && (
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                              <span className="text-sm text-green-600">
+                                Completed:{' '}
+                                {formatScheduleTime(
+                                  run.completedAt.toISOString()
+                                )}
+                              </span>
+                            </div>
+                          )}
                           <div className="flex items-center gap-2">
                             <Clock10 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                             <span className="text-sm text-muted-foreground">
