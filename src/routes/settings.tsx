@@ -402,10 +402,10 @@ function Settings() {
             Configure push notifications for flight updates and alerts
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-5">
           {/* Push Notifications Permission */}
-          <div className="space-y-4">
-            <div className="flex items-start justify-between gap-4">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <p className="font-medium">Push Notifications</p>
                 <p className="text-sm text-muted-foreground">
@@ -422,7 +422,7 @@ function Settings() {
                   </p>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <IOSToggle
                   pressed={
                     notificationPermission.enabled &&
@@ -446,7 +446,6 @@ function Settings() {
                       variant="outline"
                       size="sm"
                       onClick={handleTestNotification}
-                      className="ml-2"
                     >
                       Test
                     </Button>
@@ -456,8 +455,8 @@ function Settings() {
           </div>
 
           {/* Notification Preferences */}
-          <div className="space-y-4">
-            <div className="flex items-start justify-between gap-4">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <p className="font-medium">Flight Updates</p>
                 <p className="text-sm text-muted-foreground">
@@ -475,7 +474,7 @@ function Settings() {
                 disabled={updatePreferencesMutation.isPending}
               />
             </div>
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <p className="font-medium">Traffic Alerts</p>
                 <p className="text-sm text-muted-foreground">
@@ -493,7 +492,7 @@ function Settings() {
                 disabled={updatePreferencesMutation.isPending}
               />
             </div>
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <p className="font-medium">Run Reminders</p>
                 <p className="text-sm text-muted-foreground">

@@ -34,10 +34,10 @@ const IOSToggle = React.forwardRef<
   <TogglePrimitive.Root
     ref={ref}
     className={cn(
-      // Base styles
-      'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50',
-      // Background colors - proper iOS toggle colors
-      'bg-gray-200 dark:bg-gray-600 data-[state=on]:bg-green-500',
+      // Base styles - removed border to reduce internal padding
+      'relative inline-flex items-center min-h-7 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50',
+      // Background colors - improved contrast
+      'bg-gray-300 dark:bg-gray-700 data-[state=on]:bg-green-500 data-[state=on]:dark:bg-green-500',
       className
     )}
     {...props}
@@ -45,9 +45,9 @@ const IOSToggle = React.forwardRef<
     <span
       aria-hidden="true"
       className={cn(
-        // Base thumb styles
-        'pointer-events-none inline-block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform duration-200 ease-in-out',
-        // Transform based on state
+        // Base thumb styles - reduced margin for tighter fit
+        'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform duration-200 ease-in-out m-0.5',
+        // Transform based on state - adjusted for tighter fit
         'translate-x-0 data-[state=on]:translate-x-5'
       )}
     />
