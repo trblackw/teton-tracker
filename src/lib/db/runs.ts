@@ -1,5 +1,6 @@
 import { type NewRunForm, type Run, type RunStatus } from '../schema';
 import { getDatabase, getOrCreateUser, handleDatabaseError } from './index';
+import { deleteNotificationsByRunId } from './notifications';
 
 export interface RunsQuery {
   userId?: string;
@@ -314,6 +315,9 @@ export async function updateRun(
 export async function deleteRun(id: string, userId?: string): Promise<boolean> {
   try {
     const db = getDatabase();
+
+    // First, delete associated notifications
+    await deleteNotificationsByRunId(id);
 
     let sql = 'DELETE FROM runs WHERE id = ?';
     const args: any[] = [id];

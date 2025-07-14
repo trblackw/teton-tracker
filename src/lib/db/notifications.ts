@@ -351,6 +351,58 @@ export async function deleteAllNotifications(
   }
 }
 
+// Delete all notifications associated with a run (cascade delete)
+export async function deleteNotificationsByRunId(
+  runId: string
+): Promise<boolean> {
+  try {
+    const db = getDatabase();
+
+    const result = await db.execute({
+      sql: 'DELETE FROM notifications WHERE run_id = ?',
+      args: [runId],
+    });
+
+    const success = result.rowsAffected > 0;
+    if (success) {
+      console.log(
+        `🗑️ Deleted ${result.rowsAffected} notifications for run ${runId}`
+      );
+    }
+
+    return success;
+  } catch (error) {
+    handleDatabaseError(error, 'delete notifications by run ID');
+    return false;
+  }
+}
+
+// Delete all notifications associated with a user (cascade delete)
+export async function deleteNotificationsByUserId(
+  userId: string
+): Promise<boolean> {
+  try {
+    const db = getDatabase();
+
+    const result = await db.execute({
+      sql: 'DELETE FROM notifications WHERE user_id = ?',
+      args: [userId],
+    });
+
+    const success = result.rowsAffected > 0;
+    if (success) {
+      console.log(
+        `🗑️ Deleted ${result.rowsAffected} notifications for user ${userId}`
+      );
+    }
+
+    return success;
+  } catch (error) {
+    handleDatabaseError(error, 'delete notifications by user ID');
+    return false;
+  }
+}
+
 // Get notification statistics
 export async function getNotificationStats(userId?: string): Promise<{
   total: number;
@@ -450,3 +502,6 @@ export async function cleanupOldNotifications(
     return false;
   }
 }
+
+// Note: When user deletion is implemented, ensure to call deleteNotificationsByUserId
+// to maintain referential integrity and clean up all user-associated notifications
