@@ -1,5 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
-import { createFileRoute, Link, useSearch } from '@tanstack/react-router';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  createFileRoute,
+  Link,
+  useRouter,
+  useSearch,
+} from '@tanstack/react-router';
 import {
   Activity,
   AlertTriangle,
@@ -24,6 +29,7 @@ import {
 import { BackButton } from '../components/ui/navigation-arrow';
 import { runsApi } from '../lib/api/client';
 import { useMultipleRunsData } from '../lib/hooks/use-api-data';
+import { toasts } from '../lib/toast';
 
 export const Route = createFileRoute('/active-run')({
   component: ActiveRunPage,
@@ -128,12 +134,45 @@ function RunTimer({
 
 function ActiveRunPage() {
   const search = useSearch({ from: '/active-run' });
+  const router = useRouter();
+  const queryClient = useQueryClient();
 
   // Get the active run data
   const { data: runs = [] } = useQuery({
     queryKey: ['runs'],
     queryFn: runsApi.getRuns,
     refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
+  // Mutation for completing a run
+  const completeRunMutation = useMutation({
+    mutationFn: (runId: string) => runsApi.updateRunStatus(runId, 'completed'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['runs'] });
+      toasts.success(
+        'Run Completed',
+        'The run has been marked as completed successfully.'
+      );
+      router.navigate({ to: '/runs' });
+    },
+    onError: error => {
+      console.error('Failed to complete run:', error);
+      toasts.error('Error', 'Failed to complete the run. Please try again.');
+    },
+  });
+
+  // Mutation for canceling a run
+  const cancelRunMutation = useMutation({
+    mutationFn: (runId: string) => runsApi.updateRunStatus(runId, 'cancelled'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['runs'] });
+      toasts.info('Run Cancelled', 'The run has been cancelled successfully.');
+      router.navigate({ to: '/runs' });
+    },
+    onError: error => {
+      console.error('Failed to cancel run:', error);
+      toasts.error('Error', 'Failed to cancel the run. Please try again.');
+    },
   });
 
   const activeRun =
@@ -445,23 +484,25 @@ function ActiveRunPage() {
                   size="sm"
                   className="bg-green-700 hover:bg-green-800 text-white"
                   onClick={() => {
-                    // TODO: Implement complete run functionality
-                    console.log('Complete run:', activeRun.id);
+                    completeRunMutation.mutate(activeRun.id);
                   }}
+                  disabled={completeRunMutation.isPending}
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  Complete Run
+                  {completeRunMutation.isPending
+                    ? 'Completing...'
+                    : 'Complete Run'}
                 </Button>
                 <Button
                   variant="secondary"
                   size="sm"
                   onClick={() => {
-                    // TODO: Implement cancel run functionality
-                    console.log('Cancel run:', activeRun.id);
+                    cancelRunMutation.mutate(activeRun.id);
                   }}
+                  disabled={cancelRunMutation.isPending}
                 >
                   <XCircle className="h-4 w-4 mr-2" />
-                  Cancel Run
+                  {cancelRunMutation.isPending ? 'Cancelling...' : 'Cancel Run'}
                 </Button>
               </div>
             </div>

@@ -141,6 +141,9 @@ export async function getRuns(query: RunsQuery = {}): Promise<Run[]> {
       notes: row.notes as string | undefined,
       createdAt: new Date(row.created_at as string),
       updatedAt: new Date(row.updated_at as string),
+      completedAt: row.completed_at
+        ? new Date(row.completed_at as string)
+        : undefined,
     }));
 
     console.log(`📊 Retrieved ${runs.length} runs`);
@@ -199,6 +202,9 @@ export async function getRunById(
       notes: row.notes as string | undefined,
       createdAt: new Date(row.created_at as string),
       updatedAt: new Date(row.updated_at as string),
+      completedAt: row.completed_at
+        ? new Date(row.completed_at as string)
+        : undefined,
     };
   } catch (error) {
     handleDatabaseError(error, 'get run by ID');
