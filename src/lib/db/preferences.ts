@@ -51,6 +51,8 @@ export async function getUserPreferences(
         flightUpdates: notificationPreferences.flightUpdates ?? true,
         trafficAlerts: notificationPreferences.trafficAlerts ?? true,
         runReminders: notificationPreferences.runReminders ?? true,
+        smsNotificationsEnabled:
+          notificationPreferences.smsNotificationsEnabled ?? false,
       },
       createdAt: new Date(row.created_at as string),
       updatedAt: new Date(row.updated_at as string),
@@ -121,6 +123,8 @@ export async function updateUserPreferences(
         flightUpdates: data.notificationPreferences?.flightUpdates ?? true,
         trafficAlerts: data.notificationPreferences?.trafficAlerts ?? true,
         runReminders: data.notificationPreferences?.runReminders ?? true,
+        smsNotificationsEnabled:
+          data.notificationPreferences?.smsNotificationsEnabled ?? false,
       };
 
       const preferencesId = crypto.randomUUID();

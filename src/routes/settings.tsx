@@ -65,6 +65,12 @@ function Settings() {
       enabled: false,
     });
 
+  // Local state for form fields with explicit save/cancel
+  const [localEmail, setLocalEmail] = useState('');
+  const [localPhoneNumber, setLocalPhoneNumber] = useState('');
+  const [hasEmailChanges, setHasEmailChanges] = useState(false);
+  const [hasPhoneChanges, setHasPhoneChanges] = useState(false);
+
   // Query for user preferences from API
   const {
     data: preferences,
@@ -76,6 +82,16 @@ function Settings() {
     queryFn: () => preferencesApi.getPreferences(),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
+
+  // Sync local state with preferences when they load
+  useEffect(() => {
+    if (preferences) {
+      setLocalEmail(preferences.email || '');
+      setLocalPhoneNumber(preferences.phoneNumber || '');
+      setHasEmailChanges(false);
+      setHasPhoneChanges(false);
+    }
+  }, [preferences]);
 
   // Load notification permission state on mount
   useEffect(() => {
@@ -155,7 +171,22 @@ function Settings() {
       }
 
       if (variables.notificationPreferences !== undefined) {
-        toasts.settingsUpdated('Notification preferences');
+        // Check if SMS notifications were specifically toggled
+        if (
+          variables.notificationPreferences.smsNotificationsEnabled !==
+          undefined
+        ) {
+          const isEnabled =
+            variables.notificationPreferences.smsNotificationsEnabled;
+          toasts.success(
+            `SMS notifications ${isEnabled ? 'enabled' : 'disabled'}`,
+            isEnabled
+              ? 'You will now receive flight updates via text message'
+              : 'SMS notifications have been turned off'
+          );
+        } else {
+          toasts.settingsUpdated('Notification preferences');
+        }
       }
     },
     onError: error => {
@@ -166,6 +197,42 @@ function Settings() {
       );
     },
   });
+
+  // Handle email input changes
+  const handleEmailChange = (value: string) => {
+    setLocalEmail(value);
+    setHasEmailChanges(value !== (preferences?.email || ''));
+  };
+
+  // Handle phone number input changes
+  const handlePhoneNumberChange = (value: string) => {
+    setLocalPhoneNumber(value);
+    setHasPhoneChanges(value !== (preferences?.phoneNumber || ''));
+  };
+
+  // Save email changes
+  const saveEmail = () => {
+    updatePreferencesMutation.mutate({ email: localEmail });
+    setHasEmailChanges(false);
+  };
+
+  // Cancel email changes
+  const cancelEmail = () => {
+    setLocalEmail(preferences?.email || '');
+    setHasEmailChanges(false);
+  };
+
+  // Save phone number changes
+  const savePhoneNumber = () => {
+    updatePreferencesMutation.mutate({ phoneNumber: localPhoneNumber });
+    setHasPhoneChanges(false);
+  };
+
+  // Cancel phone number changes
+  const cancelPhoneNumber = () => {
+    setLocalPhoneNumber(preferences?.phoneNumber || '');
+    setHasPhoneChanges(false);
+  };
 
   // Mutation for requesting notification permissions
   const requestNotificationPermission = useMutation({
@@ -346,20 +413,39 @@ function Settings() {
                 <Input
                   type="email"
                   placeholder="Enter your email address"
-                  value={preferences?.email || ''}
-                  onChange={e =>
-                    updatePreferencesMutation.mutate({ email: e.target.value })
-                  }
+                  value={localEmail}
+                  onChange={e => handleEmailChange(e.target.value)}
                   disabled={updatePreferencesMutation.isPending}
                 />
               </div>
-              {preferences?.email && (
+              {hasEmailChanges && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={saveEmail}
+                    disabled={updatePreferencesMutation.isPending}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={cancelEmail}
+                    disabled={updatePreferencesMutation.isPending}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
+              {localEmail && !hasEmailChanges && (
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() =>
-                    updatePreferencesMutation.mutate({ email: '' })
-                  }
+                  onClick={() => {
+                    setLocalEmail('');
+                    updatePreferencesMutation.mutate({ email: '' });
+                  }}
                   disabled={updatePreferencesMutation.isPending}
                   title="Clear email"
                 >
@@ -388,22 +474,39 @@ function Settings() {
                 <Input
                   type="tel"
                   placeholder="Enter your phone number"
-                  value={preferences?.phoneNumber || ''}
-                  onChange={e =>
-                    updatePreferencesMutation.mutate({
-                      phoneNumber: e.target.value,
-                    })
-                  }
+                  value={localPhoneNumber}
+                  onChange={e => handlePhoneNumberChange(e.target.value)}
                   disabled={updatePreferencesMutation.isPending}
                 />
               </div>
-              {preferences?.phoneNumber && (
+              {hasPhoneChanges && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={savePhoneNumber}
+                    disabled={updatePreferencesMutation.isPending}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={cancelPhoneNumber}
+                    disabled={updatePreferencesMutation.isPending}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
+              {localPhoneNumber && !hasPhoneChanges && (
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() =>
-                    updatePreferencesMutation.mutate({ phoneNumber: '' })
-                  }
+                  onClick={() => {
+                    setLocalPhoneNumber('');
+                    updatePreferencesMutation.mutate({ phoneNumber: '' });
+                  }}
                   disabled={updatePreferencesMutation.isPending}
                   title="Clear phone number"
                 >
@@ -411,6 +514,30 @@ function Settings() {
                 </Button>
               )}
             </div>
+
+            {/* SMS Notifications Toggle - only show when phone number is saved */}
+            {preferences?.phoneNumber && (
+              <div className="pt-3 border-t">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium">SMS Notifications</p>
+                    <p className="text-sm text-muted-foreground">
+                      Receive flight updates and alerts via text message
+                    </p>
+                  </div>
+                  <IOSToggle
+                    pressed={
+                      preferences?.notificationPreferences
+                        ?.smsNotificationsEnabled ?? false
+                    }
+                    onPressedChange={(value: boolean) =>
+                      handleNotificationToggle('smsNotificationsEnabled', value)
+                    }
+                    disabled={updatePreferencesMutation.isPending}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

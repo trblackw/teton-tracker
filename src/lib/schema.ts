@@ -112,6 +112,7 @@ export const NotificationPreferencesSchema = z.object({
   flightUpdates: z.boolean().default(true),
   trafficAlerts: z.boolean().default(true),
   runReminders: z.boolean().default(true),
+  smsNotificationsEnabled: z.boolean().default(false),
 });
 
 // User preferences schema
