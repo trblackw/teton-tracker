@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import * as authApi from './api/auth';
+import * as notificationsApi from './api/notifications';
 import * as preferencesApi from './api/preferences';
 import * as runsApi from './api/runs';
 
@@ -27,6 +28,15 @@ const apiRoutes = {
   '/api/preferences': {
     GET: preferencesApi.GET,
     PUT: preferencesApi.PUT,
+  },
+  '/api/notifications': {
+    GET: notificationsApi.GET,
+    POST: notificationsApi.POST,
+    PUT: notificationsApi.PUT,
+    DELETE: notificationsApi.DELETE,
+  },
+  '/api/notifications/stats': {
+    GET: notificationsApi.getStats,
   },
 };
 

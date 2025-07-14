@@ -10,7 +10,18 @@ export function formatDateTimeInTimezone(
   includeDate: boolean = true
 ): string {
   try {
+    // Handle null/undefined/empty values
+    if (!dateTime) {
+      return 'No date';
+    }
+
     const date = typeof dateTime === 'string' ? parseISO(dateTime) : dateTime;
+
+    // Check if the parsed date is valid
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date value:', dateTime);
+      return 'Invalid date';
+    }
 
     if (includeDate) {
       // Format: "Jan 15, 2024 2:30 PM" (12-hour with AM/PM)
@@ -20,7 +31,12 @@ export function formatDateTimeInTimezone(
       return formatInTimeZone(date, timezone, 'h:mm a');
     }
   } catch (error) {
-    console.error('Error formatting date in timezone:', error);
+    console.error(
+      'Error formatting date in timezone:',
+      error,
+      'Input:',
+      dateTime
+    );
     return 'Invalid date';
   }
 }
@@ -34,10 +50,22 @@ export function formatDateInTimezone(
   formatString: string = 'MMM d, yyyy'
 ): string {
   try {
+    // Handle null/undefined/empty values
+    if (!date) {
+      return 'No date';
+    }
+
     const dateObj = typeof date === 'string' ? parseISO(date) : date;
+
+    // Check if the parsed date is valid
+    if (isNaN(dateObj.getTime())) {
+      console.warn('Invalid date value:', date);
+      return 'Invalid date';
+    }
+
     return formatInTimeZone(dateObj, timezone, formatString);
   } catch (error) {
-    console.error('Error formatting date in timezone:', error);
+    console.error('Error formatting date in timezone:', error, 'Input:', date);
     return 'Invalid date';
   }
 }
@@ -60,11 +88,28 @@ export function formatFullDateTimeInTimezone(
   timezone: string = 'UTC'
 ): string {
   try {
+    // Handle null/undefined/empty values
+    if (!dateTime) {
+      return 'No date';
+    }
+
     const date = typeof dateTime === 'string' ? parseISO(dateTime) : dateTime;
+
+    // Check if the parsed date is valid
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date value:', dateTime);
+      return 'Invalid date';
+    }
+
     // Format: "Jan 15, 2024 2:30 PM EST"
     return formatInTimeZone(date, timezone, 'MMM d, yyyy h:mm a zzz');
   } catch (error) {
-    console.error('Error formatting full date in timezone:', error);
+    console.error(
+      'Error formatting full date in timezone:',
+      error,
+      'Input:',
+      dateTime
+    );
     return 'Invalid date';
   }
 }
@@ -109,7 +154,19 @@ export function formatScheduleTime(
   timezone: string = 'UTC'
 ): string {
   try {
+    // Handle null/undefined/empty values
+    if (!scheduledTime) {
+      return 'No scheduled time';
+    }
+
     const scheduled = parseISO(scheduledTime);
+
+    // Check if the parsed date is valid
+    if (isNaN(scheduled.getTime())) {
+      console.warn('Invalid scheduled time value:', scheduledTime);
+      return 'Invalid time';
+    }
+
     const now = new Date();
     const diffHours = (scheduled.getTime() - now.getTime()) / (1000 * 60 * 60);
 
@@ -127,8 +184,13 @@ export function formatScheduleTime(
     // Otherwise show full date and time
     return formatDateTimeInTimezone(scheduled, timezone);
   } catch (error) {
-    console.error('Error formatting schedule time:', error);
-    return formatDateTimeInTimezone(scheduledTime, timezone);
+    console.error(
+      'Error formatting schedule time:',
+      error,
+      'Input:',
+      scheduledTime
+    );
+    return 'Invalid time';
   }
 }
 

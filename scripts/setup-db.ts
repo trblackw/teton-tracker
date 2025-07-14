@@ -62,6 +62,8 @@ async function setupDatabaseSchema(): Promise<void> {
         pickup_location TEXT NOT NULL,
         dropoff_location TEXT NOT NULL,
         scheduled_time DATETIME NOT NULL,
+        estimated_duration INTEGER NOT NULL,
+        actual_duration INTEGER,
         status TEXT NOT NULL DEFAULT 'scheduled',
         type TEXT NOT NULL CHECK (type IN ('pickup', 'dropoff')),
         price TEXT NOT NULL DEFAULT '0',
@@ -221,6 +223,29 @@ async function runMigrations(): Promise<void> {
       console.log('✅ Migrated users table to remove fingerprint column');
     } catch (error) {
       console.log('💡 Users table migration skipped or already completed');
+    }
+
+    // Migration: Add duration columns to runs table
+    try {
+      await db.execute(`
+        ALTER TABLE runs ADD COLUMN estimated_duration INTEGER NOT NULL DEFAULT 60
+      `);
+      console.log('✅ Added estimated_duration column to runs table');
+    } catch (error) {
+      console.log(
+        '💡 Estimated duration column already exists or could not be added'
+      );
+    }
+
+    try {
+      await db.execute(`
+        ALTER TABLE runs ADD COLUMN actual_duration INTEGER
+      `);
+      console.log('✅ Added actual_duration column to runs table');
+    } catch (error) {
+      console.log(
+        '💡 Actual duration column already exists or could not be added'
+      );
     }
 
     console.log('✅ Database migrations completed successfully\n');

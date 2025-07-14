@@ -35,9 +35,9 @@ export async function createRun(
       sql: `
         INSERT INTO runs (
           id, user_id, flight_number, airline, departure_airport, arrival_airport,
-          pickup_location, dropoff_location, scheduled_time, status, type,
+          pickup_location, dropoff_location, scheduled_time, estimated_duration, status, type,
           price, notes, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       args: [
         run.id,
@@ -49,6 +49,7 @@ export async function createRun(
         run.pickupLocation,
         run.dropoffLocation,
         run.scheduledTime,
+        run.estimatedDuration,
         run.status,
         run.type,
         run.price,
@@ -90,7 +91,7 @@ export async function getRuns(query: RunsQuery = {}): Promise<Run[]> {
     let sql = `
       SELECT 
         id, flight_number, airline, departure_airport, arrival_airport,
-        pickup_location, dropoff_location, scheduled_time, status, type,
+        pickup_location, dropoff_location, scheduled_time, estimated_duration, actual_duration, status, type,
         price, notes, user_id, created_at, updated_at, completed_at
       FROM runs
     `;
@@ -132,6 +133,8 @@ export async function getRuns(query: RunsQuery = {}): Promise<Run[]> {
       pickupLocation: row.pickup_location as string,
       dropoffLocation: row.dropoff_location as string,
       scheduledTime: row.scheduled_time as string,
+      estimatedDuration: row.estimated_duration as number,
+      actualDuration: row.actual_duration as number | undefined,
       status: row.status as RunStatus,
       type: row.type as 'pickup' | 'dropoff',
       price: row.price as string,
@@ -159,7 +162,7 @@ export async function getRunById(
     let sql = `
       SELECT 
         id, flight_number, airline, departure_airport, arrival_airport,
-        pickup_location, dropoff_location, scheduled_time, status, type,
+        pickup_location, dropoff_location, scheduled_time, estimated_duration, actual_duration, status, type,
         price, notes, user_id, created_at, updated_at, completed_at
       FROM runs 
       WHERE id = ?
@@ -188,6 +191,8 @@ export async function getRunById(
       pickupLocation: row.pickup_location as string,
       dropoffLocation: row.dropoff_location as string,
       scheduledTime: row.scheduled_time as string,
+      estimatedDuration: row.estimated_duration as number,
+      actualDuration: row.actual_duration as number | undefined,
       status: row.status as RunStatus,
       type: row.type as 'pickup' | 'dropoff',
       price: (row.price as string) || '0',
@@ -258,7 +263,7 @@ export async function updateRun(
     let sql = `
       UPDATE runs 
       SET flight_number = ?, airline = ?, departure_airport = ?, arrival_airport = ?,
-          pickup_location = ?, dropoff_location = ?, scheduled_time = ?, type = ?,
+          pickup_location = ?, dropoff_location = ?, scheduled_time = ?, estimated_duration = ?, type = ?,
           price = ?, notes = ?, updated_at = ?
       WHERE id = ?
     `;
@@ -270,6 +275,7 @@ export async function updateRun(
       runData.pickupLocation,
       runData.dropoffLocation,
       runData.scheduledTime,
+      runData.estimatedDuration,
       runData.type,
       runData.price,
       runData.notes || '',
@@ -412,9 +418,9 @@ export async function createRunsBatch(
           sql: `
             INSERT INTO runs (
               id, user_id, flight_number, airline, departure_airport, arrival_airport,
-              pickup_location, dropoff_location, scheduled_time, status, type,
+              pickup_location, dropoff_location, scheduled_time, estimated_duration, status, type,
               price, notes, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
           args: [
             run.id,
@@ -426,6 +432,7 @@ export async function createRunsBatch(
             run.pickupLocation,
             run.dropoffLocation,
             run.scheduledTime,
+            run.estimatedDuration,
             run.status,
             run.type,
             run.price,

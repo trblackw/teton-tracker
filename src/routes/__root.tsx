@@ -8,6 +8,7 @@ import {
 import { Activity, Bell, Plane, Plus, Settings } from 'lucide-react';
 import { useEffect } from 'react';
 import { Toaster } from 'sonner';
+import { ActiveRunBanner } from '../components/active-run-banner';
 import { PasswordProtection } from '../components/password-protection';
 import { ThemeProvider } from '../components/theme-provider';
 import { Button } from '../components/ui/button';
@@ -38,6 +39,9 @@ function RootComponent() {
         <AppContextProvider>
           <PasswordProtection>
             <div className="min-h-screen bg-background">
+              {/* Active Run Banner */}
+              <ActiveRunBanner />
+
               <div className="container mx-auto px-4 py-4">
                 <div className="flex flex-col lg:flex-row lg:gap-8">
                   {/* Desktop Navigation */}

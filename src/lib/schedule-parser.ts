@@ -272,14 +272,14 @@ function parseScheduleBlock(
 // Helper function to detect date patterns in schedule messages
 function extractDateFromMessage(message: string): string | null {
   const lines = message.split('\n').map(line => line.trim());
-  
+
   // Look for common date patterns
   const datePatterns = [
-    /\b(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\b/,  // MM/DD/YYYY or MM-DD-YYYY
-    /\b(\d{2,4}[\/\-]\d{1,2}[\/\-]\d{1,2})\b/,  // YYYY/MM/DD or YYYY-MM-DD
-    /\b(yesterday|today|tomorrow)\b/i,            // Relative dates
-    /\b(\d{1,2}\/\d{1,2})\b/,                    // MM/DD (current year)
-    /\b(\w{3,9}\s+\d{1,2})\b/,                   // "December 15" or "Dec 15"
+    /\b(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\b/, // MM/DD/YYYY or MM-DD-YYYY
+    /\b(\d{2,4}[\/\-]\d{1,2}[\/\-]\d{1,2})\b/, // YYYY/MM/DD or YYYY-MM-DD
+    /\b(yesterday|today|tomorrow)\b/i, // Relative dates
+    /\b(\d{1,2}\/\d{1,2})\b/, // MM/DD (current year)
+    /\b(\w{3,9}\s+\d{1,2})\b/, // "December 15" or "Dec 15"
   ];
 
   for (const line of lines) {
@@ -287,7 +287,7 @@ function extractDateFromMessage(message: string): string | null {
       const match = line.match(pattern);
       if (match) {
         const dateStr = match[1];
-        
+
         // Handle relative dates
         if (dateStr.toLowerCase() === 'yesterday') {
           const yesterday = new Date();
@@ -300,20 +300,24 @@ function extractDateFromMessage(message: string): string | null {
           tomorrow.setDate(tomorrow.getDate() + 1);
           return tomorrow.toISOString().split('T')[0];
         }
-        
+
         // Try to parse the date
         try {
           let parsedDate: Date;
-          
+
           // Handle MM/DD format (assume current year)
           if (/^\d{1,2}\/\d{1,2}$/.test(dateStr)) {
             const [month, day] = dateStr.split('/');
             const currentYear = new Date().getFullYear();
-            parsedDate = new Date(currentYear, parseInt(month, 10) - 1, parseInt(day, 10));
+            parsedDate = new Date(
+              currentYear,
+              parseInt(month, 10) - 1,
+              parseInt(day, 10)
+            );
           } else {
             parsedDate = new Date(dateStr);
           }
-          
+
           // Validate the date
           if (!isNaN(parsedDate.getTime())) {
             return parsedDate.toISOString().split('T')[0];
@@ -325,7 +329,7 @@ function extractDateFromMessage(message: string): string | null {
       }
     }
   }
-  
+
   return null;
 }
 
@@ -346,7 +350,7 @@ export function parseScheduleMessage(message: string): ParseResult {
   try {
     // Try to extract date from the message
     const extractedDate = extractDateFromMessage(message);
-    
+
     // Split message into blocks (each run is separated by multiple newlines or specific patterns)
     const lines = message
       .split('\n')
@@ -430,9 +434,13 @@ export function convertParsedRunToForm(
   baseDate: string = ''
 ): NewRunForm {
   // Check if there's a detected date in the notes
-  const detectedDateMatch = parsedRun.notes.match(/Detected date: (\d{4}-\d{2}-\d{2})/);
-  const useDate = detectedDateMatch ? detectedDateMatch[1] : (baseDate || new Date().toISOString().split('T')[0]);
-  
+  const detectedDateMatch = parsedRun.notes.match(
+    /Detected date: (\d{4}-\d{2}-\d{2})/
+  );
+  const useDate = detectedDateMatch
+    ? detectedDateMatch[1]
+    : baseDate || new Date().toISOString().split('T')[0];
+
   let scheduledTime = '';
 
   if (parsedRun.time) {
@@ -474,7 +482,10 @@ export function convertParsedRunToForm(
   }
 
   // Clean up notes to remove the detected date marker
-  const cleanNotes = parsedRun.notes.replace(/\s*\|\s*Detected date: \d{4}-\d{2}-\d{2}/, '');
+  const cleanNotes = parsedRun.notes.replace(
+    /\s*\|\s*Detected date: \d{4}-\d{2}-\d{2}/,
+    ''
+  );
 
   return {
     flightNumber: parsedRun.flightNumber,
@@ -484,6 +495,7 @@ export function convertParsedRunToForm(
     pickupLocation: parsedRun.pickupLocation,
     dropoffLocation: parsedRun.dropoffLocation,
     scheduledTime,
+    estimatedDuration: 60, // Default 60 minutes for parsed runs
     type: parsedRun.type,
     price: cleanPrice,
     notes: cleanNotes,

@@ -14,6 +14,7 @@ import { Route as RunsRouteImport } from './routes/runs';
 import { Route as NotificationsRouteImport } from './routes/notifications';
 import { Route as FlightsRouteImport } from './routes/flights';
 import { Route as AddRouteImport } from './routes/add';
+import { Route as ActiveRunRouteImport } from './routes/active-run';
 import { Route as IndexRouteImport } from './routes/index';
 
 const SettingsRoute = SettingsRouteImport.update({
@@ -41,6 +42,11 @@ const AddRoute = AddRouteImport.update({
   path: '/add',
   getParentRoute: () => rootRouteImport,
 } as any);
+const ActiveRunRoute = ActiveRunRouteImport.update({
+  id: '/active-run',
+  path: '/active-run',
+  getParentRoute: () => rootRouteImport,
+} as any);
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -49,6 +55,7 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute;
+  '/active-run': typeof ActiveRunRoute;
   '/add': typeof AddRoute;
   '/flights': typeof FlightsRoute;
   '/notifications': typeof NotificationsRoute;
@@ -57,6 +64,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute;
+  '/active-run': typeof ActiveRunRoute;
   '/add': typeof AddRoute;
   '/flights': typeof FlightsRoute;
   '/notifications': typeof NotificationsRoute;
@@ -66,6 +74,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   '/': typeof IndexRoute;
+  '/active-run': typeof ActiveRunRoute;
   '/add': typeof AddRoute;
   '/flights': typeof FlightsRoute;
   '/notifications': typeof NotificationsRoute;
@@ -76,16 +85,25 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
     | '/'
+    | '/active-run'
     | '/add'
     | '/flights'
     | '/notifications'
     | '/runs'
     | '/settings';
   fileRoutesByTo: FileRoutesByTo;
-  to: '/' | '/add' | '/flights' | '/notifications' | '/runs' | '/settings';
+  to:
+    | '/'
+    | '/active-run'
+    | '/add'
+    | '/flights'
+    | '/notifications'
+    | '/runs'
+    | '/settings';
   id:
     | '__root__'
     | '/'
+    | '/active-run'
     | '/add'
     | '/flights'
     | '/notifications'
@@ -95,6 +113,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
+  ActiveRunRoute: typeof ActiveRunRoute;
   AddRoute: typeof AddRoute;
   FlightsRoute: typeof FlightsRoute;
   NotificationsRoute: typeof NotificationsRoute;
@@ -139,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AddRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/active-run': {
+      id: '/active-run';
+      path: '/active-run';
+      fullPath: '/active-run';
+      preLoaderRoute: typeof ActiveRunRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/': {
       id: '/';
       path: '/';
@@ -151,6 +177,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ActiveRunRoute: ActiveRunRoute,
   AddRoute: AddRoute,
   FlightsRoute: FlightsRoute,
   NotificationsRoute: NotificationsRoute,

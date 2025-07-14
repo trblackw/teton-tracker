@@ -179,6 +179,7 @@ async function seedData() {
         pickupLocation,
         dropoffLocation,
         scheduledTime: scheduledTime.toISOString(),
+        estimatedDuration: Math.floor(Math.random() * 60) + 30, // 30-90 minutes
         type: runType,
         status,
         price: generatePrice(),

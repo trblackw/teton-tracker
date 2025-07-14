@@ -165,6 +165,7 @@ function AddRun() {
       pickupLocation: '',
       dropoffLocation: '',
       scheduledTime: '',
+      estimatedDuration: 60,
       type: 'pickup',
       price: '',
       notes: '',
@@ -182,6 +183,7 @@ function AddRun() {
         pickupLocation: editingRun.pickupLocation,
         dropoffLocation: editingRun.dropoffLocation,
         scheduledTime: editingRun.scheduledTime,
+        estimatedDuration: editingRun.estimatedDuration,
         type: editingRun.type,
         price: editingRun.price,
         notes: editingRun.notes || '',
@@ -198,6 +200,7 @@ function AddRun() {
     pickupLocation: '',
     dropoffLocation: '',
     scheduledTime: '',
+    estimatedDuration: 60,
     type: 'pickup',
     price: '',
     notes: '',
@@ -781,6 +784,35 @@ function AddRun() {
                 />
                 <FormField
                   control={form.control}
+                  name="estimatedDuration"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Estimated Duration (minutes)
+                        <small className="text-destructive">*</small>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="60"
+                          min="1"
+                          max="1440"
+                          value={field.value}
+                          onChange={e =>
+                            field.onChange(parseInt(e.target.value) || 60)
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
                   name="type"
                   render={({ field }) => (
                     <FormItem>
@@ -806,25 +838,24 @@ function AddRun() {
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <DollarSign className="h-4 w-4" />
+                        Price
+                        <small className="text-destructive">*</small>
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., $100 or 176" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
-
-              <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4" />
-                      Price
-                      <small className="text-destructive">*</small>
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., $100 or 176" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
               <FormField
                 control={form.control}

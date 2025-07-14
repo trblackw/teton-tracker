@@ -122,7 +122,40 @@ bun start
 - Get traffic updates for optimal route planning
 - Receive notifications for important changes
 
-## 🎨 Customization
+## �� Customization
+
+### Navigation Components
+
+The app includes a reusable navigation arrow component for consistent mobile navigation:
+
+```tsx
+import { NavigationArrow, BackButton, NextButton, PreviousButton } from '../components/ui/navigation-arrow';
+
+// Basic usage
+<NavigationArrow direction="left" variant="back" onClick={() => router.back()} />
+
+// Convenience components
+<BackButton onClick={() => router.back()} />
+<NextButton onClick={() => nextPage()} />
+<PreviousButton onClick={() => prevPage()} />
+
+// With different sizes
+<BackButton size="sm" />
+<BackButton size="md" />
+<BackButton size="lg" />
+
+// Custom styling
+<BackButton className="text-blue-600 hover:text-blue-700" />
+```
+
+**Navigation Component Props:**
+
+- `direction`: 'left' | 'right' (default: 'left')
+- `variant`: 'back' | 'chevron' (default: 'back')
+- `size`: 'sm' | 'md' | 'lg' (default: 'md')
+- `onClick`: Function to handle navigation
+- `disabled`: Boolean to disable the button
+- `aria-label`: Custom accessibility label
 
 ### Theme Configuration
 

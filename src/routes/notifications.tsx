@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import {
-  ArrowLeft,
   Bell,
   CheckCircle,
   ChevronDown,
@@ -26,6 +25,7 @@ import {
   CardTitle,
 } from '../components/ui/card';
 import { Input } from '../components/ui/input';
+import { BackButton } from '../components/ui/navigation-arrow';
 import {
   Select,
   SelectContent,
@@ -279,7 +279,7 @@ function Notifications() {
           size="sm"
           className="border-blue-600 text-blue-600 hover:bg-blue-700 hover:text-white"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <BackButton size="sm" />
           <Settings className="h-4 w-4" />
           Notification Settings
         </Button>
@@ -512,7 +512,7 @@ function Notifications() {
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                           <span>
                             {formatScheduleTime(
-                              notification.createdAt?.toISOString?.() || ''
+                              notification.createdAt?.toString() || ''
                             )}
                           </span>
                           {notification.flightNumber && (

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import {
   AlertCircle,
+  CheckCircle,
   Clock,
   Clock10,
   Edit,
@@ -9,6 +10,7 @@ import {
   MapPin,
   Navigation,
   Plane,
+  Play,
   Plus,
   Trash2,
 } from 'lucide-react';
@@ -41,7 +43,6 @@ import { runsApi } from '../lib/api/client';
 import { useMultipleRunsData } from '../lib/hooks/use-api-data';
 import { useTimezoneFormatters } from '../lib/hooks/use-timezone';
 import { type Run, type RunStatus } from '../lib/schema';
-import { pollingService } from '../lib/services/polling-service';
 import { toasts } from '../lib/toast';
 
 function Runs() {
@@ -79,8 +80,6 @@ function Runs() {
     run => run.status === 'completed' || run.status === 'cancelled'
   );
 
-  const activeRuns = activeTab === 'current' ? currentRuns : pastRuns;
-
   // Mutation for updating run status
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: RunStatus }) =>
@@ -98,25 +97,37 @@ function Runs() {
     mutationFn: runsApi.deleteRun,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['runs'] });
-      toasts.success('Run deleted', 'The run has been successfully removed.');
+      toasts.success('Run deleted', 'The run has been deleted successfully.');
+      setDeleteDialogOpen(false);
+      setRunToDelete(null);
     },
     onError: error => {
       console.error('Failed to delete run:', error);
-      toasts.error(
-        'Failed to delete run',
-        'Please try again or contact support if the problem persists.'
-      );
+      toasts.error('Failed to delete run', 'Please try again.');
     },
   });
 
+  // Data refresh handlers
   const refreshAllData = () => {
-    queryClient.invalidateQueries({ queryKey: ['runs'] });
-    runsApiData.refetchAll();
     refetchRuns();
+    queryClient.invalidateQueries({ queryKey: ['runs'] });
   };
 
   const handleUpdateStatus = (id: string, status: RunStatus) => {
     updateStatusMutation.mutate({ id, status });
+  };
+
+  const handleStartRun = (run: Run) => {
+    handleUpdateStatus(run.id, 'active');
+    toasts.success('Run started', `${run.flightNumber} run is now active.`);
+  };
+
+  const handleStopRun = (run: Run) => {
+    handleUpdateStatus(run.id, 'completed');
+    toasts.success(
+      'Run completed',
+      `${run.flightNumber} run has been completed.`
+    );
   };
 
   const handleDeleteRun = (id: string) => {
@@ -127,86 +138,96 @@ function Runs() {
   const confirmDelete = () => {
     if (runToDelete) {
       deleteRunMutation.mutate(runToDelete);
-      setDeleteDialogOpen(false);
-      setRunToDelete(null);
     }
   };
 
   const handleEditRun = (run: Run) => {
-    navigate({
-      to: '/add',
-      search: { edit: run.id },
-    });
+    navigate({ to: '/add', search: { edit: run.id } });
   };
 
   const refreshRunData = (run: Run) => {
-    const runData = runsApiData.data.find(data => data.run.id === run.id);
-    if (runData) {
-      queryClient.invalidateQueries({
-        queryKey: ['flight-status', run.flightNumber],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ['traffic-data', run.pickupLocation, run.dropoffLocation],
-      });
-    }
+    queryClient.invalidateQueries({
+      queryKey: ['flight-status', run.flightNumber],
+    });
+    queryClient.invalidateQueries({
+      queryKey: ['traffic-data', run.pickupLocation, run.dropoffLocation],
+    });
   };
 
   const getStatusColor = (status: RunStatus) => {
     switch (status) {
       case 'scheduled':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+        return 'bg-blue-100 text-blue-800';
       case 'active':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+        return 'bg-green-100 text-green-800';
       case 'completed':
-        return 'bg-muted text-muted-foreground';
+        return 'bg-green-100 text-green-800';
       case 'cancelled':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+        return 'bg-red-100 text-red-800';
       default:
-        return 'bg-muted text-muted-foreground';
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getTabHeader = () => {
-    const count = activeRuns.length;
-    const tabName = activeTab === 'current' ? 'Current' : 'Past';
-    return {
-      title: `${tabName} Runs`,
-      subtitle:
-        count === 0
-          ? `No ${activeTab} runs`
-          : `${count} ${activeTab} run${count !== 1 ? 's' : ''}`,
-    };
+    if (activeTab === 'current') {
+      return {
+        title: 'Current Runs',
+        subtitle: 'View and manage your scheduled and active runs',
+      };
+    } else {
+      return {
+        title: 'Past Runs',
+        subtitle: 'View your completed and cancelled runs',
+      };
+    }
   };
 
   const renderEmptyState = () => {
     if (activeTab === 'current') {
       return (
-        <Card className="bg-accent/50">
-          <CardContent className="p-8 text-center">
-            <Plane className="h-16 w-16 text-muted-foreground mx-auto mb-6" />
-            <p className="text-muted-foreground text-lg mb-4">
-              No current runs scheduled. Add your first run to get started!
-            </p>
-            <Link to="/add">
-              <Button className="mt-2 bg-green-600 hover:bg-green-700 text-white">
-                <Plus className="h-4 w-4" />
-                Add Your First Run
-              </Button>
-            </Link>
+        <Card className="text-center py-12">
+          <CardContent>
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+                <Clock className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-medium text-foreground">
+                  No current runs
+                </h3>
+                <p className="text-muted-foreground max-w-md">
+                  Schedule your first run to get started tracking flights and
+                  managing your transportation services.
+                </p>
+              </div>
+              <Link to="/add">
+                <Button className="bg-green-600 hover:bg-green-700 text-white">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Schedule Run
+                </Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
       );
     } else {
       return (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Plane className="h-16 w-16 text-muted-foreground mx-auto mb-6" />
-            <p className="text-muted-foreground text-lg mb-4">
-              No completed or cancelled runs yet.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Completed runs will appear here for your records.
-            </p>
+        <Card className="text-center py-12">
+          <CardContent>
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+                <FileText className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-medium text-foreground">
+                  No past runs
+                </h3>
+                <p className="text-muted-foreground max-w-md">
+                  Completed and cancelled runs will appear here.
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       );
@@ -215,38 +236,65 @@ function Runs() {
 
   if (runsLoading) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Runs</h2>
-          <p className="text-muted-foreground mt-1">Loading your runs...</p>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="h-8 w-48 bg-muted rounded animate-pulse" />
+            <div className="h-4 w-80 bg-muted rounded animate-pulse mt-2" />
+          </div>
+          <div className="flex gap-2">
+            <div className="h-10 w-24 bg-muted rounded animate-pulse" />
+            <div className="h-10 w-24 bg-muted rounded animate-pulse" />
+          </div>
         </div>
-        <Card>
-          <CardContent className="p-8 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading runs...</p>
-          </CardContent>
-        </Card>
+        <div className="grid gap-4">
+          {[1, 2, 3].map(i => (
+            <Card key={i} className="w-full">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="h-6 w-32 bg-muted rounded animate-pulse" />
+                    <div className="h-4 w-48 bg-muted rounded animate-pulse mt-2" />
+                  </div>
+                  <div className="h-6 w-20 bg-muted rounded animate-pulse" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="h-4 w-full bg-muted rounded animate-pulse" />
+                  <div className="h-4 w-3/4 bg-muted rounded animate-pulse" />
+                  <div className="h-4 w-1/2 bg-muted rounded animate-pulse" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
 
   if (runsError) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Runs</h2>
-          <p className="text-muted-foreground mt-1">Failed to load runs</p>
-        </div>
-        <Card className="border-destructive">
-          <CardContent className="p-8 text-center">
-            <AlertCircle className="h-16 w-16 text-destructive mx-auto mb-6" />
-            <p className="text-destructive text-lg mb-4">
-              Failed to load runs from database
-            </p>
-            <Button onClick={() => refetchRuns()}>Retry</Button>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="text-center py-12">
+        <CardContent>
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+              <AlertCircle className="h-8 w-8 text-red-600" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-medium text-foreground">
+                Error loading runs
+              </h3>
+              <p className="text-muted-foreground max-w-md">
+                Unable to load your runs. Please try again.
+              </p>
+            </div>
+            <Button onClick={refreshAllData} variant="outline">
+              Try Again
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -331,12 +379,44 @@ function Runs() {
                           </CardTitle>
                           <CardDescription>{run.airline}</CardDescription>
                         </div>
-                        <div className="flex items-center">
+                        <div className="flex items-center gap-1">
                           <Badge
                             className={`${getStatusColor(run.status)} mr-2`}
                           >
                             {run.status}
                           </Badge>
+
+                          {/* Start/Stop Controls */}
+                          {run.status === 'scheduled' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={e => {
+                                e.stopPropagation();
+                                handleStartRun(run);
+                              }}
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                              title="Start run"
+                            >
+                              <Play className="size-4" />
+                            </Button>
+                          )}
+
+                          {run.status === 'active' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={e => {
+                                e.stopPropagation();
+                                handleStopRun(run);
+                              }}
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              title="Complete run"
+                            >
+                              <CheckCircle className="size-4" />
+                            </Button>
+                          )}
+
                           <Button
                             variant="ghost"
                             size="sm"
@@ -345,7 +425,6 @@ function Runs() {
                               handleEditRun(run);
                             }}
                             className="text-muted-foreground"
-                            style={{ padding: 0 }}
                             title="Edit run"
                           >
                             <Edit className="size-4" />
@@ -359,7 +438,6 @@ function Runs() {
                             }}
                             disabled={deleteRunMutation.isPending}
                             title="Delete run"
-                            style={{ padding: 0 }}
                           >
                             <Trash2 className="size-4 text-destructive" />
                           </Button>
@@ -373,6 +451,12 @@ function Runs() {
                             <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                             <span className="text-sm font-medium">
                               {formatScheduleTime(run.scheduledTime)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock10 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span className="text-sm text-muted-foreground">
+                              Est. {run.estimatedDuration} min
                             </span>
                           </div>
                           <div className="flex items-start gap-2">
@@ -400,7 +484,7 @@ function Runs() {
                                 Flight: {flightStatus.status}
                                 {flightStatus.delay &&
                                   flightStatus.delay > 0 && (
-                                    <span className="text-destructive ml-1">
+                                    <span className="text-red-600 ml-1">
                                       (+{flightStatus.delay} min)
                                     </span>
                                   )}
@@ -415,11 +499,11 @@ function Runs() {
                                 {trafficData.distance} •{' '}
                                 <span
                                   className={
-                                    trafficData.status === 'heavy'
-                                      ? 'text-red-600 dark:text-red-400'
+                                    trafficData.status === 'good'
+                                      ? 'text-green-600'
                                       : trafficData.status === 'moderate'
-                                        ? 'text-yellow-600 dark:text-yellow-400'
-                                        : 'text-green-600 dark:text-green-400'
+                                        ? 'text-yellow-600'
+                                        : 'text-red-600'
                                   }
                                 >
                                   {trafficData.status}
@@ -427,69 +511,26 @@ function Runs() {
                               </span>
                             </div>
                           )}
-                          {trafficData?.incidents &&
-                            trafficData.incidents.length > 0 && (
-                              <div className="flex items-center gap-2">
-                                <AlertCircle className="h-4 w-4 text-orange-500 dark:text-orange-400 flex-shrink-0" />
-                                <span className="text-sm text-orange-600 dark:text-orange-400">
-                                  {trafficData.incidents.length} incident(s)
-                                </span>
-                              </div>
-                            )}
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold">
+                              ${run.price}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={e => {
+                                e.stopPropagation();
+                                refreshRunData(run);
+                              }}
+                              className="text-muted-foreground"
+                              title="Refresh data"
+                            >
+                              <RefreshButton
+                                onRefresh={() => refreshRunData(run)}
+                              />
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-
-                      <div className="flex flex-wrap justify-between gap-2 mt-4">
-                        {activeTab === 'current' && (
-                          <RefreshButton
-                            variant="secondary"
-                            size="sm"
-                            onRefresh={() => refreshRunData(run)}
-                            onClick={e => e.stopPropagation()}
-                            className="min-w-0"
-                          />
-                        )}
-                        {run.status === 'scheduled' && (
-                          <Button
-                            size="sm"
-                            onClick={e => {
-                              e.stopPropagation();
-                              handleUpdateStatus(run.id, 'active');
-                            }}
-                            disabled={updateStatusMutation.isPending}
-                            className="min-w-0 bg-green-600 hover:bg-green-700 text-white"
-                          >
-                            <Clock10 className="h-4 w-4" />
-                            Start Run
-                          </Button>
-                        )}
-                        {run.status === 'active' && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={e => {
-                              e.stopPropagation();
-                              handleUpdateStatus(run.id, 'completed');
-                            }}
-                            disabled={updateStatusMutation.isPending}
-                            className="min-w-0"
-                          >
-                            Complete Run
-                          </Button>
-                        )}
-                        {run.status === 'active' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={e => {
-                              e.stopPropagation();
-                              pollingService.triggerPoll();
-                            }}
-                            className="min-w-0"
-                          >
-                            Manual Poll
-                          </Button>
-                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -508,36 +549,21 @@ function Runs() {
                   pastRuns.some(pastRun => pastRun.id === run.id)
                 )
                 .map(({ run, flightStatus, trafficData }) => (
-                  <Card
-                    key={run.id}
-                    className="w-full opacity-75 cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => handleEditRun(run)}
-                  >
+                  <Card key={run.id} className="w-full opacity-75">
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
                         <div>
                           <CardTitle className="text-lg">
                             {run.flightNumber}
                           </CardTitle>
-                          <CardDescription>
-                            {run.airline} • {run.departure} → {run.arrival}
-                          </CardDescription>
+                          <CardDescription>{run.airline}</CardDescription>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className={getStatusColor(run.status)}>
+                        <div className="flex items-center">
+                          <Badge
+                            className={`${getStatusColor(run.status)} mr-2`}
+                          >
                             {run.status}
                           </Badge>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={e => {
-                              e.stopPropagation();
-                              handleEditRun(run);
-                            }}
-                            title="Edit run"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -548,7 +574,7 @@ function Runs() {
                             disabled={deleteRunMutation.isPending}
                             title="Delete run"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="size-4 text-destructive" />
                           </Button>
                         </div>
                       </div>
@@ -560,6 +586,17 @@ function Runs() {
                             <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                             <span className="text-sm font-medium">
                               {formatScheduleTime(run.scheduledTime)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock10 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span className="text-sm text-muted-foreground">
+                              Est. {run.estimatedDuration} min
+                              {run.actualDuration && (
+                                <span className="ml-1">
+                                  • Actual: {run.actualDuration} min
+                                </span>
+                              )}
                             </span>
                           </div>
                           <div className="flex items-start gap-2">
@@ -580,49 +617,11 @@ function Runs() {
                         </div>
 
                         <div className="space-y-3">
-                          {flightStatus && (
-                            <div className="flex items-center gap-2">
-                              <Plane className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                              <span className="text-sm">
-                                Flight: {flightStatus.status}
-                                {flightStatus.delay &&
-                                  flightStatus.delay > 0 && (
-                                    <span className="text-destructive ml-1">
-                                      (+{flightStatus.delay} min)
-                                    </span>
-                                  )}
-                              </span>
-                            </div>
-                          )}
-                          {trafficData && (
-                            <div className="flex items-start gap-2">
-                              <Navigation className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                              <span className="text-sm">
-                                Traffic: {trafficData.duration} min •{' '}
-                                {trafficData.distance} •{' '}
-                                <span
-                                  className={
-                                    trafficData.status === 'heavy'
-                                      ? 'text-red-600 dark:text-red-400'
-                                      : trafficData.status === 'moderate'
-                                        ? 'text-yellow-600 dark:text-yellow-400'
-                                        : 'text-green-600 dark:text-green-400'
-                                  }
-                                >
-                                  {trafficData.status}
-                                </span>
-                              </span>
-                            </div>
-                          )}
-                          {trafficData?.incidents &&
-                            trafficData.incidents.length > 0 && (
-                              <div className="flex items-center gap-2">
-                                <AlertCircle className="h-4 w-4 text-orange-500 dark:text-orange-400 flex-shrink-0" />
-                                <span className="text-sm text-orange-600 dark:text-orange-400">
-                                  {trafficData.incidents.length} incident(s)
-                                </span>
-                              </div>
-                            )}
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold">
+                              ${run.price}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -651,9 +650,8 @@ function Runs() {
               Cancel
             </Button>
             <Button
-              variant="ghost"
+              variant="destructive"
               onClick={confirmDelete}
-              className="text-destructive hover:text-destructive-foreground border-destructive"
               disabled={deleteRunMutation.isPending}
             >
               {deleteRunMutation.isPending ? 'Deleting...' : 'Delete'}

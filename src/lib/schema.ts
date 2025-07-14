@@ -45,6 +45,12 @@ export const DateTimeSchema = z
       .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, 'Invalid datetime format')
   );
 
+export const DurationSchema = z
+  .number()
+  .int('Duration must be a whole number')
+  .min(1, 'Duration must be at least 1 minute')
+  .max(1440, 'Duration cannot exceed 24 hours (1440 minutes)');
+
 // Enums
 export const RunTypeSchema = z.enum(['pickup', 'dropoff'], {
   errorMap: () => ({
@@ -152,6 +158,8 @@ export const RunSchema = z.object({
   arrival: AirportCodeSchema,
   pickupLocation: LocationSchema,
   dropoffLocation: LocationSchema,
+  estimatedDuration: DurationSchema,
+  actualDuration: DurationSchema.optional(),
   scheduledTime: DateTimeSchema,
   type: RunTypeSchema,
   status: RunStatusSchema,
@@ -232,6 +240,7 @@ export const NewRunFormSchema = z.object({
   arrival: AirportCodeSchema,
   pickupLocation: LocationSchema,
   dropoffLocation: LocationSchema,
+  estimatedDuration: DurationSchema,
   scheduledTime: DateTimeSchema,
   type: RunTypeSchema,
   price: PriceSchema,
