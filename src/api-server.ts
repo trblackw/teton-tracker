@@ -74,6 +74,40 @@ async function startApiServer() {
         });
       }
 
+      // Auth session check endpoint
+      if (url.pathname === '/api/auth/check') {
+        const response = await authApi.checkAuthHandler(request);
+
+        // Add CORS headers to response
+        const headers = new Headers(response.headers);
+        Object.entries(corsHeaders).forEach(([key, value]) => {
+          headers.set(key, value);
+        });
+
+        return new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers,
+        });
+      }
+
+      // Auth logout endpoint
+      if (url.pathname === '/api/auth/logout') {
+        const response = await authApi.logoutHandler(request);
+
+        // Add CORS headers to response
+        const headers = new Headers(response.headers);
+        Object.entries(corsHeaders).forEach(([key, value]) => {
+          headers.set(key, value);
+        });
+
+        return new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers,
+        });
+      }
+
       // API routes only
       if (url.pathname === '/api/runs') {
         const response =

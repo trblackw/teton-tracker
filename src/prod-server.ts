@@ -1,9 +1,19 @@
 #!/usr/bin/env bun
+import * as authApi from './api/auth';
 import * as preferencesApi from './api/preferences';
 import * as runsApi from './api/runs';
 
 // API route handlers
 const apiRoutes = {
+  '/api/auth/validate-password': {
+    POST: authApi.passwordValidationHandler,
+  },
+  '/api/auth/check': {
+    GET: authApi.checkAuthHandler,
+  },
+  '/api/auth/logout': {
+    POST: authApi.logoutHandler,
+  },
   '/api/runs': {
     GET: runsApi.GET,
     POST: runsApi.POST,

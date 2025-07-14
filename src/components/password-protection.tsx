@@ -1,6 +1,6 @@
 import { Eye, EyeOff, Lock } from 'lucide-react';
 import { useEffect, useState } from 'react';
-// import { isDebugMode } from '../lib/debug';
+import { authApi } from '../lib/api/client';
 import { isDebugMode } from '../lib/debug';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -16,56 +16,59 @@ export function PasswordProtection({ children }: PasswordProtectionProps) {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Check if user is already authenticated on component mount
+  // Check authentication status with server on component mount
   useEffect(() => {
-    // Skip password protection in debug mode
-    if (isDebugMode()) {
-      setIsAuthenticated(true);
-      setIsLoading(false);
-      return;
-    }
+    const checkAuthStatus = async () => {
+      // Skip password protection in debug mode
+      if (isDebugMode()) {
+        setIsAuthenticated(true);
+        setIsLoading(false);
+        return;
+      }
 
-    const authToken = sessionStorage.getItem('teton-tracker-auth');
-    if (authToken === 'authenticated') {
-      setIsAuthenticated(true);
-    }
-    setIsLoading(false);
+      try {
+        // Check authentication with server using secure API client
+        const data = await authApi.checkAuthStatus();
+        setIsAuthenticated(data.authenticated);
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuthStatus();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
 
     try {
-      // Validate password via server endpoint (use API server port)
-      const response = await fetch(
-        'http://localhost:3001/api/auth/validate-password',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ password }),
-        }
-      );
+      // Submit password to server for validation using secure API client
+      const result = await authApi.validatePassword(password);
 
-      if (response.ok) {
-        setIsAuthenticated(true);
-        sessionStorage.setItem('teton-tracker-auth', 'authenticated');
-        setPassword('');
+      if (result.success) {
+        // Server has set auth cookie, refresh the page to re-check auth status
+        window.location.reload();
       } else {
-        setError('Incorrect password. Please try again.');
+        setError(result.error || 'Authentication failed. Please try again.');
         setPassword('');
       }
     } catch (error) {
       console.error('Password validation error:', error);
       setError('Authentication error. Please try again.');
       setPassword('');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // Show loading state briefly
+  // Show loading state while checking authentication
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -102,11 +105,13 @@ export function PasswordProtection({ children }: PasswordProtectionProps) {
                     onChange={e => setPassword(e.target.value)}
                     className="pr-10"
                     autoFocus
+                    disabled={isSubmitting}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    disabled={isSubmitting}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -120,10 +125,19 @@ export function PasswordProtection({ children }: PasswordProtectionProps) {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={!password.trim()}
+                disabled={!password.trim() || isSubmitting}
               >
-                <Lock className="h-4 w-4 mr-2" />
-                Access Application
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2" />
+                    Verifying...
+                  </>
+                ) : (
+                  <>
+                    <Lock className="h-4 w-4 mr-2" />
+                    Access Application
+                  </>
+                )}
               </Button>
             </form>
             <div className="mt-6 text-center">
