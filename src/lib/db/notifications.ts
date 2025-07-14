@@ -502,6 +502,3 @@ export async function cleanupOldNotifications(
     return false;
   }
 }
-
-// Note: When user deletion is implemented, ensure to call deleteNotificationsByUserId
-// to maintain referential integrity and clean up all user-associated notifications

@@ -2,6 +2,8 @@ import { type NotificationPreferences, type UserPreferences } from '../schema';
 import { getDatabase, getOrCreateUser, handleDatabaseError } from './index';
 
 export interface UpdatePreferencesData {
+  email?: string;
+  phoneNumber?: string;
   homeAirport?: string;
   theme?: 'light' | 'dark' | 'system';
   timezone?: string;
@@ -18,8 +20,8 @@ export async function getUserPreferences(
 
     const result = await db.execute({
       sql: `
-        SELECT id, user_id, home_airport, theme, timezone, notification_preferences, 
-               created_at, updated_at
+        SELECT id, user_id, email, phone_number, home_airport, theme, timezone, 
+               notification_preferences, created_at, updated_at
         FROM user_preferences 
         WHERE user_id = ?
       `,
@@ -38,6 +40,8 @@ export async function getUserPreferences(
     return {
       id: row.id as string,
       userId: row.user_id as string,
+      email: row.email as string | undefined,
+      phoneNumber: row.phone_number as string | undefined,
       homeAirport: row.home_airport as string | undefined,
       theme: (row.theme as 'light' | 'dark' | 'system') || 'system',
       timezone: (row.timezone as string) || 'UTC',
@@ -80,10 +84,13 @@ export async function updateUserPreferences(
       await db.execute({
         sql: `
           UPDATE user_preferences 
-          SET home_airport = ?, theme = ?, timezone = ?, notification_preferences = ?, updated_at = ?
+          SET email = ?, phone_number = ?, home_airport = ?, theme = ?, timezone = ?, 
+              notification_preferences = ?, updated_at = ?
           WHERE user_id = ?
         `,
         args: [
+          data.email ?? existing.email ?? null,
+          data.phoneNumber ?? existing.phoneNumber ?? null,
           data.homeAirport ?? existing.homeAirport ?? null,
           data.theme ?? existing.theme,
           data.timezone ?? existing.timezone,
@@ -98,6 +105,8 @@ export async function updateUserPreferences(
       // Return updated preferences
       return {
         ...existing,
+        email: data.email ?? existing.email,
+        phoneNumber: data.phoneNumber ?? existing.phoneNumber,
         homeAirport: data.homeAirport ?? existing.homeAirport,
         theme: data.theme ?? existing.theme,
         timezone: data.timezone ?? existing.timezone,
@@ -119,12 +128,14 @@ export async function updateUserPreferences(
       await db.execute({
         sql: `
           INSERT INTO user_preferences 
-          (id, user_id, home_airport, theme, timezone, notification_preferences, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          (id, user_id, email, phone_number, home_airport, theme, timezone, notification_preferences, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         args: [
           preferencesId,
           currentUserId,
+          data.email || null,
+          data.phoneNumber || null,
           data.homeAirport || null,
           data.theme || 'system',
           data.timezone || 'UTC',
@@ -139,6 +150,8 @@ export async function updateUserPreferences(
       return {
         id: preferencesId,
         userId: currentUserId,
+        email: data.email,
+        phoneNumber: data.phoneNumber,
         homeAirport: data.homeAirport,
         theme: data.theme || 'system',
         timezone: data.timezone || 'UTC',
