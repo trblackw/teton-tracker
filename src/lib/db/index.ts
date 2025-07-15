@@ -26,12 +26,60 @@ export async function getOrCreateUser(userId: string): Promise<string> {
         [userId, now, now]
       );
       console.log(`✅ Created new user: ${userId}`);
+
+      // Automatically create default user preferences
+      await createDefaultUserPreferences(userId, now);
     }
 
     return userId;
   } catch (error) {
     handleDatabaseError(error, 'get or create user');
     throw error;
+  }
+}
+
+// Create default user preferences for new user
+async function createDefaultUserPreferences(
+  userId: string,
+  createdAt: string
+): Promise<void> {
+  try {
+    const db = getDatabase();
+
+    // Use UTC as default timezone (client will update with detected timezone)
+    const defaultTimezone = 'UTC';
+
+    // Default notification preferences
+    const defaultNotificationPreferences = {
+      pushNotificationsEnabled: true,
+      flightUpdates: true,
+      trafficAlerts: true,
+      runReminders: true,
+      smsNotificationsEnabled: false,
+    };
+
+    await db.query(
+      `INSERT INTO user_preferences (
+        user_id, home_airport, theme, timezone, 
+        notification_preferences, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        userId,
+        null, // home_airport - let user set this
+        'system', // default theme
+        defaultTimezone, // client will update with detected timezone
+        JSON.stringify(defaultNotificationPreferences),
+        createdAt,
+        createdAt,
+      ]
+    );
+
+    console.log(
+      `✅ Created default preferences for user: ${userId} with timezone: ${defaultTimezone}`
+    );
+  } catch (error) {
+    handleDatabaseError(error, 'create default user preferences');
+    // Don't throw - we don't want user creation to fail if preferences creation fails
   }
 }
 

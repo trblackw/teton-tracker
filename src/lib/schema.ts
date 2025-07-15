@@ -127,21 +127,20 @@ export const UserPreferencesSchema = z.object({
   updatedAt: z.date().optional(),
 });
 
-// User metadata schema
-export const UserMetadataSchema = z.object({
-  userId: z.string().min(1, 'User ID is required'),
-  deviceType: z.string().optional(),
-  browser: z.string().optional(),
-  browserVersion: z.string().optional(),
-  operatingSystem: z.string().optional(),
-  screenResolution: z.string().optional(),
-  userAgent: z.string().optional(),
-  timezoneDetected: z.string().optional(),
-  lastLoginAt: z.date().optional(),
-  loginCount: z.number().int().default(0),
-  createdAt: z.date().optional(),
-  updatedAt: z.date().optional(),
-});
+// Client-side only user metadata interface (stored in localStorage)
+export interface UserMetadata {
+  userId: string;
+  deviceType?: string;
+  browser?: string;
+  browserVersion?: string;
+  operatingSystem?: string;
+  screenResolution?: string;
+  userAgent?: string;
+  timezoneDetected?: string;
+  lastSeen?: Date;
+  sessionCount?: number;
+  firstSeen?: Date;
+}
 
 // Notification schema
 export const NotificationSchema = z.object({
@@ -314,7 +313,6 @@ export const TomTomRouteResponseSchema = z.object({
 // Utility types (inferred from schemas)
 export type User = z.infer<typeof UserSchema>;
 export type UserPreferences = z.infer<typeof UserPreferencesSchema>;
-export type UserMetadata = z.infer<typeof UserMetadataSchema>;
 export type NotificationPreferences = z.infer<
   typeof NotificationPreferencesSchema
 >;
@@ -341,10 +339,6 @@ export const validateUserPreferences = (data: unknown): UserPreferences => {
   return UserPreferencesSchema.parse(data);
 };
 
-export const validateUserMetadata = (data: unknown): UserMetadata => {
-  return UserMetadataSchema.parse(data);
-};
-
 export const validateNotification = (data: unknown): Notification => {
   return NotificationSchema.parse(data);
 };
@@ -365,17 +359,13 @@ export const validateTrafficData = (data: unknown): TrafficData => {
   return TrafficDataSchema.parse(data);
 };
 
-// Safe validation functions (returns result with error handling)
+// Safe validation functions (return results instead of throwing)
 export const safeValidateUser = (data: unknown) => {
   return UserSchema.safeParse(data);
 };
 
 export const safeValidateUserPreferences = (data: unknown) => {
   return UserPreferencesSchema.safeParse(data);
-};
-
-export const safeValidateUserMetadata = (data: unknown) => {
-  return UserMetadataSchema.safeParse(data);
 };
 
 export const safeValidateNotification = (data: unknown) => {
@@ -388,14 +378,6 @@ export const safeValidateRun = (data: unknown) => {
 
 export const safeValidateNewRunForm = (data: unknown) => {
   return NewRunFormSchema.safeParse(data);
-};
-
-export const safeValidateFlightStatus = (data: unknown) => {
-  return FlightStatusSchema.safeParse(data);
-};
-
-export const safeValidateTrafficData = (data: unknown) => {
-  return TrafficDataSchema.safeParse(data);
 };
 
 // Transform functions for external API data
