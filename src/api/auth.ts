@@ -24,12 +24,86 @@ export async function validatePassword(password: string): Promise<boolean> {
   return password === correctPassword;
 }
 
+// Verify Clerk webhook signature
+async function verifyClerkWebhook(request: Request): Promise<boolean> {
+  const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
+
+  if (!webhookSecret) {
+    console.warn(
+      '⚠️ CLERK_WEBHOOK_SECRET not configured - webhook verification disabled'
+    );
+    // In development, you might want to proceed without verification
+    // In production, this should return false
+    return process.env.NODE_ENV !== 'production';
+  }
+
+  const signature = request.headers.get('svix-signature');
+  if (!signature) {
+    console.error('❌ Missing webhook signature');
+    return false;
+  }
+
+  try {
+    const body = await request.clone().text();
+    const timestamp = request.headers.get('svix-timestamp');
+    const id = request.headers.get('svix-id');
+
+    if (!timestamp || !id) {
+      console.error('❌ Missing required webhook headers');
+      return false;
+    }
+
+    // Create the payload that was signed
+    const payload = `${id}.${timestamp}.${body}`;
+
+    // Create HMAC signature
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(webhookSecret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+
+    const signature_bytes = await crypto.subtle.sign(
+      'HMAC',
+      key,
+      encoder.encode(payload)
+    );
+    const expected_signature = btoa(
+      String.fromCharCode(...Array.from(new Uint8Array(signature_bytes)))
+    );
+
+    // Extract the signature from the header (format: "v1,signature1 v1,signature2")
+    const signatures = signature.split(' ');
+    for (const sig of signatures) {
+      const [version, sig_value] = sig.split(',');
+      if (version === 'v1' && sig_value === expected_signature) {
+        return true;
+      }
+    }
+
+    console.error('❌ Webhook signature verification failed');
+    return false;
+  } catch (error) {
+    console.error('❌ Error verifying webhook signature:', error);
+    return false;
+  }
+}
+
 // Clerk webhook handler for user events
 export const clerkWebhookHandler = async (
   request: Request
 ): Promise<Response> => {
   if (request.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
+  }
+
+  // Verify webhook signature
+  const isVerified = await verifyClerkWebhook(request);
+  if (!isVerified) {
+    return new Response('Unauthorized', { status: 401 });
   }
 
   try {
@@ -118,6 +192,16 @@ export const clerkWebhookHandler = async (
           phoneNumber: userData.phoneNumber || '(none)',
         });
       }
+    } else if (type === 'user.deleted') {
+      // User deleted their account - handle cleanup
+      const userId = data.id;
+      console.log(`🗑️ User deleted account: ${userId}`);
+
+      // You might want to implement user deletion logic here
+      // For now, we'll just log it
+      console.log(
+        `ℹ️ User deletion logged - implement cleanup logic if needed`
+      );
     }
 
     return new Response(JSON.stringify({ success: true }), {
