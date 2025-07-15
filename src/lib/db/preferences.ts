@@ -32,8 +32,6 @@ export async function getUserPreferences(
       homeAirport: row.home_airport || undefined,
       theme: row.theme,
       timezone: row.timezone,
-      email: row.email || undefined,
-      phoneNumber: row.phone_number || undefined,
       notificationPreferences: JSON.parse(row.notification_preferences || '{}'),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -81,16 +79,6 @@ export async function saveUserPreferences(
         args.push(preferences.timezone);
       }
 
-      if (preferences.email !== undefined) {
-        setFields.push(`email = $${args.length + 1}`);
-        args.push(preferences.email);
-      }
-
-      if (preferences.phoneNumber !== undefined) {
-        setFields.push(`phone_number = $${args.length + 1}`);
-        args.push(preferences.phoneNumber);
-      }
-
       if (preferences.notificationPreferences !== undefined) {
         setFields.push(`notification_preferences = $${args.length + 1}`);
         args.push(JSON.stringify(preferences.notificationPreferences));
@@ -120,8 +108,6 @@ export async function saveUserPreferences(
             homeAirport: row.home_airport || undefined,
             theme: row.theme,
             timezone: row.timezone,
-            email: row.email || undefined,
-            phoneNumber: row.phone_number || undefined,
             notificationPreferences: JSON.parse(
               row.notification_preferences || '{}'
             ),
@@ -144,8 +130,6 @@ export async function saveUserPreferences(
         homeAirport: preferences.homeAirport || undefined,
         theme: preferences.theme || 'system',
         timezone: preferences.timezone || 'UTC',
-        email: preferences.email || undefined,
-        phoneNumber: preferences.phoneNumber || undefined,
         notificationPreferences: preferences.notificationPreferences || {
           pushNotificationsEnabled: true,
           flightUpdates: true,
@@ -159,17 +143,15 @@ export async function saveUserPreferences(
 
       await db.query(
         `INSERT INTO user_preferences (
-          id, user_id, home_airport, theme, timezone, email, phone_number, 
+          id, user_id, home_airport, theme, timezone, 
           notification_preferences, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
         [
           newPreferences.id,
           newPreferences.userId,
           newPreferences.homeAirport || null,
           newPreferences.theme,
           newPreferences.timezone,
-          newPreferences.email || null,
-          newPreferences.phoneNumber || null,
           JSON.stringify(newPreferences.notificationPreferences),
           now,
           now,

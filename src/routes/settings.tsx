@@ -111,31 +111,6 @@ function Settings() {
       queryClient.invalidateQueries({ queryKey: ['preferences'] });
 
       // Show success toast based on what was updated
-      if (variables.email !== undefined) {
-        if (variables.email === '') {
-          toasts.success(
-            'Email cleared',
-            'Your email address has been removed from your preferences.'
-          );
-        } else {
-          toasts.success('Email updated', `Set to ${variables.email}`);
-        }
-      }
-
-      if (variables.phoneNumber !== undefined) {
-        if (variables.phoneNumber === '') {
-          toasts.success(
-            'Phone number cleared',
-            'Your phone number has been removed from your preferences.'
-          );
-        } else {
-          toasts.success(
-            'Phone number updated',
-            `Set to ${variables.phoneNumber}`
-          );
-        }
-      }
-
       if (variables.homeAirport !== undefined) {
         if (variables.homeAirport === '') {
           toasts.success(
@@ -515,7 +490,7 @@ function Settings() {
               <div className="flex-1 min-w-0">
                 <Input
                   type="tel"
-                  value={preferences?.phoneNumber || 'Not set'}
+                  value="Managed by Clerk"
                   readOnly
                   className="bg-muted text-muted-foreground cursor-not-allowed"
                 />
@@ -526,29 +501,27 @@ function Settings() {
               your profile.
             </p>
 
-            {/* SMS Notifications Toggle - only show when phone number is saved */}
-            {preferences?.phoneNumber && (
-              <div className="pt-3 border-t">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium">SMS Notifications</p>
-                    <p className="text-sm text-muted-foreground">
-                      Receive flight updates and alerts via text message
-                    </p>
-                  </div>
-                  <IOSToggle
-                    pressed={
-                      preferences?.notificationPreferences
-                        ?.smsNotificationsEnabled ?? false
-                    }
-                    onPressedChange={(value: boolean) =>
-                      handleNotificationToggle('smsNotificationsEnabled', value)
-                    }
-                    disabled={updatePreferencesMutation.isPending}
-                  />
+            {/* SMS Notifications Toggle - always available for notification preferences */}
+            <div className="pt-3 border-t">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium">SMS Notifications</p>
+                  <p className="text-sm text-muted-foreground">
+                    Receive flight updates and alerts via text message
+                  </p>
                 </div>
+                <IOSToggle
+                  pressed={
+                    preferences?.notificationPreferences
+                      ?.smsNotificationsEnabled ?? false
+                  }
+                  onPressedChange={(value: boolean) =>
+                    handleNotificationToggle('smsNotificationsEnabled', value)
+                  }
+                  disabled={updatePreferencesMutation.isPending}
+                />
               </div>
-            )}
+            </div>
           </div>
         </CardContent>
       </Card>

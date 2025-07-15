@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { type User } from '../schema';
 
 // Database client instance
 let db: Pool | null = null;
@@ -31,6 +32,113 @@ export async function getOrCreateUser(userId: string): Promise<string> {
   } catch (error) {
     handleDatabaseError(error, 'get or create user');
     throw error;
+  }
+}
+
+// Get user information
+export async function getUser(userId: string): Promise<User | null> {
+  if (!userId) {
+    throw new Error('User ID is required');
+  }
+
+  try {
+    const db = getDatabase();
+
+    const result = await db.query('SELECT * FROM users WHERE id = $1', [
+      userId,
+    ]);
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      name: row.name || undefined,
+      email: row.email || undefined,
+      phoneNumber: row.phone_number || undefined,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  } catch (error) {
+    handleDatabaseError(error, 'get user');
+    return null;
+  }
+}
+
+// Update user information
+export async function updateUser(
+  userId: string,
+  userData: Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>
+): Promise<User | null> {
+  if (!userId) {
+    throw new Error('User ID is required');
+  }
+
+  try {
+    const db = getDatabase();
+    const now = new Date().toISOString();
+
+    // Ensure user exists
+    await getOrCreateUser(userId);
+
+    const setFields: string[] = [];
+    const args: any[] = [];
+
+    if (userData.name !== undefined) {
+      setFields.push(`name = $${args.length + 1}`);
+      args.push(userData.name);
+    }
+
+    if (userData.email !== undefined) {
+      setFields.push(`email = $${args.length + 1}`);
+      args.push(userData.email);
+    }
+
+    if (userData.phoneNumber !== undefined) {
+      setFields.push(`phone_number = $${args.length + 1}`);
+      args.push(userData.phoneNumber);
+    }
+
+    // Always update the updated_at timestamp
+    setFields.push(`updated_at = $${args.length + 1}`);
+    args.push(now);
+
+    if (setFields.length === 1) {
+      // Only updated_at was set, nothing to update
+      return await getUser(userId);
+    }
+
+    const sql = `
+      UPDATE users 
+      SET ${setFields.join(', ')}
+      WHERE id = $${args.length + 1}
+      RETURNING *
+    `;
+    args.push(userId);
+
+    const result = await db.query(sql, args);
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const row = result.rows[0];
+    const updatedUser: User = {
+      id: row.id,
+      name: row.name || undefined,
+      email: row.email || undefined,
+      phoneNumber: row.phone_number || undefined,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+
+    console.log(`✅ Updated user: ${userId}`);
+    return updatedUser;
+  } catch (error) {
+    handleDatabaseError(error, 'update user');
+    return null;
   }
 }
 

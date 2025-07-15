@@ -8,6 +8,7 @@ import {
   type Notification,
   type Run,
   type RunStatus,
+  type User,
 } from '../schema';
 import { getApiUrl } from '../utils';
 
@@ -107,6 +108,30 @@ export const authApi = {
     if (!response.ok) {
       throw new Error('Failed to logout');
     }
+  },
+};
+
+// API client for users
+export const userApi = {
+  // Get current user data from database
+  async getUser(): Promise<User> {
+    const userId = getCurrentUserIdFromClerk();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
+    const response = await fetch(`${API_BASE}/users/${userId}`, {
+      headers: createAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('User not found in database');
+      }
+      throw new Error('Failed to fetch user data');
+    }
+
+    return response.json();
   },
 };
 

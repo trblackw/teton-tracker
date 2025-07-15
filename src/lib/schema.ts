@@ -100,6 +100,7 @@ export const ThemeSchema = z.enum(['light', 'dark', 'system'], {
 // User schema
 export const UserSchema = z.object({
   id: z.string().min(1, 'User ID is required'),
+  name: z.string().min(1, 'Name is required').optional(),
   email: z.string().email('Invalid email address').optional(),
   phoneNumber: z.string().min(1, 'Phone number is required').optional(),
   createdAt: z.date().optional(),
@@ -119,8 +120,6 @@ export const NotificationPreferencesSchema = z.object({
 export const UserPreferencesSchema = z.object({
   id: z.string().uuid('Invalid preferences ID format'),
   userId: z.string().min(1, 'User ID is required'),
-  email: z.string().email('Invalid email address').optional(),
-  phoneNumber: z.string().min(1, 'Phone number is required').optional(),
   homeAirport: AirportCodeSchema.optional(),
   theme: ThemeSchema.default('system'),
   timezone: z.string().min(1, 'Timezone is required').default('UTC'),

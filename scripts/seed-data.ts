@@ -4,7 +4,6 @@ import {
   createNotification,
   type NotificationForm,
 } from '../src/lib/db/notifications';
-import { saveUserPreferences } from '../src/lib/db/preferences';
 import { createRunsBatch } from '../src/lib/db/runs';
 import { type NewRunForm } from '../src/lib/schema';
 
@@ -32,25 +31,6 @@ async function seedDatabase() {
     // Initialize database
     console.log('🌱 Starting database seeding...');
     initializeDatabase();
-
-    // Create sample user preferences
-    console.log('👤 Creating user preferences...');
-    const preferences = await saveUserPreferences(
-      {
-        homeAirport: 'JAC',
-        theme: 'system',
-        timezone: 'America/Denver',
-        email: 'test@example.com',
-        notificationPreferences: {
-          pushNotificationsEnabled: true,
-          flightUpdates: true,
-          trafficAlerts: true,
-          runReminders: true,
-          smsNotificationsEnabled: false,
-        },
-      },
-      userId
-    );
 
     // Create sample runs
     console.log('🏃 Creating sample runs...');

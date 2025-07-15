@@ -33,6 +33,9 @@ async function setupDatabaseSchema(): Promise<void> {
     await db.query(`
       CREATE TABLE IF NOT EXISTS users (
         id text PRIMARY KEY,
+        name text,
+        email text,
+        phone_number text,
         created_at timestamp DEFAULT CURRENT_TIMESTAMP,
         updated_at timestamp DEFAULT CURRENT_TIMESTAMP
       )
@@ -46,8 +49,6 @@ async function setupDatabaseSchema(): Promise<void> {
         home_airport text,
         theme text DEFAULT 'system',
         timezone text DEFAULT 'UTC',
-        email text,
-        phone_number text,
         notification_preferences text DEFAULT '{}',
         created_at timestamp DEFAULT CURRENT_TIMESTAMP,
         updated_at timestamp DEFAULT CURRENT_TIMESTAMP,

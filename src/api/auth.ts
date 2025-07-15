@@ -2,6 +2,8 @@
  * Authentication API endpoints
  */
 
+import { updateUser } from '../lib/db';
+
 // Session storage for authenticated sessions (in production, use Redis or database)
 const authenticatedSessions = new Set<string>();
 
@@ -21,6 +23,120 @@ export async function validatePassword(password: string): Promise<boolean> {
 
   return password === correctPassword;
 }
+
+// Clerk webhook handler for user events
+export const clerkWebhookHandler = async (
+  request: Request
+): Promise<Response> => {
+  if (request.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405 });
+  }
+
+  try {
+    const body = await request.json();
+    const { type, data } = body;
+
+    console.log('📨 Clerk webhook received:', type);
+
+    if (type === 'user.created') {
+      // New user signed up - sync their data immediately
+      const userId = data.id;
+      const email = data.email_addresses?.[0]?.email_address;
+      const phoneNumber = data.phone_numbers?.[0]?.phone_number;
+      const firstName = data.first_name;
+      const lastName = data.last_name;
+
+      // Construct full name from first and last name
+      const name = [firstName, lastName].filter(Boolean).join(' ') || undefined;
+
+      console.log(`👤 New user signed up: ${userId}`);
+
+      const userData: {
+        name?: string;
+        email?: string;
+        phoneNumber?: string;
+      } = {};
+
+      if (name) {
+        userData.name = name;
+      }
+
+      if (email) {
+        userData.email = email;
+      }
+
+      if (phoneNumber) {
+        userData.phoneNumber = phoneNumber;
+      }
+
+      const updatedUser = await updateUser(userId, userData);
+
+      if (updatedUser) {
+        console.log(`✅ Synced new user data for ${userId}:`, {
+          name: userData.name || '(none)',
+          email: userData.email || '(none)',
+          phoneNumber: userData.phoneNumber || '(none)',
+        });
+      }
+    } else if (type === 'user.updated') {
+      // User updated their profile - sync changes
+      const userId = data.id;
+      const email = data.email_addresses?.[0]?.email_address;
+      const phoneNumber = data.phone_numbers?.[0]?.phone_number;
+      const firstName = data.first_name;
+      const lastName = data.last_name;
+
+      // Construct full name from first and last name
+      const name = [firstName, lastName].filter(Boolean).join(' ') || undefined;
+
+      console.log(`👤 User updated profile: ${userId}`);
+
+      const userData: {
+        name?: string;
+        email?: string;
+        phoneNumber?: string;
+      } = {};
+
+      if (name) {
+        userData.name = name;
+      }
+
+      if (email) {
+        userData.email = email;
+      }
+
+      if (phoneNumber) {
+        userData.phoneNumber = phoneNumber;
+      }
+
+      const updatedUser = await updateUser(userId, userData);
+
+      if (updatedUser) {
+        console.log(`✅ Updated user data for ${userId}:`, {
+          name: userData.name || '(none)',
+          email: userData.email || '(none)',
+          phoneNumber: userData.phoneNumber || '(none)',
+        });
+      }
+    }
+
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Clerk webhook error:', error);
+    return new Response(
+      JSON.stringify({
+        error: 'Webhook processing failed',
+      }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
+};
 
 // API handler for password validation
 export const passwordValidationHandler = async (
