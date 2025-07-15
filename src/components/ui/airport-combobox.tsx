@@ -1,6 +1,5 @@
 import { Check, ChevronsUpDown, Search } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from './button';
 import {
   Command,
   CommandEmpty,
@@ -119,40 +118,39 @@ export function AirportCombobox({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant='outline'
-          role='combobox'
+        <button
+          role="combobox"
           aria-expanded={open}
-          className='w-full justify-between'
+          className="w-full justify-between inline-flex items-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 h-9 px-4 py-2"
         >
           {selectedAirport ? (
-            <div className='flex items-center gap-2'>
-              <span className='font-mono text-sm bg-primary/10 text-primary px-2 py-0.5 rounded'>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm bg-primary/10 text-primary px-2 py-0.5 rounded">
                 {selectedAirport.iata}
               </span>
-              <span className='truncate'>{selectedAirport.name}</span>
+              <span className="truncate">{selectedAirport.name}</span>
             </div>
           ) : (
-            <span className='text-muted-foreground'>{placeholder}</span>
+            <span className="text-muted-foreground">{placeholder}</span>
           )}
-          <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
-        </Button>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </button>
       </PopoverTrigger>
       <PopoverContent
-        className='w-full p-0'
+        className="w-full p-0"
         style={{ width: 'var(--radix-popover-trigger-width)' }}
       >
         <Command>
-          <div className='flex items-center border-b px-3'>
-            <Search className='mr-2 h-4 w-4 shrink-0 opacity-50' />
+          <div className="flex items-center border-b px-3">
+            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
             <input
-              className='flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50'
-              placeholder='Search by code, name, city, or state...'
+              className="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              placeholder="Search by code, name, city, or state..."
               value={searchValue}
               onChange={e => setSearchValue(e.target.value)}
             />
           </div>
-          <CommandList className='max-h-60'>
+          <CommandList className="max-h-60">
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
               {filteredAirports.map(airport => (
@@ -165,17 +163,17 @@ export function AirportCombobox({
                     setOpen(false);
                     setSearchValue('');
                   }}
-                  className='cursor-pointer'
+                  className="cursor-pointer"
                 >
-                  <div className='flex items-center gap-3 flex-1 min-w-0'>
-                    <span className='font-mono text-sm bg-primary/10 text-primary px-2 py-0.5 rounded shrink-0'>
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <span className="font-mono text-sm bg-primary/10 text-primary px-2 py-0.5 rounded shrink-0">
                       {airport.iata}
                     </span>
-                    <div className='flex flex-col min-w-0 flex-1'>
-                      <span className='font-medium truncate'>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="font-medium truncate">
                         {airport.name}
                       </span>
-                      <span className='text-xs text-muted-foreground truncate'>
+                      <span className="text-xs text-muted-foreground truncate">
                         {airport.city}, {airport.state}
                       </span>
                     </div>

@@ -10,6 +10,7 @@ import {
   Plane,
   RefreshCw,
   Search,
+  Settings,
   X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -587,8 +588,14 @@ function UpcomingFlights() {
               No home airport configured. Please set your home base airport in
               settings first.
             </p>
-            <Button asChild>
-              <a href="/settings">Go to Settings</a>
+            <Button
+              asChild
+              className="bg-blue-500 hover:bg-blue-600 text-white"
+            >
+              <a href="/settings" className="flex items-center gap-2">
+                <Settings className="size-5" />
+                <span>Settings</span>
+              </a>
             </Button>
           </CardContent>
         </Card>

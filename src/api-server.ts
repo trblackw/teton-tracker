@@ -4,6 +4,7 @@ import * as authApi from './api/auth';
 import * as notificationsApi from './api/notifications';
 import * as preferencesApi from './api/preferences';
 import * as runsApi from './api/runs';
+import { seedDataForUser } from './api/seed';
 import { initializeDatabase } from './lib/db';
 
 // Initialize database
@@ -45,6 +46,73 @@ const server = serve({
             'Content-Type': 'application/json',
           },
         });
+      }
+
+      // Seed endpoint for development data generation
+      if (url.pathname === '/api/seed') {
+        // Only allow in development mode
+        if (process.env.NODE_ENV === 'production') {
+          return new Response(
+            JSON.stringify({ error: 'Not available in production' }),
+            {
+              status: 403,
+              headers: {
+                ...corsHeaders,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+        }
+
+        if (request.method === 'POST') {
+          try {
+            const body = await request.json();
+            const { userId } = body as { userId: string };
+
+            if (!userId) {
+              return new Response(
+                JSON.stringify({ error: 'User ID is required' }),
+                {
+                  status: 400,
+                  headers: {
+                    ...corsHeaders,
+                    'Content-Type': 'application/json',
+                  },
+                }
+              );
+            }
+
+            const result = await seedDataForUser(userId);
+
+            return new Response(JSON.stringify(result), {
+              status: 200,
+              headers: {
+                ...corsHeaders,
+                'Content-Type': 'application/json',
+              },
+            });
+          } catch (error) {
+            console.error('Seed endpoint error:', error);
+            return new Response(
+              JSON.stringify({ error: 'Failed to seed data' }),
+              {
+                status: 500,
+                headers: {
+                  ...corsHeaders,
+                  'Content-Type': 'application/json',
+                },
+              }
+            );
+          }
+        } else {
+          return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+            status: 405,
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+            },
+          });
+        }
       }
 
       // Auth endpoint for password validation

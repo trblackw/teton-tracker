@@ -4,6 +4,7 @@ import {
   Bell,
   Building,
   Clock,
+  Database,
   Mail,
   Monitor,
   Moon,
@@ -30,8 +31,9 @@ import { TimezoneCombobox } from '../components/ui/timezone-combobox';
 import { IOSToggle } from '../components/ui/toggle';
 import airportsData from '../data/airports-comprehensive.json';
 import timezonesData from '../data/timezones.json';
-import { preferencesApi } from '../lib/api/client';
+import { preferencesApi, seedApi } from '../lib/api/client';
 import { type UpdatePreferencesData } from '../lib/db/preferences';
+import { isDebugMode } from '../lib/debug';
 import {
   notifications,
   type NotificationPermissionState,
@@ -264,6 +266,35 @@ function Settings() {
         'Please check your notification settings and try again.'
       );
     }
+  };
+
+  // Mutation for generating seed data (debug only)
+  const generateSeedDataMutation = useMutation({
+    mutationFn: () => {
+      if (!userId) {
+        throw new Error('User ID is required');
+      }
+      return seedApi.generateData(userId);
+    },
+    onSuccess: result => {
+      // Invalidate all queries to refresh the UI
+      queryClient.invalidateQueries();
+      toasts.success(
+        'Seed data generated!',
+        `Created ${result.runs} runs and ${result.notifications} notifications`
+      );
+    },
+    onError: error => {
+      console.error('Failed to generate seed data:', error);
+      toasts.error(
+        'Failed to generate seed data',
+        error instanceof Error ? error.message : 'Unknown error occurred'
+      );
+    },
+  });
+
+  const handleGenerateSeedData = () => {
+    generateSeedDataMutation.mutate();
   };
 
   if (isLoading) {
@@ -685,6 +716,55 @@ function Settings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Debug Tools */}
+      {isDebugMode() && (
+        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+              <Database className="h-5 w-5" />
+              Debug Tools
+            </CardTitle>
+            <CardDescription className="text-amber-700 dark:text-amber-300">
+              Development tools for testing and data generation
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-4 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+              <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">
+                Generate Sample Data
+              </h4>
+              <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+                This will create realistic sample runs and notifications for
+                your account. Any existing data will be replaced.
+              </p>
+              <Button
+                onClick={handleGenerateSeedData}
+                disabled={generateSeedDataMutation.isPending}
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                {generateSeedDataMutation.isPending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Database className="h-4 w-4 mr-2" />
+                    Generate Data
+                  </>
+                )}
+              </Button>
+            </div>
+            <div className="text-xs text-amber-600 dark:text-amber-400">
+              <p>• Creates 20 realistic runs with various statuses</p>
+              <p>• Generates 40+ notifications across different types</p>
+              <p>• Uses Jackson Hole locations and major airlines</p>
+              <p>• Only available in development mode</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Status */}
       {updatePreferencesMutation.isPending && (

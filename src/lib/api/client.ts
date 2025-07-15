@@ -368,3 +368,25 @@ export const notificationsApi = {
     }
   },
 };
+
+export const seedApi = {
+  // Generate seed data for the current user (development only)
+  async generateData(userId: string): Promise<{
+    runs: number;
+    notifications: number;
+    message: string;
+  }> {
+    const response = await fetch(`${API_BASE}/seed`, {
+      method: 'POST',
+      headers: createAuthHeaders(),
+      body: JSON.stringify({ userId }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to generate seed data');
+    }
+
+    return response.json();
+  },
+};
