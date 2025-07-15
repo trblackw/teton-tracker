@@ -32,12 +32,15 @@ export async function createRun(
       updatedAt: new Date(now),
     };
 
+    // activatedAt should only be set when explicitly activating a run, not during creation
+    const activatedAt = null;
+
     await db.query(
       `INSERT INTO runs (
         id, user_id, flight_number, airline, departure_airport, arrival_airport,
         pickup_location, dropoff_location, scheduled_time, estimated_duration, status, type,
-        price, notes, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+        price, notes, created_at, updated_at, activated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
       [
         run.id,
         run.userId,
@@ -55,6 +58,7 @@ export async function createRun(
         run.notes || null,
         now,
         now,
+        activatedAt,
       ]
     );
 
@@ -91,7 +95,7 @@ export async function getRuns(query: RunsQuery = {}): Promise<Run[]> {
       SELECT 
         id, flight_number, airline, departure_airport, arrival_airport,
         pickup_location, dropoff_location, scheduled_time, estimated_duration, actual_duration, status, type,
-        price, notes, user_id, created_at, updated_at, completed_at
+        price, notes, user_id, created_at, updated_at, completed_at, activated_at
       FROM runs
     `;
 
@@ -144,6 +148,7 @@ export async function getRuns(query: RunsQuery = {}): Promise<Run[]> {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       completedAt: row.completed_at,
+      activatedAt: row.activated_at,
     }));
 
     return runs;
@@ -165,7 +170,7 @@ export async function getRunById(
       SELECT 
         id, flight_number, airline, departure_airport, arrival_airport,
         pickup_location, dropoff_location, scheduled_time, estimated_duration, actual_duration, status, type,
-        price, notes, user_id, created_at, updated_at, completed_at
+        price, notes, user_id, created_at, updated_at, completed_at, activated_at
       FROM runs
       WHERE id = $1
     `;
@@ -203,6 +208,7 @@ export async function getRunById(
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       completedAt: row.completed_at,
+      activatedAt: row.activated_at,
     };
   } catch (error) {
     handleDatabaseError(error, 'get run by id');
@@ -272,6 +278,20 @@ export async function updateRun(
     if (updateData.status !== undefined) {
       setFields.push(`status = $${args.length + 1}`);
       args.push(updateData.status);
+
+      // Set activatedAt when status changes to 'active'
+      if (updateData.status === 'active') {
+        setFields.push(`activated_at = $${args.length + 1}`);
+        args.push(now);
+      }
+      // Null activatedAt when status changes to 'completed' or 'cancelled'
+      else if (
+        updateData.status === 'completed' ||
+        updateData.status === 'cancelled'
+      ) {
+        setFields.push(`activated_at = $${args.length + 1}`);
+        args.push(null);
+      }
     }
 
     if (updateData.type !== undefined) {
@@ -343,6 +363,7 @@ export async function updateRun(
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       completedAt: row.completed_at,
+      activatedAt: row.activated_at,
     };
 
     console.log(`✅ Updated run: ${id}`);

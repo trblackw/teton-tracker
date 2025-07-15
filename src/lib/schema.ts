@@ -172,6 +172,7 @@ export const RunSchema = z.object({
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
   completedAt: z.date().optional(),
+  activatedAt: z.date().optional().nullable(),
   notes: z.string().max(500, 'Notes must be at most 500 characters').optional(),
 });
 

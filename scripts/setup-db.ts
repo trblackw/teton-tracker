@@ -77,8 +77,13 @@ async function setupDatabaseSchema(): Promise<void> {
         created_at timestamp DEFAULT CURRENT_TIMESTAMP,
         updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
         completed_at timestamp,
+        activated_at timestamp,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
+    `);
+
+    await db.query(`
+      ALTER TABLE runs ADD COLUMN IF NOT EXISTS activated_at timestamp
     `);
 
     // Flight data cache table

@@ -5,6 +5,7 @@ import {
   useRouter,
   useSearch,
 } from '@tanstack/react-router';
+import { differenceInSeconds, intervalToDuration } from 'date-fns';
 import {
   AlertTriangle,
   Car,
@@ -55,17 +56,21 @@ function RunTimer({
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
-      const elapsed = Math.floor((now.getTime() - startTime.getTime()) / 1000);
-      setElapsedTime(elapsed);
+      // Use date-fns for cleaner time difference calculation
+      const elapsed = differenceInSeconds(now, startTime);
+      setElapsedTime(Math.max(0, elapsed)); // Ensure non-negative
     }, 1000);
 
     return () => clearInterval(interval);
   }, [startTime]);
 
   const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
+    // Use date-fns intervalToDuration for cleaner duration formatting
+    const duration = intervalToDuration({ start: 0, end: seconds * 1000 });
+
+    const hours = duration.hours || 0;
+    const minutes = duration.minutes || 0;
+    const secs = duration.seconds || 0;
 
     if (hours > 0) {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
@@ -220,9 +225,28 @@ function ActiveRunPage() {
   }
 
   // Calculate run start time (when it became active)
-  const startTime = new Date(
-    activeRun.updatedAt || activeRun.createdAt || new Date()
-  );
+  const calculateStartTime = () => {
+    const now = new Date();
+
+    // Use activatedAt if available, otherwise fall back to updatedAt/createdAt
+    if (activeRun.activatedAt) {
+      return new Date(activeRun.activatedAt);
+    }
+
+    // Fallback for legacy data without activatedAt
+    const fallbackTime = new Date(
+      activeRun.updatedAt || activeRun.createdAt || now
+    );
+
+    // If the fallback time is in the future, assume run started 5 minutes ago
+    if (fallbackTime > now) {
+      return new Date(now.getTime() - 5 * 60 * 1000); // 5 minutes ago
+    }
+
+    return fallbackTime;
+  };
+
+  const startTime = calculateStartTime();
 
   return (
     <div className="space-y-6">
