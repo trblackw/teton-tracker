@@ -1,17 +1,7 @@
 import { notificationsApi, preferencesApi } from '../api/client';
 import { type NotificationType as DbNotificationType } from '../schema';
 import { toasts } from '../toast';
-
-// Check if we're in development mode
-function isDevelopmentMode(): boolean {
-  return (
-    (typeof window !== 'undefined' &&
-      (window.location.hostname === 'localhost' ||
-        window.location.hostname === '127.0.0.1' ||
-        window.location.port === '3000')) ||
-    (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development')
-  );
-}
+import { isDevelopmentMode } from '../utils';
 
 // Notification types
 export type NotificationType =

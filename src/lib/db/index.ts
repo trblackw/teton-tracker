@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
 import { generateBrowserUserId } from '../user-utils';
+import { isDevelopmentMode } from '../utils';
 
 // Fixed development user ID for consistent seeding
 const DEVELOPMENT_USER_ID = 'user_dev_seed_12345';
@@ -10,10 +11,7 @@ let db: Pool | null = null;
 // Utility function for getting the appropriate user ID (for database operations)
 export function generateUserId(): string {
   // In development mode, use the fixed development user ID for consistency with seed data
-  if (
-    process.env.NODE_ENV === 'development' ||
-    (typeof window !== 'undefined' && window.location.hostname === 'localhost')
-  ) {
+  if (isDevelopmentMode()) {
     return DEVELOPMENT_USER_ID;
   }
 

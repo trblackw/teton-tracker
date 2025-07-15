@@ -9,9 +9,9 @@ import {
   type Run,
   type RunStatus,
 } from '../schema';
+import { getApiUrl } from '../utils';
 
-const API_BASE =
-  process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:3001/api';
+const API_BASE = getApiUrl();
 
 // Extend Window interface to include Clerk
 declare global {

@@ -3,24 +3,17 @@ import {
   transformTomTomToTrafficData,
   validateTrafficData,
 } from '../schema';
+import { buildApiUrl, isDevelopmentMode } from '../utils';
 
 // TomTom API configuration
 const TOMTOM_BASE_URL = 'https://api.tomtom.com';
 const ROUTING_VERSION = 'v1';
 const TRAFFIC_VERSION = 'v1';
 
-// Check if we're in development mode
-function isDevelopmentMode(): boolean {
-  // Check various indicators that we're in development
-  return (
-    (typeof window !== 'undefined' &&
-      (window.location.hostname === 'localhost' ||
-        window.location.hostname === '127.0.0.1' ||
-        window.location.port === '3000')) ||
-    // Also check for explicit environment variable if available
-    (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development')
-  );
-}
+// Development mode utilities
+const DEV_MODE = {
+  DEBUG_LOGGING: false,
+};
 
 // Check if real API is explicitly enabled
 function isRealApiEnabled(): boolean {
@@ -579,7 +572,7 @@ export function initializeTomTomService(): void {
 export async function initializeTomTomServiceWithConfig(): Promise<void> {
   try {
     // Try to get configuration from server
-    const response = await fetch('http://localhost:3001/api/config');
+    const response = await fetch(buildApiUrl('/config'));
 
     if (response.ok) {
       const config = await response.json();

@@ -19,8 +19,22 @@ export async function GET(request: Request): Promise<Response> {
       );
     }
 
+    // Get API keys for flight and mapping services
+    const aviationStackApiKey = process.env.AVIATIONSTACK_API_KEY;
+    const tomtomApiKey = process.env.TOMTOM_API_KEY;
+    const environment = process.env.NODE_ENV || 'development';
+
     const config = {
+      // Clerk authentication
       clerkPublishableKey,
+
+      // Flight service configuration (AviationStack API)
+      hasApiKey: !!aviationStackApiKey,
+      apiKey: aviationStackApiKey || null,
+      environment,
+
+      // TomTom service configuration
+      tomtomKey: tomtomApiKey || null,
     };
 
     return new Response(JSON.stringify(config), {

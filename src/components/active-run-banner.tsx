@@ -119,14 +119,26 @@ export function ActiveRunBanner() {
       <motion.div
         className="w-full"
         layout
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        transition={{
+          type: 'spring',
+          stiffness: 200,
+          damping: 25,
+          mass: 0.8,
+          duration: 0.6,
+        }}
         style={{ originX: isMinimized ? 1 : 0.5 }} // Animate from right when minimized
       >
         <motion.div
           className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200 shadow-lg pointer-events-auto cursor-pointer hover:shadow-xl rounded-lg border dark:from-blue-950 dark:to-blue-900 dark:border-blue-800"
           onClick={handleNavigateToActiveRun}
-          whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={{
+            scale: 1.02,
+            transition: { duration: 0.25, ease: 'easeOut' },
+          }}
+          whileTap={{
+            scale: 0.98,
+            transition: { duration: 0.15, ease: 'easeOut' },
+          }}
           layout
         >
           <div className={isMinimized ? 'px-2 py-0.5' : 'px-3 py-1'}>
@@ -138,10 +150,11 @@ export function ActiveRunBanner() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
                 >
                   <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
-                  <span className="font-mono font-medium text-blue-800 dark:text-blue-200 text-xs whitespace-nowrap">
+                  <span className="font-mono font-medium text-blue-800 dark:text-blue-200 text-xs whitespace-nowrap flex items-center gap-1">
+                    <Plane className="size-4" />
                     {activeRun.flightNumber}
                   </span>
                   <Button
@@ -160,7 +173,7 @@ export function ActiveRunBanner() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
                 >
                   {/* Mobile layout */}
                   <div className="flex sm:hidden items-center justify-between gap-2">

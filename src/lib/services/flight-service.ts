@@ -1,5 +1,6 @@
 import { getAirportDisplayName } from '../airport-codes';
 import { type FlightStatus } from '../schema';
+import { buildApiUrl, isDevelopmentMode } from '../utils';
 
 // AviationStack API configuration
 const AVIATIONSTACK_BASE_URL = 'https://api.aviationstack.com/v1';
@@ -25,19 +26,6 @@ const DEV_MODE = {
   // Set to true to test API key loading
   TEST_API_KEY_LOADING: true,
 };
-
-// Check if we're in development mode
-function isDevelopmentMode(): boolean {
-  // Check various indicators that we're in development
-  return (
-    (typeof window !== 'undefined' &&
-      (window.location.hostname === 'localhost' ||
-        window.location.hostname === '127.0.0.1' ||
-        window.location.port === '3000')) ||
-    // Also check for explicit environment variable if available
-    (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development')
-  );
-}
 
 // Check if real API is explicitly enabled
 function isRealApiEnabled(): boolean {
@@ -1156,33 +1144,7 @@ export class FlightService {
       return false;
     }
   }
-
-  /**
-   * Get timezone offset in minutes
-   */
-  private getTimezoneOffset(timezone: string): number {
-    try {
-      const date = new Date();
-      const utcDate = new Date(
-        date.toLocaleString('en-US', { timeZone: 'UTC' })
-      );
-      const tzDate = new Date(
-        date.toLocaleString('en-US', { timeZone: timezone })
-      );
-      return (tzDate.getTime() - utcDate.getTime()) / (1000 * 60);
-    } catch (error) {
-      console.warn('⚠️ Invalid timezone, defaulting to UTC:', timezone);
-      return 0; // Default to UTC offset
-    }
-  }
 }
-
-// Cache for configuration promise to avoid multiple fetches
-let configPromise: Promise<{
-  hasApiKey: boolean;
-  apiKey: string | null;
-  environment: string;
-}> | null = null;
 
 // Fetch configuration from server
 async function fetchConfig(): Promise<{
@@ -1195,10 +1157,12 @@ async function fetchConfig(): Promise<{
       console.log('🔧 Fetching config from server...');
     }
 
-    const response = await fetch('http://localhost:3001/api/config');
+    const configUrl = buildApiUrl('/config');
+    const response = await fetch(configUrl);
 
     if (DEV_MODE.DEBUG_LOGGING) {
       console.log('🔧 Config response status:', response.status);
+      console.log('🔧 Config URL:', configUrl);
     }
 
     if (!response.ok) {

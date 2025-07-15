@@ -16,6 +16,8 @@ import { createRoot } from 'react-dom/client';
 import { AuthProvider } from './components/auth-guard';
 import { ThemeProvider } from './components/theme-provider';
 // @ts-ignore
+import { queryClient } from './lib/react-query-client';
+import { buildApiUrl } from './lib/utils';
 import { routeTree } from './routeTree.gen';
 
 // Create a new query client instance
@@ -34,13 +36,7 @@ const router = createRouter({ routeTree });
 // Get Clerk publishable key from config API
 async function getClerkPublishableKey(): Promise<string> {
   try {
-    // Use the same API base URL pattern as the rest of the app
-    // In development (localhost), use the API server port, otherwise use relative path
-    const API_BASE =
-      window.location.hostname === 'localhost'
-        ? 'http://localhost:3001/api'
-        : '/api';
-    const response = await fetch(`${API_BASE}/config`);
+    const response = await fetch(buildApiUrl('/config'));
     const config = await response.json();
     return config.clerkPublishableKey;
   } catch (error) {
