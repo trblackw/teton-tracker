@@ -13,12 +13,22 @@ export const isDebugMode = (): boolean => {
       window?.location?.hostname === '[::1]'
   );
 
+  // Check localStorage for debug flag
+  const localStorageDebug =
+    typeof window !== 'undefined' &&
+    window.localStorage?.getItem('debug') === 'true';
+
+  // Check URL params for debug flag
+  const urlDebug =
+    typeof window !== 'undefined' &&
+    window.location?.search?.includes('debug=true');
+
   // Only enable via explicit environment variables, not just development mode
   const envDebug =
     typeof process !== 'undefined' &&
     (process.env.DEBUG === 'true' || process.env.BUN_DEBUG === 'true');
 
-  return isLocalhost || envDebug;
+  return isLocalhost || envDebug || localStorageDebug || urlDebug;
 };
 
 // Enable debug mode via localStorage (for runtime toggling)

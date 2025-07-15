@@ -1,59 +1,49 @@
 #!/usr/bin/env bun
+import { serve } from 'bun';
 import * as authApi from './api/auth';
 import * as notificationsApi from './api/notifications';
 import * as preferencesApi from './api/preferences';
 import * as runsApi from './api/runs';
+import { initializeDatabase } from './lib/db';
 
-// Configuration endpoint
-async function handleConfigRequest(request: Request): Promise<Response> {
-  const aviationStackAPIKey = process.env.AVIATIONSTACK_API_KEY;
-  const tomtomAPIKey = process.env.TOMTOM_API_KEY;
+// Initialize database
+initializeDatabase();
 
-  const config = {
-    hasApiKey: !!aviationStackAPIKey,
-    apiKey: aviationStackAPIKey || null,
-    tomtomKey: tomtomAPIKey || null,
-    environment: process.env.NODE_ENV || 'development',
-  };
+// CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
 
-  return new Response(JSON.stringify(config), {
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// Create the server
+const server = serve({
+  port: process.env.API_PORT || 3001,
+  async fetch(request) {
+    const url = new URL(request.url);
 
-// API-only server
-async function startApiServer() {
-  const server = Bun.serve({
-    port: process.env.API_PORT || 3001,
+    // Handle OPTIONS requests for CORS
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 200,
+        headers: corsHeaders,
+      });
+    }
 
-    async fetch(request: Request): Promise<Response> {
-      const url = new URL(request.url);
-
-      // Add CORS headers for development
-      const corsHeaders = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      };
-
-      if (request.method === 'OPTIONS') {
-        return new Response(null, { headers: corsHeaders });
-      }
-
-      // Configuration endpoint
+    try {
+      // Config endpoint for frontend environment variables
       if (url.pathname === '/api/config') {
-        const response = await handleConfigRequest(request);
+        const config = {
+          clerkPublishableKey: process.env.VITE_CLERK_PUBLISHABLE_KEY,
+          environment: process.env.NODE_ENV || 'development',
+        };
 
-        // Add CORS headers to response
-        const headers = new Headers(response.headers);
-        Object.entries(corsHeaders).forEach(([key, value]) => {
-          headers.set(key, value);
-        });
-
-        return new Response(response.body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers,
+        return new Response(JSON.stringify(config), {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+          },
         });
       }
 
@@ -91,7 +81,7 @@ async function startApiServer() {
         });
       }
 
-      // Auth logout endpoint
+      // Logout endpoint
       if (url.pathname === '/api/auth/logout') {
         const response = await authApi.logoutHandler(request);
 
@@ -238,14 +228,15 @@ async function startApiServer() {
         status: 404,
         headers: corsHeaders,
       });
-    },
-  });
+    } catch (error) {
+      console.error('Error fetching:', error);
+      return new Response('Internal Server Error', { status: 500 });
+    }
+  },
+});
 
-  console.log(`🌐 API server running at http://localhost:${server.port}`);
-  console.log('📊 Database initialized and API routes available');
-  console.log(
-    `🔑 AviationStack API key: ${process.env.AVIATIONSTACK_API_KEY ? '✅ Configured' : '❌ Not found'}`
-  );
-}
-
-startApiServer().catch(console.error);
+console.log(`🌐 API server running at http://localhost:${server.port}`);
+console.log('📊 Database initialized and API routes available');
+console.log(
+  `🔑 AviationStack API key: ${process.env.AVIATIONSTACK_API_KEY ? '✅ Configured' : '❌ Not found'}`
+);

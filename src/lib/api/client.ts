@@ -6,16 +6,60 @@ import { type UpdatePreferencesData } from '../db/preferences';
 import {
   type NewRunForm,
   type Notification,
-  type NotificationType,
   type Run,
   type RunStatus,
 } from '../schema';
-import { getCurrentUserId } from '../user-utils';
 
 const API_BASE =
   process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:3001/api';
 
-// API client for authentication
+// Extend Window interface to include Clerk
+declare global {
+  interface Window {
+    Clerk?: {
+      user?: {
+        id: string;
+      };
+      session?: {
+        getToken: () => string | null;
+      };
+    };
+  }
+}
+
+// Helper function to get auth token from Clerk
+function getAuthToken(): string | null {
+  // This will be populated by Clerk's session token
+  // For now, we'll return null during migration
+  if (typeof window !== 'undefined' && window.Clerk?.session) {
+    return window.Clerk.session.getToken() || null;
+  }
+  return null;
+}
+
+// Helper function to get current user ID from Clerk
+function getCurrentUserIdFromClerk(): string | null {
+  if (typeof window !== 'undefined' && window.Clerk?.user) {
+    return window.Clerk.user.id || null;
+  }
+  return null;
+}
+
+// Helper function to create authenticated headers
+function createAuthHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+
+  const token = getAuthToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  return headers;
+}
+
+// API client for authentication (legacy - will be replaced by Clerk)
 export const authApi = {
   // Check authentication status
   async checkAuthStatus(): Promise<{ authenticated: boolean }> {
@@ -70,9 +114,16 @@ export const authApi = {
 export const runsApi = {
   // Get all runs for the current user
   async getRuns(): Promise<Run[]> {
-    const userId = getCurrentUserId();
+    const userId = getCurrentUserIdFromClerk();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
     const response = await fetch(
-      `${API_BASE}/runs?userId=${userId}&orderDirection=DESC`
+      `${API_BASE}/runs?userId=${userId}&orderDirection=DESC`,
+      {
+        headers: createAuthHeaders(),
+      }
     );
 
     if (!response.ok) {
@@ -84,12 +135,14 @@ export const runsApi = {
 
   // Create a new run
   async createRun(runData: NewRunForm): Promise<Run> {
-    const userId = getCurrentUserId();
+    const userId = getCurrentUserIdFromClerk();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
     const response = await fetch(`${API_BASE}/runs`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: createAuthHeaders(),
       body: JSON.stringify({ runData, userId }),
     });
 
@@ -102,12 +155,14 @@ export const runsApi = {
 
   // Update an existing run
   async updateRun(id: string, runData: NewRunForm): Promise<Run> {
-    const userId = getCurrentUserId();
+    const userId = getCurrentUserIdFromClerk();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
     const response = await fetch(`${API_BASE}/runs/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: createAuthHeaders(),
       body: JSON.stringify({ runData, userId }),
     });
 
@@ -120,12 +175,14 @@ export const runsApi = {
 
   // Update run status
   async updateRunStatus(id: string, status: RunStatus): Promise<void> {
-    const userId = getCurrentUserId();
+    const userId = getCurrentUserIdFromClerk();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
     const response = await fetch(`${API_BASE}/runs/${id}/status`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: createAuthHeaders(),
       body: JSON.stringify({ status, userId }),
     });
 
@@ -136,12 +193,14 @@ export const runsApi = {
 
   // Delete a run
   async deleteRun(id: string): Promise<void> {
-    const userId = getCurrentUserId();
+    const userId = getCurrentUserIdFromClerk();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
     const response = await fetch(`${API_BASE}/runs/${id}`, {
       method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: createAuthHeaders(),
       body: JSON.stringify({ userId }),
     });
 
@@ -155,8 +214,14 @@ export const runsApi = {
 export const preferencesApi = {
   // Get user preferences
   async getPreferences() {
-    const userId = getCurrentUserId();
-    const response = await fetch(`${API_BASE}/preferences?userId=${userId}`);
+    const userId = getCurrentUserIdFromClerk();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
+    const response = await fetch(`${API_BASE}/preferences?userId=${userId}`, {
+      headers: createAuthHeaders(),
+    });
 
     if (!response.ok) {
       throw new Error('Failed to fetch preferences');
@@ -167,12 +232,14 @@ export const preferencesApi = {
 
   // Update user preferences
   async updatePreferences(preferencesData: UpdatePreferencesData) {
-    const userId = getCurrentUserId();
+    const userId = getCurrentUserIdFromClerk();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
     const response = await fetch(`${API_BASE}/preferences`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: createAuthHeaders(),
       body: JSON.stringify({ preferencesData, userId }),
     });
 
@@ -190,7 +257,10 @@ export const notificationsApi = {
   async getNotifications(
     query: Partial<NotificationsQuery> = {}
   ): Promise<Notification[]> {
-    const userId = getCurrentUserId();
+    const userId = getCurrentUserIdFromClerk();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
 
     const params = new URLSearchParams();
     params.append('userId', userId);
@@ -206,7 +276,9 @@ export const notificationsApi = {
     if (query.flightNumber) params.append('flightNumber', query.flightNumber);
     if (query.search) params.append('search', query.search);
 
-    const response = await fetch(`${API_BASE}/notifications?${params}`);
+    const response = await fetch(`${API_BASE}/notifications?${params}`, {
+      headers: createAuthHeaders(),
+    });
 
     if (!response.ok) {
       throw new Error('Failed to fetch notifications');
@@ -219,12 +291,14 @@ export const notificationsApi = {
   async createNotification(
     notificationData: CreateNotificationData
   ): Promise<Notification> {
-    const userId = getCurrentUserId();
+    const userId = getCurrentUserIdFromClerk();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
     const response = await fetch(`${API_BASE}/notifications`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: createAuthHeaders(),
       body: JSON.stringify({ notificationData, userId }),
     });
 
@@ -240,12 +314,14 @@ export const notificationsApi = {
     id: string,
     isRead: boolean = true
   ): Promise<void> {
-    const userId = getCurrentUserId();
+    const userId = getCurrentUserIdFromClerk();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
     const response = await fetch(`${API_BASE}/notifications`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: createAuthHeaders(),
       body: JSON.stringify({ action: 'mark_read', id, isRead, userId }),
     });
 
@@ -256,12 +332,14 @@ export const notificationsApi = {
 
   // Mark all notifications as read
   async markAllNotificationsAsRead(): Promise<void> {
-    const userId = getCurrentUserId();
+    const userId = getCurrentUserIdFromClerk();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
     const response = await fetch(`${API_BASE}/notifications`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: createAuthHeaders(),
       body: JSON.stringify({ action: 'mark_all_read', userId }),
     });
 
@@ -272,49 +350,21 @@ export const notificationsApi = {
 
   // Delete a notification
   async deleteNotification(id: string): Promise<void> {
-    const userId = getCurrentUserId();
+    const userId = getCurrentUserIdFromClerk();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
     const response = await fetch(
       `${API_BASE}/notifications?id=${id}&userId=${userId}`,
       {
         method: 'DELETE',
+        headers: createAuthHeaders(),
       }
     );
 
     if (!response.ok) {
       throw new Error('Failed to delete notification');
-    }
-  },
-
-  // Get notification statistics
-  async getNotificationStats(): Promise<{
-    total: number;
-    unread: number;
-    byType: Record<NotificationType, number>;
-  }> {
-    const userId = getCurrentUserId();
-    const response = await fetch(
-      `${API_BASE}/notifications/stats?userId=${userId}`
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch notification stats');
-    }
-
-    return response.json();
-  },
-
-  // Cleanup old notifications
-  async cleanupOldNotifications(daysToKeep: number = 30): Promise<void> {
-    const userId = getCurrentUserId();
-    const response = await fetch(
-      `${API_BASE}/notifications?action=cleanup&userId=${userId}&daysToKeep=${daysToKeep}`,
-      {
-        method: 'DELETE',
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to cleanup old notifications');
     }
   },
 };

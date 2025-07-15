@@ -11,6 +11,7 @@ import {
   Phone,
   SettingsIcon,
   Sun,
+  User,
   X,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
@@ -36,6 +37,7 @@ import {
   type NotificationPermissionState,
 } from '../lib/services/notification-service';
 import { toasts } from '../lib/toast';
+import { useCurrentUser } from '../lib/user-utils';
 
 // Convert airport data from object to array format expected by AirportCombobox
 const airports = Object.entries(airportsData)
@@ -58,6 +60,7 @@ const timezones = timezonesData.timezones;
 function Settings() {
   const { theme, setTheme } = useTheme();
   const queryClient = useQueryClient();
+  const { userId, email, fullName, imageUrl, isLoaded } = useCurrentUser();
   const [notificationPermission, setNotificationPermission] =
     useState<NotificationPermissionState>({
       permission: 'default',
@@ -358,6 +361,44 @@ function Settings() {
           Configure your preferences & settings
         </p>
       </div>
+
+      {/* User Profile */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Account Information
+          </CardTitle>
+          <CardDescription>
+            Your account details managed by Clerk
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            {imageUrl && (
+              <img
+                src={imageUrl}
+                alt="User Avatar"
+                className="h-12 w-12 rounded-full border-2 border-gray-200"
+              />
+            )}
+            <div className="flex-1">
+              <p className="font-medium text-foreground">
+                {fullName || email || 'User'}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {email && `${email} • `}User ID: {userId}
+              </p>
+            </div>
+          </div>
+          <div className="pt-2 border-t">
+            <p className="text-xs text-muted-foreground">
+              To update your profile, email, or password, please use the account
+              settings.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Home Airport */}
       <Card>

@@ -151,6 +151,9 @@ const result = await build({
   sourcemap: 'linked',
   define: {
     'process.env.NODE_ENV': JSON.stringify('production'),
+    'process.env.VITE_CLERK_PUBLISHABLE_KEY': JSON.stringify(
+      process.env.VITE_CLERK_PUBLISHABLE_KEY
+    ),
   },
   ...cliConfig, // Merge in any CLI-provided options
 });
