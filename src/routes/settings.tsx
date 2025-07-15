@@ -12,6 +12,7 @@ import {
   Phone,
   SettingsIcon,
   Sun,
+  Trash,
   User,
   X,
 } from 'lucide-react';
@@ -26,6 +27,14 @@ import {
   CardHeader,
   CardTitle,
 } from '../components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
 import { TimezoneCombobox } from '../components/ui/timezone-combobox';
 import { IOSToggle } from '../components/ui/toggle';
@@ -69,6 +78,7 @@ function Settings() {
       supported: false,
       enabled: false,
     });
+  const [showClearDataDialog, setShowClearDataDialog] = useState(false);
 
   // Query for user preferences from API
   const {
@@ -291,8 +301,46 @@ function Settings() {
     },
   });
 
+  // Mutation for clearing user data (debug only)
+  const clearUserDataMutation = useMutation({
+    mutationFn: () => {
+      if (!userId) {
+        throw new Error('User ID is required');
+      }
+      return seedApi.clearUserData(userId);
+    },
+    onSuccess: result => {
+      // Invalidate all queries to refresh the UI
+      queryClient.invalidateQueries();
+      toasts.success(
+        'Data cleared!',
+        result.message || 'All your data has been cleared'
+      );
+    },
+    onError: error => {
+      console.error('Failed to clear user data:', error);
+      toasts.error(
+        'Failed to clear data',
+        error instanceof Error ? error.message : 'Unknown error occurred'
+      );
+    },
+  });
+
   const handleGenerateSeedData = () => {
     generateSeedDataMutation.mutate();
+  };
+
+  const handleClearUserData = () => {
+    setShowClearDataDialog(true);
+  };
+
+  const handleConfirmClearData = () => {
+    clearUserDataMutation.mutate();
+    setShowClearDataDialog(false);
+  };
+
+  const handleCancelClearData = () => {
+    setShowClearDataDialog(false);
   };
 
   if (isLoading) {
@@ -760,6 +808,32 @@ function Settings() {
               <p>• Uses Jackson Hole locations and major airlines</p>
               <p>• Only available in development mode</p>
             </div>
+            <div className="p-4 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+              <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">
+                Clear All Data
+              </h4>
+              <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+                This will delete all your runs, notifications, and preferences.
+                This action cannot be undone.
+              </p>
+              <Button
+                onClick={handleClearUserData}
+                disabled={clearUserDataMutation.isPending}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {clearUserDataMutation.isPending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                    Clearing...
+                  </>
+                ) : (
+                  <>
+                    <Trash className="h-4 w-4 mr-2" />
+                    Clear Data
+                  </>
+                )}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -775,6 +849,65 @@ function Settings() {
           </CardContent>
         </Card>
       )}
+
+      {/* Clear Data Dialog */}
+      <Dialog open={showClearDataDialog} onOpenChange={setShowClearDataDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+              <Trash className="h-5 w-5" />
+              Clear All Data
+            </DialogTitle>
+            <DialogDescription className="text-red-600 dark:text-red-400">
+              This action cannot be undone. All your data will be permanently
+              deleted.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                This will permanently delete:
+              </p>
+              <ul className="space-y-1 text-sm text-red-600 dark:text-red-400">
+                <li>• All your runs and shuttles</li>
+                <li>• All notifications and alerts</li>
+                <li>• All your preferences and settings</li>
+              </ul>
+              <p className="text-sm font-medium text-red-700 dark:text-red-300">
+                Are you absolutely sure you want to continue?
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleCancelClearData}
+              disabled={clearUserDataMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmClearData}
+              disabled={clearUserDataMutation.isPending}
+            >
+              {clearUserDataMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Clearing...
+                </>
+              ) : (
+                <>
+                  <Trash className="h-4 w-4 mr-2" />
+                  Clear All Data
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

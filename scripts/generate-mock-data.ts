@@ -8,102 +8,113 @@ console.log('🎭 Starting mock data generation...');
 
 const db = getDatabase();
 
-// Generate mock runs data
-const mockRuns = [
-  {
-    flightNumber: 'UA2729',
-    airline: 'United Airlines',
-    departure: 'SFO',
-    arrival: 'DEN',
-    pickupLocation: 'Jackson Hole Airport (JAC)',
-    dropoffLocation: 'Hotel Jackson - 470 W Broadway, Jackson, WY 83001',
-    scheduledTime: '2024-01-15T14:30:00Z',
-    type: 'dropoff' as const,
-    estimatedDuration: 45,
-    price: '85',
-    notes: 'Guest has ski equipment - extra time needed for loading',
-  },
-  {
-    flightNumber: 'AA1558',
-    airline: 'American Airlines',
-    departure: 'DFW',
-    arrival: 'JAC',
-    pickupLocation: 'Hotel Jackson - 470 W Broadway, Jackson, WY 83001',
-    dropoffLocation: 'Jackson Hole Airport (JAC)',
-    scheduledTime: '2024-01-16T06:45:00Z',
-    type: 'dropoff' as const,
-    estimatedDuration: 35,
-    price: '75',
-    notes: 'Early morning flight - confirm pickup time with guest',
-  },
-  {
-    flightNumber: 'DL1234',
-    airline: 'Delta Air Lines',
-    departure: 'ATL',
-    arrival: 'JAC',
-    pickupLocation: 'Jackson Hole Airport (JAC)',
-    dropoffLocation:
-      'Four Seasons Resort Jackson Hole - 7680 Granite Loop Rd, Teton Village, WY 83025',
-    scheduledTime: '2024-01-17T16:20:00Z',
-    type: 'pickup' as const,
-    estimatedDuration: 60,
-    price: '120',
-    notes: 'VIP guest - luxury vehicle requested',
-  },
-  {
-    flightNumber: 'WN1847',
-    airline: 'Southwest Airlines',
-    departure: 'LAS',
-    arrival: 'JAC',
-    pickupLocation: 'Jackson Hole Airport (JAC)',
-    dropoffLocation:
-      'Snake River Lodge & Spa - 7710 Granite Loop Rd, Teton Village, WY 83025',
-    scheduledTime: '2024-01-18T12:15:00Z',
-    type: 'pickup' as const,
-    estimatedDuration: 55,
-    price: '95',
-    notes: 'Family with 2 children - car seats available on request',
-  },
-  {
-    flightNumber: 'F9321',
-    airline: 'Frontier Airlines',
-    departure: 'DEN',
-    arrival: 'JAC',
-    pickupLocation:
-      'Teton Mountain Lodge & Spa - 3385 Cody Ln, Teton Village, WY 83025',
-    dropoffLocation: 'Jackson Hole Airport (JAC)',
-    scheduledTime: '2024-01-19T08:30:00Z',
-    type: 'dropoff' as const,
-    estimatedDuration: 50,
-    price: '90',
-    notes: 'Guest requested early pickup due to weather concerns',
-  },
-  {
-    flightNumber: 'AS987',
-    airline: 'Alaska Airlines',
-    departure: 'SEA',
-    arrival: 'JAC',
-    pickupLocation: 'Jackson Hole Airport (JAC)',
-    dropoffLocation: 'Amangani - 1535 Northeast Butte Road, Jackson, WY 83001',
-    scheduledTime: '2024-01-20T19:45:00Z',
-    type: 'pickup' as const,
-    estimatedDuration: 40,
-    price: '110',
-    notes: 'Completed successfully - guest very satisfied',
-  },
-  {
-    flightNumber: 'NK654',
-    airline: 'Spirit Airlines',
-    departure: 'LAX',
-    arrival: 'JAC',
-    pickupLocation: 'Jackson Hole Airport (JAC)',
-    dropoffLocation: 'Hotel Jackson - 470 W Broadway, Jackson, WY 83001',
-    scheduledTime: '2024-01-21T11:20:00Z',
-    type: 'dropoff' as const,
-    estimatedDuration: 45,
-    price: '60',
-  },
-];
+// Generate mock runs data with realistic current dates
+const generateMockRuns = () => {
+  const now = new Date();
+
+  return [
+    {
+      flightNumber: 'UA2729',
+      airline: 'United Airlines',
+      departure: 'SFO',
+      arrival: 'JAC',
+      pickupLocation: 'Jackson Hole Airport (JAC)',
+      dropoffLocation: 'Hotel Jackson - 470 W Broadway, Jackson, WY 83001',
+      scheduledTime: new Date(now.getTime() + 4 * 60 * 60 * 1000).toISOString(), // 4 hours from now
+      type: 'pickup' as const,
+      estimatedDuration: 45,
+      price: '85',
+      notes: 'Guest has ski equipment - extra time needed for loading',
+    },
+    {
+      flightNumber: 'AA1558',
+      airline: 'American Airlines',
+      departure: 'DFW',
+      arrival: 'JAC',
+      pickupLocation: 'Hotel Jackson - 470 W Broadway, Jackson, WY 83001',
+      dropoffLocation: 'Jackson Hole Airport (JAC)',
+      scheduledTime: new Date(now.getTime() + 6 * 60 * 60 * 1000).toISOString(), // 6 hours from now
+      type: 'dropoff' as const,
+      estimatedDuration: 35,
+      price: '75',
+      notes: 'Early morning flight - confirm pickup time with guest',
+    },
+    {
+      flightNumber: 'DL1234',
+      airline: 'Delta Air Lines',
+      departure: 'ATL',
+      arrival: 'JAC',
+      pickupLocation: 'Jackson Hole Airport (JAC)',
+      dropoffLocation:
+        'Four Seasons Resort Jackson Hole - 7680 Granite Loop Rd, Teton Village, WY 83025',
+      scheduledTime: new Date(now.getTime() + 8 * 60 * 60 * 1000).toISOString(), // 8 hours from now
+      type: 'pickup' as const,
+      estimatedDuration: 60,
+      price: '120',
+      notes: 'VIP guest - luxury vehicle requested',
+    },
+    {
+      flightNumber: 'WN1847',
+      airline: 'Southwest Airlines',
+      departure: 'LAS',
+      arrival: 'JAC',
+      pickupLocation: 'Jackson Hole Airport (JAC)',
+      dropoffLocation:
+        'Snake River Lodge & Spa - 7710 Granite Loop Rd, Teton Village, WY 83025',
+      scheduledTime: new Date(
+        now.getTime() + 12 * 60 * 60 * 1000
+      ).toISOString(), // 12 hours from now
+      type: 'pickup' as const,
+      estimatedDuration: 55,
+      price: '95',
+      notes: 'Family with 2 children - car seats available on request',
+    },
+    {
+      flightNumber: 'F9321',
+      airline: 'Frontier Airlines',
+      departure: 'DEN',
+      arrival: 'JAC',
+      pickupLocation:
+        'Teton Mountain Lodge & Spa - 3385 Cody Ln, Teton Village, WY 83025',
+      dropoffLocation: 'Jackson Hole Airport (JAC)',
+      scheduledTime: new Date(
+        now.getTime() + 18 * 60 * 60 * 1000
+      ).toISOString(), // 18 hours from now
+      type: 'dropoff' as const,
+      estimatedDuration: 50,
+      price: '90',
+      notes: 'Guest requested early pickup due to weather concerns',
+    },
+    // Completed runs (in the past)
+    {
+      flightNumber: 'AS987',
+      airline: 'Alaska Airlines',
+      departure: 'SEA',
+      arrival: 'JAC',
+      pickupLocation: 'Jackson Hole Airport (JAC)',
+      dropoffLocation:
+        'Amangani - 1535 Northeast Butte Road, Jackson, WY 83001',
+      scheduledTime: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+      type: 'pickup' as const,
+      estimatedDuration: 40,
+      price: '110',
+      notes: 'Completed successfully - guest very satisfied',
+    },
+    {
+      flightNumber: 'NK654',
+      airline: 'Spirit Airlines',
+      departure: 'LAX',
+      arrival: 'JAC',
+      pickupLocation: 'Jackson Hole Airport (JAC)',
+      dropoffLocation: 'Hotel Jackson - 470 W Broadway, Jackson, WY 83001',
+      scheduledTime: new Date(now.getTime() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
+      type: 'dropoff' as const,
+      estimatedDuration: 45,
+      price: '60',
+      notes: 'Standard dropoff completed on time',
+    },
+  ];
+};
 
 async function generateMockData() {
   try {
@@ -126,13 +137,14 @@ async function generateMockData() {
     console.log('🏃 Creating mock runs...');
 
     const createdRunIds: string[] = [];
+    const mockRuns = generateMockRuns();
 
     for (const runData of mockRuns) {
       try {
         const newRun = await createRun(runData);
         createdRunIds.push(newRun.id);
         console.log(
-          `✅ Created run: ${runData.flightNumber} (${runData.type})`
+          `✅ Created run: ${runData.flightNumber} (${runData.type}) - scheduled for ${new Date(runData.scheduledTime).toLocaleString()}`
         );
       } catch (error) {
         console.error(
@@ -176,8 +188,8 @@ async function generateMockNotifications(runIds: string[]) {
         flightNumber: 'UA2729',
         runId: runIds[0],
         metadata: {
-          originalTime: '2024-01-15T14:30:00Z',
-          newTime: '2024-01-15T15:00:00Z',
+          originalTime: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
+          newTime: new Date(Date.now() + 4.5 * 60 * 60 * 1000).toISOString(),
           reason: 'Weather conditions',
         },
       },
@@ -209,11 +221,11 @@ async function generateMockNotifications(runIds: string[]) {
       {
         type: 'status_change' as const,
         title: 'Run Status Update',
-        message: 'Run for WN1847 has been marked as completed successfully.',
-        flightNumber: 'WN1847',
-        runId: runIds[3],
+        message: 'Run for AS987 has been marked as completed successfully.',
+        flightNumber: 'AS987',
+        runId: runIds[5], // This should be the completed run
         metadata: {
-          previousStatus: 'active',
+          previousStatus: 'scheduled',
           newStatus: 'completed',
         },
       },
@@ -223,30 +235,12 @@ async function generateMockNotifications(runIds: string[]) {
         message:
           'Scheduled maintenance will occur tonight from 2:00 AM to 4:00 AM MST.',
         metadata: {
-          maintenanceStart: '2024-01-22T09:00:00Z',
-          maintenanceEnd: '2024-01-22T11:00:00Z',
-        },
-      },
-      {
-        type: 'flight_update' as const,
-        title: 'Gate Change',
-        message: 'Flight F9321 gate has changed from A12 to B8.',
-        flightNumber: 'F9321',
-        runId: runIds[4],
-        metadata: {
-          originalGate: 'A12',
-          newGate: 'B8',
-        },
-      },
-      {
-        type: 'traffic_alert' as const,
-        title: 'Road Construction',
-        message: 'Road construction on Granite Loop Road may cause delays.',
-        flightNumber: 'AS987',
-        runId: runIds[5],
-        metadata: {
-          route: 'Granite Loop Road',
-          expectedDelay: 10,
+          maintenanceStart: new Date(
+            Date.now() + 8 * 60 * 60 * 1000
+          ).toISOString(),
+          maintenanceEnd: new Date(
+            Date.now() + 10 * 60 * 60 * 1000
+          ).toISOString(),
         },
       },
     ];
@@ -285,6 +279,9 @@ async function main() {
     console.log(`   - ${runIds.length} runs created/found`);
     console.log('   - Mock notifications generated');
     console.log('\n💡 You can now view the mock data in the application');
+    console.log(
+      '⚠️  All runs are created as "scheduled" - no active runs that need immediate attention'
+    );
   } catch (error) {
     console.error('❌ Mock data generation failed:', error);
     process.exit(1);

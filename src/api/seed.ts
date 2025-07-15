@@ -283,3 +283,125 @@ export async function seedDataForUser(userId: string): Promise<{
     throw error;
   }
 }
+
+// POST /api/seed
+export async function POST(request: Request): Promise<Response> {
+  try {
+    const body = await request.json();
+    const { userId } = body as { userId?: string };
+
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'User ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Call the actual seed data generation function
+    const result = await seedDataForUser(userId);
+
+    return new Response(JSON.stringify(result), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Failed to generate seed data:', error);
+    return new Response(
+      JSON.stringify({ error: 'Failed to generate seed data' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
+}
+
+// DELETE /api/seed/clear
+export async function DELETE(request: Request): Promise<Response> {
+  try {
+    const body = await request.json();
+    const { userId } = body as { userId?: string };
+
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'User ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const db = getDatabase();
+    let deletedRuns = 0;
+    let deletedNotifications = 0;
+    let deletedPreferences = 0;
+
+    try {
+      // Count existing data before deletion
+      const runsResult = await db.query(
+        'SELECT COUNT(*) as count FROM runs WHERE user_id = $1',
+        [userId]
+      );
+      deletedRuns = parseInt(runsResult.rows[0].count);
+
+      const notificationsResult = await db.query(
+        'SELECT COUNT(*) as count FROM notifications WHERE user_id = $1',
+        [userId]
+      );
+      deletedNotifications = parseInt(notificationsResult.rows[0].count);
+
+      const preferencesResult = await db.query(
+        'SELECT COUNT(*) as count FROM user_preferences WHERE user_id = $1',
+        [userId]
+      );
+      deletedPreferences = parseInt(preferencesResult.rows[0].count);
+
+      // Delete all user data except the user record itself
+      await db.query('DELETE FROM notifications WHERE user_id = $1', [userId]);
+      await db.query('DELETE FROM runs WHERE user_id = $1', [userId]);
+      await db.query('DELETE FROM user_preferences WHERE user_id = $1', [
+        userId,
+      ]);
+
+      console.log(`✅ Cleared all data for user ${userId}:`);
+      console.log(`   - ${deletedRuns} runs`);
+      console.log(`   - ${deletedNotifications} notifications`);
+      console.log(`   - ${deletedPreferences} preferences`);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `Cleared ${deletedRuns} runs, ${deletedNotifications} notifications, and ${deletedPreferences} preferences`,
+          deletedRuns,
+          deletedNotifications,
+          deletedPreferences,
+        }),
+        {
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    } catch (error) {
+      console.error('❌ Error clearing user data:', error);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Failed to clear user data',
+          details: error instanceof Error ? error.message : 'Unknown error',
+        }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+  } catch (error) {
+    console.error('Failed to clear user data:', error);
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: 'Failed to process request',
+      }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
+}

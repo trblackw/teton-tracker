@@ -89,7 +89,7 @@ export function UserProfilePopover() {
               className="flex items-center gap-2"
               onClick={handleSettingsClick}
             >
-              <Settings className="h-4 w-4" />
+              <Settings className="h-4 w-4 text-muted-foreground" />
               Settings
             </Link>
           </Button>
@@ -98,7 +98,7 @@ export function UserProfilePopover() {
             className="w-full justify-start h-8 px-2 text-sm"
             onClick={handleSignOut}
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-4 w-4 text-muted-foreground" />
             Sign Out
           </Button>
         </div>

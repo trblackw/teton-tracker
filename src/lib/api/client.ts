@@ -180,10 +180,15 @@ export const runsApi = {
       throw new Error('User not authenticated');
     }
 
-    const response = await fetch(`${API_BASE}/runs/${id}/status`, {
+    const response = await fetch(`${API_BASE}/runs`, {
       method: 'PUT',
       headers: createAuthHeaders(),
-      body: JSON.stringify({ status, userId }),
+      body: JSON.stringify({
+        action: 'update_status',
+        id,
+        status,
+        userId,
+      }),
     });
 
     if (!response.ok) {
@@ -395,6 +400,22 @@ export const seedApi = {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to generate seed data');
+    }
+
+    return response.json();
+  },
+
+  async clearUserData(
+    userId: string
+  ): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(`${API_BASE}/seed`, {
+      method: 'DELETE',
+      headers: createAuthHeaders(),
+      body: JSON.stringify({ userId }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to clear user data');
     }
 
     return response.json();

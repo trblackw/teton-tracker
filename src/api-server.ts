@@ -1,10 +1,11 @@
 #!/usr/bin/env bun
 import { serve } from 'bun';
 import * as authApi from './api/auth';
+import * as configApi from './api/config';
 import * as notificationsApi from './api/notifications';
 import * as preferencesApi from './api/preferences';
 import * as runsApi from './api/runs';
-import { seedDataForUser } from './api/seed';
+import * as seedApi from './api/seed';
 import { initializeDatabase } from './lib/db';
 
 // Initialize database
@@ -16,6 +17,89 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
+
+// API route configuration
+const apiRoutes = {
+  '/api/config': configApi,
+  '/api/runs': runsApi,
+  '/api/preferences': preferencesApi,
+  '/api/notifications': notificationsApi,
+  '/api/seed': seedApi,
+};
+
+// Auth routes (these have custom path handling)
+const authRoutes = {
+  '/api/auth/validate-password': authApi.passwordValidationHandler,
+  '/api/auth/check': authApi.checkAuthHandler,
+  '/api/auth/logout': authApi.logoutHandler,
+};
+
+// Generic API route handler
+async function handleApiRoute(
+  request: Request,
+  apiModule: any
+): Promise<Response> {
+  const method = request.method;
+  const handler = apiModule[method];
+
+  if (typeof handler === 'function') {
+    try {
+      const response = await handler(request);
+      // Add CORS headers
+      response.headers.set('Access-Control-Allow-Origin', '*');
+      response.headers.set(
+        'Access-Control-Allow-Methods',
+        'GET, POST, PUT, DELETE, OPTIONS'
+      );
+      response.headers.set(
+        'Access-Control-Allow-Headers',
+        'Content-Type, Authorization'
+      );
+      return response;
+    } catch (error) {
+      console.error(`${method} ${request.url} error:`, error);
+      return new Response(
+        JSON.stringify({ error: `Failed to ${method.toLowerCase()} resource` }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+  } else {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+}
+
+// Special handler for auth routes
+async function handleAuthRoute(
+  request: Request,
+  handler: Function
+): Promise<Response> {
+  try {
+    const response = await handler(request);
+    // Add CORS headers to response
+    const headers = new Headers(response.headers);
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      headers.set(key, value);
+    });
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
+  } catch (error) {
+    console.error(`Auth ${request.url} error:`, error);
+    return new Response(JSON.stringify({ error: 'Authentication failed' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+}
 
 // Create the server
 const server = serve({
@@ -32,273 +116,68 @@ const server = serve({
     }
 
     try {
-      // Config endpoint for frontend environment variables
-      if (url.pathname === '/api/config') {
-        const config = {
-          clerkPublishableKey: process.env.VITE_CLERK_PUBLISHABLE_KEY,
-          environment: process.env.NODE_ENV || 'development',
-        };
-
-        return new Response(JSON.stringify(config), {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-          },
-        });
+      // Check for auth routes first (special handling)
+      const authHandler = authRoutes[url.pathname as keyof typeof authRoutes];
+      if (authHandler) {
+        return await handleAuthRoute(request, authHandler);
       }
 
-      // Seed endpoint for development data generation
-      if (url.pathname === '/api/seed') {
-        // Only allow in development mode
-        if (process.env.NODE_ENV === 'production') {
-          return new Response(
-            JSON.stringify({ error: 'Not available in production' }),
-            {
-              status: 403,
-              headers: {
-                ...corsHeaders,
-                'Content-Type': 'application/json',
-              },
-            }
+      // Check for special sub-path routes
+      if (url.pathname === '/api/notifications/stats') {
+        if (
+          request.method === 'GET' &&
+          typeof notificationsApi.getStats === 'function'
+        ) {
+          const response = await notificationsApi.getStats(request);
+          response.headers.set('Access-Control-Allow-Origin', '*');
+          response.headers.set(
+            'Access-Control-Allow-Methods',
+            'GET, POST, PUT, DELETE, OPTIONS'
           );
-        }
-
-        if (request.method === 'POST') {
-          try {
-            const body = await request.json();
-            const { userId } = body as { userId: string };
-
-            if (!userId) {
-              return new Response(
-                JSON.stringify({ error: 'User ID is required' }),
-                {
-                  status: 400,
-                  headers: {
-                    ...corsHeaders,
-                    'Content-Type': 'application/json',
-                  },
-                }
-              );
-            }
-
-            const result = await seedDataForUser(userId);
-
-            return new Response(JSON.stringify(result), {
-              status: 200,
-              headers: {
-                ...corsHeaders,
-                'Content-Type': 'application/json',
-              },
-            });
-          } catch (error) {
-            console.error('Seed endpoint error:', error);
-            return new Response(
-              JSON.stringify({ error: 'Failed to seed data' }),
-              {
-                status: 500,
-                headers: {
-                  ...corsHeaders,
-                  'Content-Type': 'application/json',
-                },
-              }
-            );
-          }
+          response.headers.set(
+            'Access-Control-Allow-Headers',
+            'Content-Type, Authorization'
+          );
+          return response;
         } else {
           return new Response(JSON.stringify({ error: 'Method not allowed' }), {
             status: 405,
-            headers: {
-              ...corsHeaders,
-              'Content-Type': 'application/json',
-            },
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
       }
 
-      // Auth endpoint for password validation
-      if (url.pathname === '/api/auth/validate-password') {
-        const response = await authApi.passwordValidationHandler(request);
+      // Check for standard API routes
+      const apiModule = apiRoutes[url.pathname as keyof typeof apiRoutes];
+      if (apiModule) {
+        // Special handling for seed endpoint (development only)
+        if (
+          url.pathname === '/api/seed' &&
+          process.env.NODE_ENV === 'production'
+        ) {
+          return new Response(
+            JSON.stringify({ error: 'Not available in production' }),
+            {
+              status: 403,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          );
+        }
 
-        // Add CORS headers to response
-        const headers = new Headers(response.headers);
-        Object.entries(corsHeaders).forEach(([key, value]) => {
-          headers.set(key, value);
-        });
-
-        return new Response(response.body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers,
-        });
+        return await handleApiRoute(request, apiModule);
       }
 
-      // Auth session check endpoint
-      if (url.pathname === '/api/auth/check') {
-        const response = await authApi.checkAuthHandler(request);
-
-        // Add CORS headers to response
-        const headers = new Headers(response.headers);
-        Object.entries(corsHeaders).forEach(([key, value]) => {
-          headers.set(key, value);
-        });
-
-        return new Response(response.body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers,
-        });
-      }
-
-      // Logout endpoint
-      if (url.pathname === '/api/auth/logout') {
-        const response = await authApi.logoutHandler(request);
-
-        // Add CORS headers to response
-        const headers = new Headers(response.headers);
-        Object.entries(corsHeaders).forEach(([key, value]) => {
-          headers.set(key, value);
-        });
-
-        return new Response(response.body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers,
-        });
-      }
-
-      // API routes only
-      if (url.pathname === '/api/runs') {
-        const response =
-          request.method === 'GET'
-            ? await runsApi.GET(request)
-            : request.method === 'POST'
-              ? await runsApi.POST(request)
-              : new Response('Method not allowed', { status: 405 });
-
-        // Add CORS headers to response
-        const headers = new Headers(response.headers);
-        Object.entries(corsHeaders).forEach(([key, value]) => {
-          headers.set(key, value);
-        });
-
-        return new Response(response.body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers,
-        });
-      }
-
-      if (url.pathname === '/api/preferences') {
-        const response =
-          request.method === 'GET'
-            ? await preferencesApi.GET(request)
-            : request.method === 'PUT'
-              ? await preferencesApi.PUT(request)
-              : new Response('Method not allowed', { status: 405 });
-
-        // Add CORS headers to response
-        const headers = new Headers(response.headers);
-        Object.entries(corsHeaders).forEach(([key, value]) => {
-          headers.set(key, value);
-        });
-
-        return new Response(response.body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers,
-        });
-      }
-
-      // Notifications API routes
-      if (url.pathname === '/api/notifications') {
-        const response =
-          request.method === 'GET'
-            ? await notificationsApi.GET(request)
-            : request.method === 'POST'
-              ? await notificationsApi.POST(request)
-              : request.method === 'PUT'
-                ? await notificationsApi.PUT(request)
-                : request.method === 'DELETE'
-                  ? await notificationsApi.DELETE(request)
-                  : new Response('Method not allowed', { status: 405 });
-
-        // Add CORS headers to response
-        const headers = new Headers(response.headers);
-        Object.entries(corsHeaders).forEach(([key, value]) => {
-          headers.set(key, value);
-        });
-
-        return new Response(response.body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers,
-        });
-      }
-
-      // Notifications stats endpoint
-      if (url.pathname === '/api/notifications/stats') {
-        const response =
-          request.method === 'GET'
-            ? await notificationsApi.getStats(request)
-            : new Response('Method not allowed', { status: 405 });
-
-        // Add CORS headers to response
-        const headers = new Headers(response.headers);
-        Object.entries(corsHeaders).forEach(([key, value]) => {
-          headers.set(key, value);
-        });
-
-        return new Response(response.body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers,
-        });
-      }
-
-      // Handle parameterized routes
-      const runIdMatch = url.pathname.match(/^\/api\/runs\/([^\/]+)$/);
-      if (runIdMatch && request.method === 'DELETE') {
-        (request as any).params = { id: runIdMatch[1] };
-        const response = await runsApi.DELETE(request);
-
-        // Add CORS headers to response
-        const headers = new Headers(response.headers);
-        Object.entries(corsHeaders).forEach(([key, value]) => {
-          headers.set(key, value);
-        });
-
-        return new Response(response.body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers,
-        });
-      }
-
-      const statusMatch = url.pathname.match(/^\/api\/runs\/([^\/]+)\/status$/);
-      if (statusMatch && request.method === 'PUT') {
-        (request as any).params = { id: statusMatch[1] };
-        const response = await runsApi.PUT(request);
-
-        // Add CORS headers to response
-        const headers = new Headers(response.headers);
-        Object.entries(corsHeaders).forEach(([key, value]) => {
-          headers.set(key, value);
-        });
-
-        return new Response(response.body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers,
-        });
-      }
-
-      return new Response('API endpoint not found', {
+      // No matching route found
+      return new Response(JSON.stringify({ error: 'Not found' }), {
         status: 404,
-        headers: corsHeaders,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (error) {
-      console.error('Error fetching:', error);
-      return new Response('Internal Server Error', { status: 500 });
+      console.error('Server error:', error);
+      return new Response(JSON.stringify({ error: 'Internal server error' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
   },
 });
