@@ -13,6 +13,7 @@ import { PasswordProtection } from '../components/password-protection';
 import { ThemeProvider } from '../components/theme-provider';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
+import { UserProfilePopover } from '../components/user-profile-popover';
 import { AppContextProvider } from '../lib/AppContextProvider';
 import { queryClient } from '../lib/react-query-client';
 import { initializeTomTomServiceWithConfig } from '../lib/services/tomtom-service';
@@ -56,6 +57,12 @@ function RootComponent() {
                             Teton Tracker
                           </h1>
                         </div>
+
+                        {/* User Profile Section */}
+                        <div className="mb-4 pb-4 border-b">
+                          <UserProfilePopover />
+                        </div>
+
                         <nav className="space-y-2">
                           <Button
                             asChild
@@ -154,88 +161,95 @@ function RootComponent() {
 
               {/* Mobile Navigation */}
               <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-sm">
-                <nav className="flex items-center justify-center gap-1 p-2">
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
-                  >
-                    <Link
-                      to="/runs"
-                      className="flex flex-col items-center gap-1"
-                      activeProps={{
-                        className: activeNavClass,
-                      }}
+                <div className="flex items-center justify-between p-2">
+                  <nav className="flex items-center justify-center gap-1 flex-1">
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                      className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
                     >
-                      <Car className="size-8" />
-                    </Link>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
-                  >
-                    <Link
-                      to="/add"
-                      className="flex flex-col items-center gap-1"
-                      activeProps={{
-                        className: activeNavClass,
-                      }}
+                      <Link
+                        to="/runs"
+                        className="flex flex-col items-center gap-1"
+                        activeProps={{
+                          className: activeNavClass,
+                        }}
+                      >
+                        <Car className="size-5" />
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                      className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
                     >
-                      <Plus className="size-6" />
-                    </Link>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
-                  >
-                    <Link
-                      to="/flights"
-                      className="flex flex-col items-center gap-1"
-                      activeProps={{
-                        className: activeNavClass,
-                      }}
+                      <Link
+                        to="/add"
+                        className="flex flex-col items-center gap-1"
+                        activeProps={{
+                          className: activeNavClass,
+                        }}
+                      >
+                        <Plus className="size-6" />
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                      className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
                     >
-                      <Plane className="size-5" />
-                    </Link>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
-                  >
-                    <Link
-                      to="/notifications"
-                      className="flex flex-col items-center gap-1"
-                      activeProps={{
-                        className: activeNavClass,
-                      }}
+                      <Link
+                        to="/flights"
+                        className="flex flex-col items-center gap-1"
+                        activeProps={{
+                          className: activeNavClass,
+                        }}
+                      >
+                        <Plane className="size-5" />
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                      className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
                     >
-                      <Bell className="size-5" />
-                    </Link>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="sm"
-                    className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
-                  >
-                    <Link
-                      to="/settings"
-                      className="flex flex-col items-center gap-1"
-                      activeProps={{
-                        className: activeNavClass,
-                      }}
+                      <Link
+                        to="/notifications"
+                        className="flex flex-col items-center gap-1"
+                        activeProps={{
+                          className: activeNavClass,
+                        }}
+                      >
+                        <Bell className="size-5" />
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                      className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
                     >
-                      <Settings className="size-5" />
-                    </Link>
-                  </Button>
-                </nav>
+                      <Link
+                        to="/settings"
+                        className="flex flex-col items-center gap-1"
+                        activeProps={{
+                          className: activeNavClass,
+                        }}
+                      >
+                        <Settings className="size-5" />
+                      </Link>
+                    </Button>
+                  </nav>
+
+                  {/* User Profile for Mobile */}
+                  <div className="mr-7">
+                    <UserProfilePopover />
+                  </div>
+                </div>
               </div>
 
               {/* Add bottom padding for mobile navigation */}
