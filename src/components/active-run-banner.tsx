@@ -113,13 +113,14 @@ export function ActiveRunBanner() {
   return (
     <div
       className={`fixed top-4 z-50 pointer-events-none ${
-        isMinimized ? 'left-4' : 'left-4 right-4'
+        isMinimized ? 'right-4' : 'left-4 right-4'
       }`}
     >
       <motion.div
         className="w-full"
         layout
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        style={{ originX: isMinimized ? 1 : 0.5 }} // Animate from right when minimized
       >
         <motion.div
           className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200 shadow-lg pointer-events-auto cursor-pointer hover:shadow-xl rounded-lg border dark:from-blue-950 dark:to-blue-900 dark:border-blue-800"
