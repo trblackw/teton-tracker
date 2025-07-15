@@ -27,7 +27,6 @@ export async function getUserPreferences(
 
     const row = result.rows[0];
     return {
-      id: row.id,
       userId: row.user_id,
       homeAirport: row.home_airport || undefined,
       theme: row.theme,
@@ -103,7 +102,6 @@ export async function saveUserPreferences(
         if (result.rows.length > 0) {
           const row = result.rows[0];
           const updated: UserPreferences = {
-            id: row.id,
             userId: row.user_id,
             homeAirport: row.home_airport || undefined,
             theme: row.theme,
@@ -123,9 +121,7 @@ export async function saveUserPreferences(
       return existing;
     } else {
       // Create new preferences
-      const preferencesId = crypto.randomUUID();
       const newPreferences: UserPreferences = {
-        id: preferencesId,
         userId: currentUserId,
         homeAirport: preferences.homeAirport || undefined,
         theme: preferences.theme || 'system',
@@ -143,11 +139,10 @@ export async function saveUserPreferences(
 
       await db.query(
         `INSERT INTO user_preferences (
-          id, user_id, home_airport, theme, timezone, 
+          user_id, home_airport, theme, timezone, 
           notification_preferences, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
-          newPreferences.id,
           newPreferences.userId,
           newPreferences.homeAirport || null,
           newPreferences.theme,

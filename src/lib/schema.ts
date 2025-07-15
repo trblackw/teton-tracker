@@ -116,14 +116,29 @@ export const NotificationPreferencesSchema = z.object({
   smsNotificationsEnabled: z.boolean().default(false),
 });
 
-// User preferences schema
+// User preferences schema (updated to use userId as primary key)
 export const UserPreferencesSchema = z.object({
-  id: z.string().uuid('Invalid preferences ID format'),
   userId: z.string().min(1, 'User ID is required'),
   homeAirport: AirportCodeSchema.optional(),
   theme: ThemeSchema.default('system'),
   timezone: z.string().min(1, 'Timezone is required').default('UTC'),
   notificationPreferences: NotificationPreferencesSchema.default({}),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+// User metadata schema
+export const UserMetadataSchema = z.object({
+  userId: z.string().min(1, 'User ID is required'),
+  deviceType: z.string().optional(),
+  browser: z.string().optional(),
+  browserVersion: z.string().optional(),
+  operatingSystem: z.string().optional(),
+  screenResolution: z.string().optional(),
+  userAgent: z.string().optional(),
+  timezoneDetected: z.string().optional(),
+  lastLoginAt: z.date().optional(),
+  loginCount: z.number().int().default(0),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
@@ -299,6 +314,7 @@ export const TomTomRouteResponseSchema = z.object({
 // Utility types (inferred from schemas)
 export type User = z.infer<typeof UserSchema>;
 export type UserPreferences = z.infer<typeof UserPreferencesSchema>;
+export type UserMetadata = z.infer<typeof UserMetadataSchema>;
 export type NotificationPreferences = z.infer<
   typeof NotificationPreferencesSchema
 >;
@@ -323,6 +339,10 @@ export const validateUser = (data: unknown): User => {
 
 export const validateUserPreferences = (data: unknown): UserPreferences => {
   return UserPreferencesSchema.parse(data);
+};
+
+export const validateUserMetadata = (data: unknown): UserMetadata => {
+  return UserMetadataSchema.parse(data);
 };
 
 export const validateNotification = (data: unknown): Notification => {
@@ -352,6 +372,10 @@ export const safeValidateUser = (data: unknown) => {
 
 export const safeValidateUserPreferences = (data: unknown) => {
   return UserPreferencesSchema.safeParse(data);
+};
+
+export const safeValidateUserMetadata = (data: unknown) => {
+  return UserMetadataSchema.safeParse(data);
 };
 
 export const safeValidateNotification = (data: unknown) => {

@@ -21,7 +21,12 @@
     "generate-social-preview": "bun run scripts/generate-social-preview.ts",
     "setup-db": "bun run scripts/setup-db.ts",
     "cleanup-db": "bun run scripts/cleanup-db.ts",
-    "verify-db": "bun run scripts/verify-db.ts"
+    "verify-db": "bun run scripts/verify-db.ts",
+    "migrate-db": "bun run scripts/migrate-db.ts",
+    "migrate": "bun run scripts/migrate-db.ts migrate",
+    "rollback": "bun run scripts/migrate-db.ts rollback",
+    "migration-status": "bun run scripts/migrate-db.ts status",
+    "create-migration": "bun run scripts/migrate-db.ts create"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

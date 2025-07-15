@@ -41,15 +41,33 @@ async function setupDatabaseSchema(): Promise<void> {
       )
     `);
 
-    // User preferences table
+    // User preferences table (restructured to use user_id as primary key)
     await db.query(`
       CREATE TABLE IF NOT EXISTS user_preferences (
-        id text PRIMARY KEY,
-        user_id text NOT NULL,
+        user_id text PRIMARY KEY,
         home_airport text,
         theme text DEFAULT 'system',
         timezone text DEFAULT 'UTC',
         notification_preferences text DEFAULT '{}',
+        created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+        updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    // User metadata table
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS user_metadata (
+        user_id text PRIMARY KEY,
+        device_type text,
+        browser text,
+        browser_version text,
+        operating_system text,
+        screen_resolution text,
+        user_agent text,
+        timezone_detected text,
+        last_login_at timestamp,
+        login_count integer DEFAULT 0,
         created_at timestamp DEFAULT CURRENT_TIMESTAMP,
         updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -124,6 +142,12 @@ async function setupDatabaseSchema(): Promise<void> {
       'CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at)',
       // User preferences table indexes
       'CREATE INDEX IF NOT EXISTS idx_user_preferences_user_id ON user_preferences(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_user_preferences_theme ON user_preferences(theme)',
+      'CREATE INDEX IF NOT EXISTS idx_user_preferences_timezone ON user_preferences(timezone)',
+      // User metadata table indexes
+      'CREATE INDEX IF NOT EXISTS idx_user_metadata_last_login ON user_metadata(last_login_at)',
+      'CREATE INDEX IF NOT EXISTS idx_user_metadata_device_type ON user_metadata(device_type)',
+      'CREATE INDEX IF NOT EXISTS idx_user_metadata_browser ON user_metadata(browser)',
       // Runs table indexes
       'CREATE INDEX IF NOT EXISTS idx_runs_user_id ON runs(user_id)',
       'CREATE INDEX IF NOT EXISTS idx_runs_scheduled_time ON runs(scheduled_time)',
