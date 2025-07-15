@@ -248,6 +248,27 @@ async function runMigrations(): Promise<void> {
       );
     }
 
+    // Migration: Add email and phone_number columns to user_preferences table
+    try {
+      await db.execute(`
+        ALTER TABLE user_preferences ADD COLUMN email TEXT
+      `);
+      console.log('✅ Added email column to user_preferences table');
+    } catch (error) {
+      console.log('💡 Email column already exists or could not be added');
+    }
+
+    try {
+      await db.execute(`
+        ALTER TABLE user_preferences ADD COLUMN phone_number TEXT
+      `);
+      console.log('✅ Added phone_number column to user_preferences table');
+    } catch (error) {
+      console.log(
+        '💡 Phone_number column already exists or could not be added'
+      );
+    }
+
     console.log('✅ Database migrations completed successfully\n');
   } catch (error) {
     console.error('❌ Failed to run database migrations:', error);

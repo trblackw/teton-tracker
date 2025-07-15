@@ -1,6 +1,6 @@
+import { useUser } from '@clerk/clerk-react';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { type User } from './schema';
-import { getCurrentUserId } from './user-utils';
 
 interface AppContextValue {
   currentUser: User | null;
@@ -16,21 +16,24 @@ export function AppContextProvider({
 }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { user: clerkUser, isLoaded } = useUser();
 
   useEffect(() => {
-    const initializeUser = async () => {
+    if (isLoaded) {
       try {
-        // Clean approach: use frontend utility (no database concerns)
-        const userId = getCurrentUserId();
-
-        const user: User = {
-          id: userId,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-
-        setCurrentUser(user);
-        console.log('👤 Initialized user:', userId);
+        if (clerkUser) {
+          const user: User = {
+            id: clerkUser.id,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+          setCurrentUser(user);
+          console.log('👤 Initialized user:', clerkUser.id);
+        } else {
+          // No user logged in
+          setCurrentUser(null);
+          console.log('👤 No user logged in');
+        }
       } catch (error) {
         console.error('Failed to initialize user:', error);
         // Fallback to a basic user
@@ -43,10 +46,8 @@ export function AppContextProvider({
       } finally {
         setIsLoading(false);
       }
-    };
-
-    initializeUser();
-  }, []);
+    }
+  }, [isLoaded, clerkUser]);
 
   return (
     <AppContext.Provider value={{ currentUser, isLoading }}>
