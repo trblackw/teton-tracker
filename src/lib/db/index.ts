@@ -1,33 +1,20 @@
 import { Pool } from 'pg';
-import { generateBrowserUserId } from '../user-utils';
-import { isDevelopmentMode } from '../utils';
-
-// Fixed development user ID for consistent seeding
-const DEVELOPMENT_USER_ID = 'user_dev_seed_12345';
 
 // Database client instance
 let db: Pool | null = null;
 
-// Utility function for getting the appropriate user ID (for database operations)
-export function generateUserId(): string {
-  // In development mode, use the fixed development user ID for consistency with seed data
-  if (isDevelopmentMode()) {
-    return DEVELOPMENT_USER_ID;
+// Get or create user in database
+export async function getOrCreateUser(userId: string): Promise<string> {
+  if (!userId) {
+    throw new Error('User ID is required');
   }
 
-  // In production, use browser-based generation
-  return generateBrowserUserId();
-}
-
-// Get or create user in database
-export async function getOrCreateUser(userId?: string): Promise<string> {
   const db = getDatabase();
-  const currentUserId = userId || generateUserId();
 
   try {
     // Check if user exists
     const existingUser = await db.query('SELECT id FROM users WHERE id = $1', [
-      currentUserId,
+      userId,
     ]);
 
     if (existingUser.rows.length === 0) {
@@ -35,15 +22,15 @@ export async function getOrCreateUser(userId?: string): Promise<string> {
       const now = new Date().toISOString();
       await db.query(
         `INSERT INTO users (id, created_at, updated_at) VALUES ($1, $2, $3)`,
-        [currentUserId, now, now]
+        [userId, now, now]
       );
-      console.log(`✅ Created new user: ${currentUserId}`);
+      console.log(`✅ Created new user: ${userId}`);
     }
 
-    return currentUserId;
+    return userId;
   } catch (error) {
     handleDatabaseError(error, 'get or create user');
-    return currentUserId;
+    throw error;
   }
 }
 

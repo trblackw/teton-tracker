@@ -228,8 +228,8 @@ function ActiveRunPage() {
   const calculateStartTime = () => {
     const now = new Date();
 
-    // Use activatedAt if available, otherwise fall back to updatedAt/createdAt
-    if (activeRun.activatedAt) {
+    // Use activatedAt if available and not null
+    if (activeRun.activatedAt && activeRun.activatedAt !== null) {
       return new Date(activeRun.activatedAt);
     }
 

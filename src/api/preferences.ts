@@ -1,4 +1,7 @@
-import { generateUserId } from '../lib/db';
+import {
+  createAccessControlResponse,
+  validateResourceOwnership,
+} from '../lib/access-control';
 import { getUserPreferences, saveUserPreferences } from '../lib/db/preferences';
 import { type UserPreferences } from '../lib/schema';
 
@@ -6,8 +9,16 @@ import { type UserPreferences } from '../lib/schema';
 export async function GET(request: Request): Promise<Response> {
   try {
     const url = new URL(request.url);
-    const userId = url.searchParams.get('userId') || generateUserId();
+    const userId = url.searchParams.get('userId');
 
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'User ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Preferences are user-specific by design - we only return the user's own preferences
     const preferences = await getUserPreferences(userId);
 
     return new Response(JSON.stringify(preferences), {
@@ -31,9 +42,36 @@ export async function PUT(request: Request): Promise<Response> {
     const body = await request.json();
     const { preferencesData, userId } = body as {
       preferencesData: Partial<UserPreferences>;
-      userId?: string;
+      userId: string;
     };
 
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'User ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // For preferences updates, we check if preferences exist for this user
+    // If they exist, we validate ownership; if not, we're creating new ones
+    const existingPreferences = await getUserPreferences(userId);
+
+    if (existingPreferences) {
+      // Validate that the user owns these preferences before allowing updates
+      try {
+        await validateResourceOwnership(
+          'user_preferences',
+          existingPreferences.id,
+          userId
+        );
+      } catch (error) {
+        return createAccessControlResponse(
+          error instanceof Error ? error : new Error(String(error))
+        );
+      }
+    }
+
+    // Save/update preferences for the authenticated user
     const preferences = await saveUserPreferences(preferencesData, userId);
 
     return new Response(JSON.stringify(preferences), {

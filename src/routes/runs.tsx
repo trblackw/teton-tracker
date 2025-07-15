@@ -227,8 +227,18 @@ function Runs() {
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: RunStatus }) =>
       runsApi.updateRunStatus(id, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['runs'] });
+    onSuccess: async (updatedRun: Run | null) => {
+      if (updatedRun) {
+        // Update the cache immediately with the updated run data
+        queryClient.setQueryData(['runs'], (oldData: Run[] | undefined) => {
+          if (!oldData) return oldData;
+          return oldData.map((run: Run) =>
+            run.id === updatedRun.id ? updatedRun : run
+          );
+        });
+      }
+      // Also invalidate to ensure consistency
+      await queryClient.invalidateQueries({ queryKey: ['runs'] });
     },
     onError: error => {
       console.error('Failed to update run status:', error);

@@ -1,4 +1,7 @@
-import { generateUserId } from '../lib/db';
+import {
+  createAccessControlResponse,
+  validateResourceOwnership,
+} from '../lib/access-control';
 import {
   createNotification,
   deleteNotification,
@@ -14,11 +17,18 @@ import {
 export async function GET(request: Request): Promise<Response> {
   try {
     const url = new URL(request.url);
-    const userId = url.searchParams.get('userId') || generateUserId();
+    const userId = url.searchParams.get('userId');
+
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'User ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
     // Parse query parameters
     const query: NotificationsQuery = {
-      userId,
+      userId, // This ensures we only get notifications for the authenticated user
       limit: Number(url.searchParams.get('limit')) || 50,
       offset: Number(url.searchParams.get('offset')) || 0,
       orderBy:
@@ -72,9 +82,17 @@ export async function POST(request: Request): Promise<Response> {
     const body = await request.json();
     const { notificationData, userId } = body as {
       notificationData: NotificationForm;
-      userId?: string;
+      userId: string;
     };
 
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'User ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // For creation, we don't need access control validation since the user is creating their own resource
     const notification = await createNotification(notificationData, userId);
 
     return new Response(JSON.stringify(notification), {
@@ -101,8 +119,15 @@ export async function PUT(request: Request): Promise<Response> {
       action: 'mark_read' | 'mark_all_read';
       id?: string;
       isRead?: boolean;
-      userId?: string;
+      userId: string;
     };
+
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'User ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
     let success = false;
 
@@ -117,6 +142,16 @@ export async function PUT(request: Request): Promise<Response> {
             }
           );
         }
+
+        // Validate that the user owns this notification before allowing updates
+        try {
+          await validateResourceOwnership('notification', id, userId);
+        } catch (error) {
+          return createAccessControlResponse(
+            error instanceof Error ? error : new Error(String(error))
+          );
+        }
+
         if (isRead) {
           success = await markNotificationAsRead(id, userId);
         } else {
@@ -126,7 +161,8 @@ export async function PUT(request: Request): Promise<Response> {
         break;
 
       case 'mark_all_read':
-        success = await markAllNotificationsAsRead(userId || generateUserId());
+        // For mark_all_read, we only mark the user's own notifications
+        success = await markAllNotificationsAsRead(userId);
         break;
 
       default:
@@ -157,18 +193,31 @@ export async function DELETE(request: Request): Promise<Response> {
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
     const userId = url.searchParams.get('userId');
-    const action = url.searchParams.get('action');
 
-    let success = false;
-
-    if (id) {
-      success = await deleteNotification(id, userId || undefined);
-    } else {
+    if (!id) {
       return new Response(JSON.stringify({ error: 'Missing id parameter' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'User ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Validate that the user owns this notification before allowing deletion
+    try {
+      await validateResourceOwnership('notification', id, userId);
+    } catch (error) {
+      return createAccessControlResponse(
+        error instanceof Error ? error : new Error(String(error))
+      );
+    }
+
+    const success = await deleteNotification(id, userId);
 
     return new Response(JSON.stringify({ success }), {
       headers: { 'Content-Type': 'application/json' },
@@ -189,8 +238,16 @@ export async function DELETE(request: Request): Promise<Response> {
 export async function getStats(request: Request): Promise<Response> {
   try {
     const url = new URL(request.url);
-    const userId = url.searchParams.get('userId') || generateUserId();
+    const userId = url.searchParams.get('userId');
 
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'User ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Stats are user-specific by design, so we don't need additional access control
     const stats = await getNotificationsStats(userId);
 
     return new Response(JSON.stringify(stats), {

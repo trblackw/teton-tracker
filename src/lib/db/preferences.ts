@@ -6,11 +6,15 @@ export type UpdatePreferencesData = Partial<UserPreferences>;
 
 // Get user preferences
 export async function getUserPreferences(
-  userId?: string
+  userId: string
 ): Promise<UserPreferences | null> {
+  if (!userId) {
+    throw new Error('User ID is required');
+  }
+
   try {
     const db = getDatabase();
-    const currentUserId = userId || (await getOrCreateUser());
+    const currentUserId = await getOrCreateUser(userId);
 
     const result = await db.query(
       'SELECT * FROM user_preferences WHERE user_id = $1',
@@ -43,11 +47,15 @@ export async function getUserPreferences(
 // Create or update user preferences
 export async function saveUserPreferences(
   preferences: Partial<UserPreferences>,
-  userId?: string
+  userId: string
 ): Promise<UserPreferences | null> {
+  if (!userId) {
+    throw new Error('User ID is required');
+  }
+
   try {
     const db = getDatabase();
-    const currentUserId = userId || (await getOrCreateUser());
+    const currentUserId = await getOrCreateUser(userId);
     const now = new Date().toISOString();
 
     // Check if preferences exist
@@ -180,11 +188,15 @@ export async function saveUserPreferences(
 // Update notification preferences
 export async function updateNotificationPreferences(
   notificationPreferences: NotificationPreferences,
-  userId?: string
+  userId: string
 ): Promise<boolean> {
+  if (!userId) {
+    throw new Error('User ID is required');
+  }
+
   try {
     const db = getDatabase();
-    const currentUserId = userId || (await getOrCreateUser());
+    const currentUserId = await getOrCreateUser(userId);
     const now = new Date().toISOString();
 
     const result = await db.query(
@@ -209,10 +221,14 @@ export async function updateNotificationPreferences(
 }
 
 // Delete user preferences
-export async function deleteUserPreferences(userId?: string): Promise<boolean> {
+export async function deleteUserPreferences(userId: string): Promise<boolean> {
+  if (!userId) {
+    throw new Error('User ID is required');
+  }
+
   try {
     const db = getDatabase();
-    const currentUserId = userId || (await getOrCreateUser());
+    const currentUserId = await getOrCreateUser(userId);
 
     const result = await db.query(
       'DELETE FROM user_preferences WHERE user_id = $1',

@@ -19,7 +19,6 @@
     "format:check": "prettier --check .",
     "prepare": "husky",
     "generate-social-preview": "bun run scripts/generate-social-preview.ts",
-    "seed": "bun run scripts/seed-data.ts",
     "setup-db": "bun run scripts/setup-db.ts",
     "cleanup-db": "bun run scripts/cleanup-db.ts",
     "verify-db": "bun run scripts/verify-db.ts"

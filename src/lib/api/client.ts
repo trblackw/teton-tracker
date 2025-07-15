@@ -174,7 +174,7 @@ export const runsApi = {
   },
 
   // Update run status
-  async updateRunStatus(id: string, status: RunStatus): Promise<void> {
+  async updateRunStatus(id: string, status: RunStatus): Promise<Run | null> {
     const userId = getCurrentUserIdFromClerk();
     if (!userId) {
       throw new Error('User not authenticated');
@@ -194,6 +194,9 @@ export const runsApi = {
     if (!response.ok) {
       throw new Error('Failed to update run status');
     }
+
+    const result = await response.json();
+    return result.updatedRun;
   },
 
   // Delete a run

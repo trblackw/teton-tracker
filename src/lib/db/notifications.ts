@@ -25,11 +25,15 @@ export interface NotificationsQuery {
 // Create a new notification
 export async function createNotification(
   notificationData: NotificationForm,
-  userId?: string
+  userId: string
 ): Promise<Notification> {
+  if (!userId) {
+    throw new Error('User ID is required');
+  }
+
   try {
     const db = getDatabase();
-    const currentUserId = userId || (await getOrCreateUser());
+    const currentUserId = await getOrCreateUser(userId);
     const notificationId = crypto.randomUUID();
     const now = new Date().toISOString();
 
@@ -219,30 +223,31 @@ export async function getNotificationById(
 // Mark notification as read
 export async function markNotificationAsRead(
   id: string,
-  userId?: string
+  userId: string
 ): Promise<boolean> {
+  if (!userId) {
+    throw new Error('User ID is required');
+  }
+
+  if (!id) {
+    throw new Error('Notification ID is required');
+  }
+
   try {
     const db = getDatabase();
     const now = new Date().toISOString();
 
-    let sql = `
-      UPDATE notifications 
-      SET is_read = $1, updated_at = $2
-      WHERE id = $3
-    `;
-
-    const args = [true, now, id];
-
-    if (userId) {
-      sql += ' AND user_id = $4';
-      args.push(userId);
-    }
-
-    const result = await db.query(sql, args);
+    // Update only if the notification belongs to the user
+    const result = await db.query(
+      `UPDATE notifications 
+       SET is_read = true, updated_at = $1 
+       WHERE id = $2 AND user_id = $3`,
+      [now, id, userId]
+    );
 
     const success = result.rowCount != null && result.rowCount > 0;
     if (success) {
-      console.log(`✅ Marked notification ${id} as read`);
+      console.log(`✅ Marked notification as read: ${id}`);
     }
 
     return success;
@@ -256,20 +261,27 @@ export async function markNotificationAsRead(
 export async function markAllNotificationsAsRead(
   userId: string
 ): Promise<boolean> {
+  if (!userId) {
+    throw new Error('User ID is required');
+  }
+
   try {
     const db = getDatabase();
     const now = new Date().toISOString();
 
+    // Update all unread notifications for the specific user
     const result = await db.query(
       `UPDATE notifications 
-       SET is_read = $1, updated_at = $2
-       WHERE user_id = $3 AND is_read = $4`,
-      [true, now, userId, false]
+       SET is_read = true, updated_at = $1 
+       WHERE user_id = $2 AND is_read = false`,
+      [now, userId]
     );
 
-    const success = result.rowCount != null && result.rowCount > 0;
-    if (success) {
-      console.log(`✅ Marked all notifications as read for user ${userId}`);
+    const success = result.rowCount != null && result.rowCount >= 0;
+    if (success && result.rowCount != null && result.rowCount > 0) {
+      console.log(
+        `✅ Marked ${result.rowCount} notifications as read for user: ${userId}`
+      );
     }
 
     return success;
@@ -279,23 +291,27 @@ export async function markAllNotificationsAsRead(
   }
 }
 
-// Delete a notification
+// Delete notification
 export async function deleteNotification(
   id: string,
-  userId?: string
+  userId: string
 ): Promise<boolean> {
+  if (!userId) {
+    throw new Error('User ID is required');
+  }
+
+  if (!id) {
+    throw new Error('Notification ID is required');
+  }
+
   try {
     const db = getDatabase();
 
-    let sql = 'DELETE FROM notifications WHERE id = $1';
-    const args = [id];
-
-    if (userId) {
-      sql += ' AND user_id = $2';
-      args.push(userId);
-    }
-
-    const result = await db.query(sql, args);
+    // Delete only if the notification belongs to the user
+    const result = await db.query(
+      'DELETE FROM notifications WHERE id = $1 AND user_id = $2',
+      [id, userId]
+    );
 
     const success = result.rowCount != null && result.rowCount > 0;
     if (success) {
@@ -333,19 +349,28 @@ export async function deleteAllNotifications(userId: string): Promise<boolean> {
 
 // Delete notifications by run ID
 export async function deleteNotificationsByRunId(
-  runId: string
+  runId: string,
+  userId?: string
 ): Promise<boolean> {
   try {
     const db = getDatabase();
 
-    const result = await db.query(
-      'DELETE FROM notifications WHERE run_id = $1',
-      [runId]
-    );
+    let sql = 'DELETE FROM notifications WHERE run_id = $1';
+    const args = [runId];
+
+    // If userId is provided, only delete notifications belonging to that user
+    if (userId) {
+      sql += ' AND user_id = $2';
+      args.push(userId);
+    }
+
+    const result = await db.query(sql, args);
 
     const success = result.rowCount != null && result.rowCount > 0;
     if (success) {
-      console.log(`🗑️ Deleted notifications for run: ${runId}`);
+      console.log(
+        `🗑️ Deleted notifications for run: ${runId}${userId ? ` (user: ${userId})` : ''}`
+      );
     }
 
     return success;
@@ -437,11 +462,15 @@ export async function getNotificationsStats(userId?: string): Promise<{
 // Bulk create notifications
 export async function createBulkNotifications(
   notificationsData: NotificationForm[],
-  userId?: string
+  userId: string
 ): Promise<Notification[]> {
+  if (!userId) {
+    throw new Error('User ID is required');
+  }
+
   try {
     const db = getDatabase();
-    const currentUserId = userId || (await getOrCreateUser());
+    const currentUserId = await getOrCreateUser(userId);
     const notifications: Notification[] = [];
     const now = new Date().toISOString();
 
@@ -488,11 +517,10 @@ export async function createBulkNotifications(
 
       // Commit transaction
       await db.query('COMMIT');
-
       console.log(`✅ Created ${notifications.length} notifications in batch`);
       return notifications;
     } catch (error) {
-      // Rollback on error
+      // Rollback transaction on error
       await db.query('ROLLBACK');
       throw error;
     }

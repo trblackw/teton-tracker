@@ -4,7 +4,26 @@ import { getDatabase } from '../src/lib/db/index';
 import { createNotification as createNotificationDb } from '../src/lib/db/notifications';
 import { createRun } from '../src/lib/db/runs';
 
-console.log('🎭 Starting mock data generation...');
+// Get user ID from command line arguments
+const userId = process.argv[2];
+
+if (!userId) {
+  console.error('❌ Error: User ID is required');
+  console.error('Usage: bun run generate-mock-data.ts <user-id>');
+  console.error('Example: bun run generate-mock-data.ts user_2abc123def456');
+  process.exit(1);
+}
+
+// Validate user ID format (basic check for Clerk user ID format)
+if (!userId.startsWith('user_')) {
+  console.error(
+    '❌ Error: User ID must be a valid Clerk user ID (starts with "user_")'
+  );
+  console.error('Example: user_2abc123def456');
+  process.exit(1);
+}
+
+console.log(`🎭 Starting mock data generation for user: ${userId}...`);
 
 const db = getDatabase();
 
@@ -120,16 +139,20 @@ async function generateMockData() {
   try {
     console.log('📊 Checking existing data...');
 
-    // Check if we already have runs
-    const existingRuns = await db.query('SELECT COUNT(*) as count FROM runs');
+    // Check if we already have runs for this user
+    const existingRuns = await db.query(
+      'SELECT COUNT(*) as count FROM runs WHERE user_id = $1',
+      [userId]
+    );
     const runCount = existingRuns.rows[0].count;
 
-    console.log(`📈 Found ${runCount} existing runs`);
+    console.log(`📈 Found ${runCount} existing runs for user ${userId}`);
 
     if (runCount > 0) {
       console.log('📋 Getting existing run IDs...');
       const existingRunsResult = await db.query(
-        'SELECT id FROM runs ORDER BY created_at DESC LIMIT 10'
+        'SELECT id FROM runs WHERE user_id = $1 ORDER BY created_at DESC LIMIT 10',
+        [userId]
       );
       return existingRunsResult.rows.map(row => row.id as string);
     }
@@ -141,7 +164,7 @@ async function generateMockData() {
 
     for (const runData of mockRuns) {
       try {
-        const newRun = await createRun(runData);
+        const newRun = await createRun(runData, userId);
         createdRunIds.push(newRun.id);
         console.log(
           `✅ Created run: ${runData.flightNumber} (${runData.type}) - scheduled for ${new Date(runData.scheduledTime).toLocaleString()}`
@@ -166,15 +189,16 @@ async function generateMockNotifications(runIds: string[]) {
   try {
     console.log('\n📬 Generating mock notifications...');
 
-    // Check if we already have notifications
+    // Check if we already have notifications for this user
     const existingNotifications = await db.query(
-      'SELECT COUNT(*) as count FROM notifications'
+      'SELECT COUNT(*) as count FROM notifications WHERE user_id = $1',
+      [userId]
     );
     const notificationCount = existingNotifications.rows[0].count;
 
     if (notificationCount > 0) {
       console.log(
-        `📮 Found ${notificationCount} existing notifications - skipping generation`
+        `📮 Found ${notificationCount} existing notifications for user ${userId} - skipping generation`
       );
       return;
     }
@@ -249,7 +273,7 @@ async function generateMockNotifications(runIds: string[]) {
 
     for (const notificationData of mockNotifications) {
       try {
-        await createNotificationDb(notificationData);
+        await createNotificationDb(notificationData, userId);
         createdCount++;
         console.log(`✅ Created notification: ${notificationData.title}`);
       } catch (error) {
@@ -269,15 +293,15 @@ async function generateMockNotifications(runIds: string[]) {
 
 async function main() {
   try {
-    console.log('🚀 Starting mock data generation...\n');
+    console.log(`🚀 Starting mock data generation for user: ${userId}...\n`);
 
     const runIds = await generateMockData();
     await generateMockNotifications(runIds);
 
     console.log('\n🎉 Mock data generation completed successfully!');
     console.log('📊 Summary:');
-    console.log(`   - ${runIds.length} runs created/found`);
-    console.log('   - Mock notifications generated');
+    console.log(`   - ${runIds.length} runs created/found for user ${userId}`);
+    console.log(`   - Mock notifications generated for user ${userId}`);
     console.log('\n💡 You can now view the mock data in the application');
     console.log(
       '⚠️  All runs are created as "scheduled" - no active runs that need immediate attention'

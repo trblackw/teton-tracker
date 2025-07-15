@@ -14,11 +14,15 @@ export interface RunsQuery {
 // Create a new run
 export async function createRun(
   runData: NewRunForm,
-  userId?: string
+  userId: string
 ): Promise<Run> {
+  if (!userId) {
+    throw new Error('User ID is required');
+  }
+
   try {
     const db = getDatabase();
-    const currentUserId = userId || (await getOrCreateUser());
+    const currentUserId = await getOrCreateUser(userId);
     const runId = crypto.randomUUID();
     const now = new Date().toISOString();
 
@@ -219,17 +223,31 @@ export async function getRunById(
 // Update run
 export async function updateRun(
   id: string,
-  updateData: Partial<Run>,
-  userId?: string
+  updateData: Partial<Omit<Run, 'id' | 'createdAt'>>,
+  userId: string
 ): Promise<Run | null> {
+  if (!userId) {
+    throw new Error('User ID is required');
+  }
+
+  if (!id) {
+    throw new Error('Run ID is required');
+  }
+
   try {
     const db = getDatabase();
     const now = new Date().toISOString();
 
-    // Build dynamic SET clause
+    // First, verify the run exists and belongs to the user
+    const existingRun = await getRunById(id, userId);
+    if (!existingRun) {
+      return null; // Run doesn't exist or doesn't belong to user
+    }
+
     const setFields: string[] = [];
     const args: any[] = [];
 
+    // Build dynamic update query
     if (updateData.flightNumber !== undefined) {
       setFields.push(`flight_number = $${args.length + 1}`);
       args.push(updateData.flightNumber);
@@ -278,20 +296,6 @@ export async function updateRun(
     if (updateData.status !== undefined) {
       setFields.push(`status = $${args.length + 1}`);
       args.push(updateData.status);
-
-      // Set activatedAt when status changes to 'active'
-      if (updateData.status === 'active') {
-        setFields.push(`activated_at = $${args.length + 1}`);
-        args.push(now);
-      }
-      // Null activatedAt when status changes to 'completed' or 'cancelled'
-      else if (
-        updateData.status === 'completed' ||
-        updateData.status === 'cancelled'
-      ) {
-        setFields.push(`activated_at = $${args.length + 1}`);
-        args.push(null);
-      }
     }
 
     if (updateData.type !== undefined) {
@@ -314,33 +318,34 @@ export async function updateRun(
       args.push(updateData.completedAt);
     }
 
+    if (updateData.activatedAt !== undefined) {
+      setFields.push(`activated_at = $${args.length + 1}`);
+      args.push(updateData.activatedAt);
+    }
+
     // Always update the updated_at timestamp
     setFields.push(`updated_at = $${args.length + 1}`);
     args.push(now);
 
     if (setFields.length === 1) {
       // Only updated_at was set, nothing to update
-      return await getRunById(id, userId);
+      return existingRun;
     }
 
+    // Add WHERE clause with user validation
     let sql = `
       UPDATE runs 
       SET ${setFields.join(', ')}
-      WHERE id = $${args.length + 1}
+      WHERE id = $${args.length + 1} AND user_id = $${args.length + 2}
     `;
-    args.push(id);
-
-    if (userId) {
-      sql += ` AND user_id = $${args.length + 1}`;
-      args.push(userId);
-    }
+    args.push(id, userId);
 
     sql += ' RETURNING *';
 
     const result = await db.query(sql, args);
 
     if (result.rows.length === 0) {
-      return null;
+      return null; // Update failed - either run doesn't exist or user doesn't own it
     }
 
     const row = result.rows[0];
@@ -375,22 +380,24 @@ export async function updateRun(
 }
 
 // Delete run
-export async function deleteRun(id: string, userId?: string): Promise<boolean> {
+export async function deleteRun(id: string, userId: string): Promise<boolean> {
+  if (!userId) {
+    throw new Error('User ID is required');
+  }
+
+  if (!id) {
+    throw new Error('Run ID is required');
+  }
+
   try {
     const db = getDatabase();
 
-    // First delete related notifications
-    await deleteNotificationsByRunId(id);
+    // First delete related notifications (only those belonging to the user)
+    await deleteNotificationsByRunId(id, userId);
 
-    let sql = 'DELETE FROM runs WHERE id = $1';
-    const args = [id];
-
-    if (userId) {
-      sql += ' AND user_id = $2';
-      args.push(userId);
-    }
-
-    const result = await db.query(sql, args);
+    // Delete the run only if it belongs to the user
+    const sql = 'DELETE FROM runs WHERE id = $1 AND user_id = $2';
+    const result = await db.query(sql, [id, userId]);
 
     const success = result.rowCount != null && result.rowCount > 0;
     if (success) {
@@ -463,11 +470,15 @@ export async function getRunsStats(userId?: string): Promise<{
 // Bulk create runs (for import functionality)
 export async function createRunsBatch(
   runsData: NewRunForm[],
-  userId?: string
+  userId: string
 ): Promise<Run[]> {
+  if (!userId) {
+    throw new Error('User ID is required');
+  }
+
   try {
     const db = getDatabase();
-    const currentUserId = userId || (await getOrCreateUser());
+    const currentUserId = await getOrCreateUser(userId);
     const now = new Date().toISOString();
     const runs: Run[] = [];
 
@@ -491,8 +502,8 @@ export async function createRunsBatch(
           `INSERT INTO runs (
             id, user_id, flight_number, airline, departure_airport, arrival_airport,
             pickup_location, dropoff_location, scheduled_time, estimated_duration, status, type,
-            price, notes, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+            price, notes, created_at, updated_at, activated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
           [
             run.id,
             run.userId,
@@ -510,6 +521,7 @@ export async function createRunsBatch(
             run.notes || null,
             now,
             now,
+            null, // activatedAt
           ]
         );
 
@@ -518,11 +530,10 @@ export async function createRunsBatch(
 
       // Commit transaction
       await db.query('COMMIT');
-
       console.log(`✅ Created ${runs.length} runs in batch`);
       return runs;
     } catch (error) {
-      // Rollback on error
+      // Rollback transaction on error
       await db.query('ROLLBACK');
       throw error;
     }

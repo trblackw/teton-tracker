@@ -1,4 +1,7 @@
-import { generateUserId } from '../lib/db';
+import {
+  createAccessControlResponse,
+  validateResourceOwnership,
+} from '../lib/access-control';
 import {
   createRun,
   deleteRun,
@@ -12,7 +15,15 @@ import { type NewRunForm, type RunStatus } from '../lib/schema';
 export async function GET(request: Request): Promise<Response> {
   try {
     const url = new URL(request.url);
-    const userId = url.searchParams.get('userId') || undefined; // Don't generate one if not provided
+    const userId = url.searchParams.get('userId');
+
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'User ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const statusParam = url.searchParams.get('status');
     const status = statusParam
       ? (statusParam.split(',') as RunStatus[])
@@ -35,7 +46,7 @@ export async function GET(request: Request): Promise<Response> {
         : undefined;
 
     const query: RunsQuery = {
-      userId,
+      userId, // This ensures we only get runs for the authenticated user
       status,
       limit,
       offset,
@@ -63,9 +74,17 @@ export async function POST(request: Request): Promise<Response> {
     const body = await request.json();
     const { runData, userId } = body as {
       runData: NewRunForm;
-      userId?: string;
+      userId: string;
     };
 
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'User ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // For creation, we don't need access control validation since the user is creating their own resource
     const run = await createRun(runData, userId);
 
     return new Response(JSON.stringify(run), {
@@ -89,14 +108,33 @@ export async function PUT(request: Request): Promise<Response> {
       action: string;
       id: string;
       status: any;
-      userId?: string;
+      userId: string;
     };
 
-    const actualUserId = userId || generateUserId();
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'User ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!id) {
+      return new Response(JSON.stringify({ error: 'Run ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Validate that the user owns this run before allowing updates
+    try {
+      await validateResourceOwnership('run', id, userId);
+    } catch (error) {
+      return createAccessControlResponse(
+        error instanceof Error ? error : new Error(String(error))
+      );
+    }
 
     if (action === 'update_status') {
-      const actualRunId = id;
-
       // For status updates, we need to update the run with the new status
       const updateData: any = { status };
 
@@ -105,10 +143,10 @@ export async function PUT(request: Request): Promise<Response> {
         updateData.completedAt = new Date().toISOString();
       }
 
-      const updatedRun = await updateRun(actualRunId, updateData, actualUserId);
+      const updatedRun = await updateRun(id, updateData, userId);
       const success = updatedRun !== null;
 
-      return new Response(JSON.stringify({ success }), {
+      return new Response(JSON.stringify({ success, updatedRun }), {
         headers: { 'Content-Type': 'application/json' },
       });
     }
@@ -130,25 +168,35 @@ export async function PUT(request: Request): Promise<Response> {
 export async function DELETE(request: Request): Promise<Response> {
   try {
     const url = new URL(request.url);
-    const pathParts = url.pathname.split('/');
-    const runId = pathParts[pathParts.length - 1]; // /api/runs/:id
+    const id = url.pathname.split('/').pop();
+    const userId = url.searchParams.get('userId');
 
-    const body = await request.json().catch(() => ({}));
-    const { userId } = body as { userId?: string };
+    if (!id) {
+      return new Response(JSON.stringify({ error: 'Missing run ID' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
-    const success = await deleteRun(runId, userId);
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'User ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
-    if (!success) {
-      return new Response(
-        JSON.stringify({ error: 'Run not found or unauthorized' }),
-        {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' },
-        }
+    // Validate that the user owns this run before allowing deletion
+    try {
+      await validateResourceOwnership('run', id, userId);
+    } catch (error) {
+      return createAccessControlResponse(
+        error instanceof Error ? error : new Error(String(error))
       );
     }
 
-    return new Response(JSON.stringify({ success: true }), {
+    const success = await deleteRun(id, userId);
+
+    return new Response(JSON.stringify({ success }), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
