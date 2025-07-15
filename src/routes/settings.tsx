@@ -68,11 +68,7 @@ function Settings() {
       enabled: false,
     });
 
-  // Local state for form fields with explicit save/cancel
-  const [localEmail, setLocalEmail] = useState('');
-  const [localPhoneNumber, setLocalPhoneNumber] = useState('');
-  const [hasEmailChanges, setHasEmailChanges] = useState(false);
-  const [hasPhoneChanges, setHasPhoneChanges] = useState(false);
+  // Note: Email and phone number are now managed by Clerk and shown as readonly
 
   // Query for user preferences from API
   const {
@@ -86,15 +82,7 @@ function Settings() {
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  // Sync local state with preferences when they load
-  useEffect(() => {
-    if (preferences) {
-      setLocalEmail(preferences.email || '');
-      setLocalPhoneNumber(preferences.phoneNumber || '');
-      setHasEmailChanges(false);
-      setHasPhoneChanges(false);
-    }
-  }, [preferences]);
+  // Email and phone number are now managed by Clerk - no local state needed
 
   // Load notification permission state on mount
   useEffect(() => {
@@ -201,41 +189,7 @@ function Settings() {
     },
   });
 
-  // Handle email input changes
-  const handleEmailChange = (value: string) => {
-    setLocalEmail(value);
-    setHasEmailChanges(value !== (preferences?.email || ''));
-  };
-
-  // Handle phone number input changes
-  const handlePhoneNumberChange = (value: string) => {
-    setLocalPhoneNumber(value);
-    setHasPhoneChanges(value !== (preferences?.phoneNumber || ''));
-  };
-
-  // Save email changes
-  const saveEmail = () => {
-    updatePreferencesMutation.mutate({ email: localEmail });
-    setHasEmailChanges(false);
-  };
-
-  // Cancel email changes
-  const cancelEmail = () => {
-    setLocalEmail(preferences?.email || '');
-    setHasEmailChanges(false);
-  };
-
-  // Save phone number changes
-  const savePhoneNumber = () => {
-    updatePreferencesMutation.mutate({ phoneNumber: localPhoneNumber });
-    setHasPhoneChanges(false);
-  };
-
-  // Cancel phone number changes
-  const cancelPhoneNumber = () => {
-    setLocalPhoneNumber(preferences?.phoneNumber || '');
-    setHasPhoneChanges(false);
-  };
+  // Email and phone number handlers removed - fields are now readonly and managed by Clerk
 
   // Mutation for requesting notification permissions
   const requestNotificationPermission = useMutation({
@@ -386,9 +340,6 @@ function Settings() {
               <p className="font-medium text-foreground">
                 {fullName || email || 'User'}
               </p>
-              <p className="text-sm text-muted-foreground">
-                {email && `${email} • `}User ID: {userId}
-              </p>
             </div>
           </div>
           <div className="pt-2 border-t">
@@ -439,13 +390,16 @@ function Settings() {
         </CardContent>
       </Card>
 
-      {/* Email and Phone Number */}
+      {/* Email - Managed by Clerk */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
             Email
           </CardTitle>
+          <CardDescription>
+            Your email address is managed by your account provider
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col gap-2">
@@ -453,51 +407,21 @@ function Settings() {
               <div className="flex-1 min-w-0">
                 <Input
                   type="email"
-                  placeholder="Enter your email address"
-                  value={localEmail}
-                  onChange={e => handleEmailChange(e.target.value)}
-                  disabled={updatePreferencesMutation.isPending}
+                  value={email || 'Not set'}
+                  readOnly
+                  className="bg-muted text-muted-foreground cursor-not-allowed"
                 />
               </div>
-              {hasEmailChanges && (
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={saveEmail}
-                    disabled={updatePreferencesMutation.isPending}
-                  >
-                    Save
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={cancelEmail}
-                    disabled={updatePreferencesMutation.isPending}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              )}
-              {localEmail && !hasEmailChanges && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => {
-                    setLocalEmail('');
-                    updatePreferencesMutation.mutate({ email: '' });
-                  }}
-                  disabled={updatePreferencesMutation.isPending}
-                  title="Clear email"
-                >
-                  <X className="h-4 w-4 text-destructive hover:text-destructive/80" />
-                </Button>
-              )}
             </div>
+            <p className="text-sm text-muted-foreground">
+              To change your email address, please use the account settings in
+              your profile.
+            </p>
           </div>
         </CardContent>
       </Card>
 
+      {/* Phone Number - Managed by Clerk */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -505,7 +429,7 @@ function Settings() {
             Phone Number
           </CardTitle>
           <CardDescription>
-            Set your phone number for SMS notifications
+            Your phone number is managed by your account provider
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -514,47 +438,16 @@ function Settings() {
               <div className="flex-1 min-w-0">
                 <Input
                   type="tel"
-                  placeholder="Enter your phone number"
-                  value={localPhoneNumber}
-                  onChange={e => handlePhoneNumberChange(e.target.value)}
-                  disabled={updatePreferencesMutation.isPending}
+                  value={preferences?.phoneNumber || 'Not set'}
+                  readOnly
+                  className="bg-muted text-muted-foreground cursor-not-allowed"
                 />
               </div>
-              {hasPhoneChanges && (
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={savePhoneNumber}
-                    disabled={updatePreferencesMutation.isPending}
-                  >
-                    Save
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={cancelPhoneNumber}
-                    disabled={updatePreferencesMutation.isPending}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              )}
-              {localPhoneNumber && !hasPhoneChanges && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => {
-                    setLocalPhoneNumber('');
-                    updatePreferencesMutation.mutate({ phoneNumber: '' });
-                  }}
-                  disabled={updatePreferencesMutation.isPending}
-                  title="Clear phone number"
-                >
-                  <X className="h-4 w-4 text-destructive hover:text-destructive/80" />
-                </Button>
-              )}
             </div>
+            <p className="text-sm text-muted-foreground">
+              To change your phone number, please use the account settings in
+              your profile.
+            </p>
 
             {/* SMS Notifications Toggle - only show when phone number is saved */}
             {preferences?.phoneNumber && (
