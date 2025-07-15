@@ -1,9 +1,6 @@
 import { generateUserId } from '../lib/db';
-import {
-  getUserPreferences,
-  updateUserPreferences,
-  type UpdatePreferencesData,
-} from '../lib/db/preferences';
+import { getUserPreferences, saveUserPreferences } from '../lib/db/preferences';
+import { type UserPreferences } from '../lib/schema';
 
 // GET /api/preferences
 export async function GET(request: Request): Promise<Response> {
@@ -33,11 +30,11 @@ export async function PUT(request: Request): Promise<Response> {
   try {
     const body = await request.json();
     const { preferencesData, userId } = body as {
-      preferencesData: UpdatePreferencesData;
+      preferencesData: Partial<UserPreferences>;
       userId?: string;
     };
 
-    const preferences = await updateUserPreferences(preferencesData, userId);
+    const preferences = await saveUserPreferences(preferencesData, userId);
 
     return new Response(JSON.stringify(preferences), {
       headers: { 'Content-Type': 'application/json' },

@@ -91,15 +91,9 @@ async function seedData() {
 
     try {
       // Delete existing runs and notifications for this user
-      await db.execute({
-        sql: 'DELETE FROM runs WHERE user_id = ?',
-        args: [userId],
-      });
+      await db.query('DELETE FROM runs WHERE user_id = $1', [userId]);
 
-      await db.execute({
-        sql: 'DELETE FROM notifications WHERE user_id = ?',
-        args: [userId],
-      });
+      await db.query('DELETE FROM notifications WHERE user_id = $1', [userId]);
 
       console.log('✅ Cleared existing runs and notifications');
     } catch (error) {

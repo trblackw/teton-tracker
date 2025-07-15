@@ -234,62 +234,71 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🗄️ Database Setup
 
-Teton Tracker uses [Turso](https://turso.tech/) (libSQL) for data persistence, providing a modern SQLite-compatible database with edge distribution and serverless scaling.
+Teton Tracker uses [Railway PostgreSQL](https://railway.app) for data persistence, providing a managed PostgreSQL database with automatic backups and scaling.
 
-### Development Setup
+### Setup Instructions
 
-For local development, the application automatically uses a local SQLite database (`local.db`). No additional setup is required - the database schema is initialized automatically when the application starts.
-
-### Production Setup with Turso
-
-1. **Create a Turso Account**
+1. **Install Railway CLI**
 
    ```bash
-   # Install Turso CLI
-   curl -sSfL https://get.tur.so/install.sh | bash
-
-   # Sign up for Turso
-   turso auth signup
+   # Install Railway CLI
+   curl -fsSL https://railway.app/install.sh | sh
    ```
 
-2. **Create a Database**
+2. **Connect to Railway Project**
 
    ```bash
-   # Create a new database
-   turso db create teton-tracker
-
-   # Get the database URL
-   turso db show teton-tracker
-
-   # Create an auth token
-   turso db tokens create teton-tracker
+   # Link to your Railway project
+   railway link
    ```
 
-3. **Configure Environment Variables**
+3. **Add PostgreSQL Database**
 
    ```bash
-   # Set environment variables
-   export TURSO_DATABASE_URL="libsql://your-database-name.turso.io"
-   export TURSO_AUTH_TOKEN="your-auth-token-here"
+   # Add PostgreSQL service to your project
+   railway add --database postgres
    ```
 
-4. **Database Schema**
-   The application automatically initializes the required tables:
-   - `user_preferences` - User settings and preferences
-   - `runs` - Historical shuttle runs and schedules
-   - `flight_cache` - Cached flight data to reduce API calls
+4. **Configure Environment Variables**
+
+   ```bash
+   # Railway automatically provides DATABASE_URL
+   # For local development, get the connection string:
+   railway variables
+
+   # Add to your .env file
+   export DATABASE_URL="postgresql://user:password@host:port/database"
+   ```
+
+5. **Initialize Database Schema**
+
+   ```bash
+   # Run database setup
+   bun run setup-db
+   ```
+
+### Database Schema
+
+The application automatically initializes the required tables:
+
+- `users` - User accounts and authentication
+- `user_preferences` - User settings and preferences
+- `runs` - Historical shuttle runs and schedules
+- `notifications` - System notifications and alerts
+- `flight_cache` - Cached flight data to reduce API calls
 
 ### Database Features
 
-- **Automatic Schema Migration**: Database tables are created automatically on first run
-- **User Data Isolation**: Each user gets their own data space using generated user IDs
-- **Data Persistence**: Runs and preferences are stored permanently
-- **Performance Optimization**: Built-in caching and indexing for fast queries
-- **Backup & Recovery**: Turso provides automatic backups and point-in-time recovery
+- **Managed PostgreSQL**: Full-featured PostgreSQL database with automatic maintenance
+- **Connection Pooling**: Efficient connection management for optimal performance
+- **Automatic Backups**: Daily backups with point-in-time recovery
+- **Scaling**: Automatic scaling based on usage
+- **SSL/TLS**: Secure connections with automatic certificate management
+- **Schema Management**: Automatic table creation and indexing
 
-### Local Database File
+### Local Development
 
-During development, you'll see a `local.db` file created in your project root. This is your local SQLite database and can be safely deleted to reset all data.
+The application connects to your Railway PostgreSQL database locally using the public connection URL. This ensures development parity with production.
 
 ### Data Migration
 

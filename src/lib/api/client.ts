@@ -287,6 +287,16 @@ export const notificationsApi = {
     return response.json();
   },
 
+  async getNotificationStats() {
+    const response = await fetch(`${API_BASE}/notifications/stats`, {
+      headers: createAuthHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to fetch notification stats');
+    }
+    return response.json();
+  },
+
   // Create a new notification
   async createNotification(
     notificationData: CreateNotificationData

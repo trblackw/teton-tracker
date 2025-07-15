@@ -176,7 +176,7 @@ function RootComponent() {
                           className: activeNavClass,
                         }}
                       >
-                        <Car className="size-5" />
+                        <Car className="size-7" />
                       </Link>
                     </Button>
                     <Button

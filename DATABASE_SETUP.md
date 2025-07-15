@@ -1,8 +1,81 @@
 # Database Setup Guide for Teton Tracker
 
-This guide will help you set up Turso (libSQL) for production deployment of Teton Tracker.
+This guide will help you set up Railway PostgreSQL for Teton Tracker deployment.
 
-## Quick Start
+## Option 1: Railway PostgreSQL (Recommended)
+
+Railway provides a managed PostgreSQL database that's perfect for production deployments.
+
+### 1. Install Railway CLI
+
+```bash
+# Install Railway CLI
+curl -fsSL https://railway.app/install.sh | sh
+
+# Or using npm
+npm install -g @railway/cli
+
+# Or using bun
+bun install -g @railway/cli
+```
+
+### 2. Connect to Railway Project
+
+```bash
+# Connect to your Railway project
+railway link
+
+# Or connect with project ID (from Railway dashboard)
+railway link [project-id]
+```
+
+### 3. Add PostgreSQL Database
+
+In your Railway dashboard:
+
+1. Click "New Service"
+2. Choose "Database"
+3. Select "PostgreSQL"
+4. Railway will automatically provision your database
+
+### 4. Configure Environment Variables
+
+```bash
+# Get your database URL from Railway
+railway variables
+
+# Set DATABASE_URL in your environment
+export DATABASE_URL="postgres://user:password@hostname:port/database"
+
+# Or add to your .env file
+DATABASE_URL=postgres://user:password@hostname:port/database
+```
+
+### 5. Deploy & Initialize
+
+```bash
+# Deploy your application
+railway up
+
+# Initialize database schema
+railway run bun run setup-db
+```
+
+### 6. Local Development with Railway DB
+
+To connect locally to your Railway PostgreSQL database:
+
+```bash
+# Connect to Railway database locally
+railway connect
+
+# Or set DATABASE_URL locally
+railway variables --format env > .env
+```
+
+## Option 2: Turso (libSQL)
+
+Turso provides a globally distributed SQLite-compatible database.
 
 ### 1. Install Turso CLI
 
@@ -47,6 +120,11 @@ Your application will automatically:
 
 The application creates these tables automatically:
 
+### `users`
+
+- User accounts and authentication
+- Browser-based user identification
+
 ### `user_preferences`
 
 - User settings and home airport
@@ -66,90 +144,119 @@ The application creates these tables automatically:
 - Reduces API calls
 - Automatic expiration
 
+### `notifications`
+
+- System notifications
+- Flight updates and alerts
+- Run reminders
+
 ## Environment Variables
 
-| Variable             | Description             | Required         |
-| -------------------- | ----------------------- | ---------------- |
-| `TURSO_DATABASE_URL` | Your Turso database URL | Yes (production) |
-| `TURSO_AUTH_TOKEN`   | Your Turso auth token   | Yes (production) |
-| `DATABASE_URL`       | Local SQLite file path  | No (development) |
+| Variable             | Description               | Required      | Database Type |
+| -------------------- | ------------------------- | ------------- | ------------- |
+| `DATABASE_URL`       | PostgreSQL connection URL | Yes (Railway) | PostgreSQL    |
+| `TURSO_DATABASE_URL` | Your Turso database URL   | Yes (Turso)   | libSQL        |
+| `TURSO_AUTH_TOKEN`   | Your Turso auth token     | Yes (Turso)   | libSQL        |
 
 ## Development vs Production
 
 ### Development
 
-- Uses local SQLite (`local.db`)
-- No setup required
-- Data persists locally
+- **Local SQLite**: Uses `local.db` file (no setup required)
+- **Railway PostgreSQL**: Connect to production database locally
+- **Turso**: Use development branch or main database
 
 ### Production
 
-- Uses Turso cloud database
-- Requires environment variables
-- Data synced globally
+- **Railway**: Managed PostgreSQL with automatic backups
+- **Turso**: Globally distributed with edge caching
+
+## Database Selection Guide
+
+### Choose Railway PostgreSQL if:
+
+- ✅ You want a traditional PostgreSQL database
+- ✅ You need full SQL compatibility
+- ✅ You prefer managed infrastructure
+- ✅ You want to develop against production database locally
+
+### Choose Turso if:
+
+- ✅ You want globally distributed data
+- ✅ You prefer SQLite-compatible syntax
+- ✅ You want automatic edge caching
+- ✅ You need minimal latency worldwide
 
 ## Troubleshooting
 
-### Connection Issues
+### Railway PostgreSQL Issues
 
-1. Verify your environment variables are set
-2. Check your auth token is valid
-3. Ensure database URL is correct
+1. **Connection Issues**
 
-### Schema Issues
+   ```bash
+   # Check railway connection
+   railway status
 
-If you see table errors:
+   # Get fresh environment variables
+   railway variables
+   ```
 
-1. Check logs for initialization messages
-2. Verify database permissions
-3. Try restarting the application
+2. **Schema Issues**
 
-### Performance
+   ```bash
+   # Reinitialize database
+   railway run bun run setup-db
 
-- Turso provides edge caching automatically
+   # Check logs
+   railway logs
+   ```
+
+### Turso Issues
+
+1. **Connection Issues**
+   - Verify your environment variables are set
+   - Check your auth token is valid
+   - Ensure database URL is correct
+
+2. **Schema Issues**
+   - Check logs for initialization messages
+   - Verify database permissions
+   - Try restarting the application
+
+## Performance Optimization
+
+### Railway PostgreSQL
+
+- Connection pooling is handled automatically
 - Database queries are optimized with indexes
-- Flight data is cached to reduce API calls
+- Consider read replicas for high-traffic applications
 
-## Advanced Configuration
+### Turso
 
-### Custom Database Location
-
-```bash
-# Use specific region
-turso db create teton-tracker --location lax
-
-# List available locations
-turso db locations
-```
-
-### Database Branching
-
-```bash
-# Create development branch
-turso db create teton-tracker-dev --from-db teton-tracker
-
-# Use development database
-export TURSO_DATABASE_URL="libsql://teton-tracker-dev.turso.io"
-```
-
-### Backup & Recovery
-
-```bash
-# Turso provides automatic backups
-turso db inspect teton-tracker
-
-# Point-in-time recovery available through dashboard
-```
-
-## Support
-
-- [Turso Documentation](https://docs.turso.tech/)
-- [Turso Discord](https://discord.gg/turso)
-- [Teton Tracker Issues](https://github.com/your-repo/issues)
+- Edge caching is provided automatically
+- Global distribution reduces latency
+- Automatic replication across regions
 
 ## Security
+
+### Railway PostgreSQL
+
+- Managed SSL certificates
+- Network isolation
+- Automatic security updates
+- Database backups and point-in-time recovery
+
+### Turso
 
 - Auth tokens are scoped to specific databases
 - All connections use TLS encryption
 - Data is replicated across multiple regions
-- No sensitive data is stored in the database
+- Row-level security available
+
+## Support
+
+- [Railway Documentation](https://docs.railway.app/)
+- [Railway Discord](https://discord.gg/railway)
+- [Turso Documentation](https://docs.turso.tech/)
+- [Turso Discord](https://discord.gg/turso)
+- [Teton Tracker Issues](https://github.com/your-repo/issues)

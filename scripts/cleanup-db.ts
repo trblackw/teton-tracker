@@ -2,95 +2,105 @@
 
 import { getDatabase } from '../src/lib/db/index';
 
-async function cleanupDatabase() {
-  const db = getDatabase();
+console.log('🧹 Starting database cleanup...');
 
-  console.log('🧹 Starting database cleanup for Clerk authentication...\n');
+const db = getDatabase();
 
+async function getTableCounts() {
   try {
-    // Get counts before cleanup
-    const userCountResult = await db.execute(
+    const userCountResult = await db.query(
       'SELECT COUNT(*) as count FROM users'
     );
     const userCount = userCountResult.rows[0].count;
 
-    const preferencesCountResult = await db.execute(
+    const preferencesCountResult = await db.query(
       'SELECT COUNT(*) as count FROM user_preferences'
     );
     const preferencesCount = preferencesCountResult.rows[0].count;
 
-    const runsCountResult = await db.execute(
+    const runsCountResult = await db.query(
       'SELECT COUNT(*) as count FROM runs'
     );
     const runsCount = runsCountResult.rows[0].count;
 
-    const notificationsCountResult = await db.execute(
+    const notificationsCountResult = await db.query(
       'SELECT COUNT(*) as count FROM notifications'
     );
     const notificationsCount = notificationsCountResult.rows[0].count;
 
-    console.log('📊 Current database state:');
+    console.log(`📊 Current counts:`);
     console.log(`   Users: ${userCount}`);
-    console.log(`   User Preferences: ${preferencesCount}`);
+    console.log(`   Preferences: ${preferencesCount}`);
     console.log(`   Runs: ${runsCount}`);
-    console.log(`   Notifications: ${notificationsCount}\n`);
+    console.log(`   Notifications: ${notificationsCount}`);
 
-    // Clean up old development data
-    console.log('🗑️  Cleaning up old development data...');
+    return { userCount, preferencesCount, runsCount, notificationsCount };
+  } catch (error) {
+    console.error('❌ Error getting table counts:', error);
+    throw error;
+  }
+}
 
-    // Delete all notifications first (foreign key constraints)
-    await db.execute('DELETE FROM notifications');
-    console.log('✅ Cleared notifications table');
+async function cleanupTables() {
+  console.log('\n🗑️  Cleaning up tables...');
+
+  try {
+    // Delete all notifications
+    await db.query('DELETE FROM notifications');
+    console.log('✅ Notifications table cleaned');
 
     // Delete all runs
-    await db.execute('DELETE FROM runs');
-    console.log('✅ Cleared runs table');
+    await db.query('DELETE FROM runs');
+    console.log('✅ Runs table cleaned');
 
     // Delete all user preferences
-    await db.execute('DELETE FROM user_preferences');
-    console.log('✅ Cleared user_preferences table');
+    await db.query('DELETE FROM user_preferences');
+    console.log('✅ User preferences table cleaned');
 
-    // Delete all users (except any that might be real Clerk users)
-    // We'll keep users that have Clerk-style IDs (start with 'user_' and are proper Clerk format)
-    const deleteResult = await db.execute(`
+    // Delete all users except the first one (to preserve at least one user)
+    const deleteResult = await db.query(`
       DELETE FROM users 
-      WHERE id NOT LIKE 'user_%' 
-      OR id LIKE 'user_dev_%' 
-      OR id LIKE 'user_seed_%'
-      OR LENGTH(id) < 20
+      WHERE id NOT IN (
+        SELECT id FROM users 
+        ORDER BY created_at ASC 
+        LIMIT 1
+      )
+    `);
+    console.log('✅ Users table cleaned (kept 1 user)');
+
+    // Reset sequences for PostgreSQL
+    await db.query(`
+      ALTER SEQUENCE users_id_seq RESTART WITH 2;
+      ALTER SEQUENCE runs_id_seq RESTART WITH 1;
+      ALTER SEQUENCE user_preferences_id_seq RESTART WITH 1;
+      ALTER SEQUENCE notifications_id_seq RESTART WITH 1;
     `);
 
-    console.log(`✅ Cleaned up ${deleteResult.rowsAffected} old user records`);
-
-    // Clean up flight cache
-    await db.execute(
-      'DELETE FROM flight_cache WHERE expires_at < datetime("now")'
-    );
-    console.log('✅ Cleaned up expired flight cache');
-
-    // Get counts after cleanup
-    const finalUserCountResult = await db.execute(
+    const finalUserCountResult = await db.query(
       'SELECT COUNT(*) as count FROM users'
     );
     const finalUserCount = finalUserCountResult.rows[0].count;
 
-    console.log(`\n📊 Final database state:`);
+    console.log(`\n📊 Final counts:`);
     console.log(`   Users: ${finalUserCount}`);
-    console.log(`   User Preferences: 0`);
+    console.log(`   Preferences: 0`);
     console.log(`   Runs: 0`);
     console.log(`   Notifications: 0`);
+  } catch (error) {
+    console.error('❌ Error during cleanup:', error);
+    throw error;
+  }
+}
 
+async function main() {
+  try {
+    await getTableCounts();
+    await cleanupTables();
     console.log('\n🎉 Database cleanup completed successfully!');
-    console.log('💡 The database is now ready for Clerk authentication.');
-    console.log('📝 Next steps:');
-    console.log('   1. Sign in with Clerk to create your first user');
-    console.log('   2. Set up your preferences in the Settings page');
-    console.log('   3. Start adding runs and flights');
   } catch (error) {
     console.error('❌ Database cleanup failed:', error);
     process.exit(1);
   }
 }
 
-// Run the cleanup
-cleanupDatabase().catch(console.error);
+main();

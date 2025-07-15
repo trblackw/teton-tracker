@@ -70,8 +70,6 @@ function Settings() {
       enabled: false,
     });
 
-  // Note: Email and phone number are now managed by Clerk and shown as readonly
-
   // Query for user preferences from API
   const {
     data: preferences,

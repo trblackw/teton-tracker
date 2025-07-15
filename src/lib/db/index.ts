@@ -1,8 +1,11 @@
-import { createClient, type Client } from '@libsql/client';
+import { Pool } from 'pg';
 import { generateBrowserUserId } from '../user-utils';
 
 // Fixed development user ID for consistent seeding
 const DEVELOPMENT_USER_ID = 'user_dev_seed_12345';
+
+// Database client instance
+let db: Pool | null = null;
 
 // Utility function for getting the appropriate user ID (for database operations)
 export function generateUserId(): string {
@@ -25,21 +28,17 @@ export async function getOrCreateUser(userId?: string): Promise<string> {
 
   try {
     // Check if user exists
-    const existingUser = await db.execute({
-      sql: 'SELECT id FROM users WHERE id = ?',
-      args: [currentUserId],
-    });
+    const existingUser = await db.query('SELECT id FROM users WHERE id = $1', [
+      currentUserId,
+    ]);
 
     if (existingUser.rows.length === 0) {
       // Create new user
       const now = new Date().toISOString();
-      await db.execute({
-        sql: `
-          INSERT INTO users (id, created_at, updated_at)
-          VALUES (?, ?, ?)
-        `,
-        args: [currentUserId, now, now],
-      });
+      await db.query(
+        `INSERT INTO users (id, created_at, updated_at) VALUES ($1, $2, $3)`,
+        [currentUserId, now, now]
+      );
       console.log(`✅ Created new user: ${currentUserId}`);
     }
 
@@ -50,44 +49,38 @@ export async function getOrCreateUser(userId?: string): Promise<string> {
   }
 }
 
-// Database client instance
-let db: Client | null = null;
-
 // Initialize database connection
-export function initializeDatabase(): Client {
+export function initializeDatabase(): Pool {
   if (db) return db;
 
-  const url = process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL;
-  const authToken = process.env.TURSO_AUTH_TOKEN;
+  const databaseUrl = process.env.DATABASE_URL;
 
-  if (!url) {
-    // Fallback to local SQLite for development
-    console.log('🗄️ Using local SQLite database');
-    db = createClient({
-      url: 'file:local.db',
-    });
-  } else if (url.startsWith('libsql://') && authToken) {
-    // Production Turso setup
-    console.log('🌐 Connecting to Turso database');
-    db = createClient({
-      url,
-      authToken,
-    });
-  } else if (url.startsWith('file:')) {
-    // Local file database
-    console.log('📁 Using local file database');
-    db = createClient({ url });
-  } else {
-    throw new Error(
-      'Invalid database configuration. Please set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN or DATABASE_URL.'
-    );
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL environment variable is required');
   }
+
+  if (
+    !databaseUrl.startsWith('postgres://') &&
+    !databaseUrl.startsWith('postgresql://')
+  ) {
+    throw new Error('DATABASE_URL must be a PostgreSQL connection string');
+  }
+
+  console.log('🐘 Connecting to PostgreSQL database');
+
+  db = new Pool({
+    connectionString: databaseUrl,
+    ssl:
+      process.env.NODE_ENV === 'production'
+        ? { rejectUnauthorized: false }
+        : false,
+  });
 
   return db;
 }
 
 // Get database instance
-export function getDatabase(): Client {
+export function getDatabase(): Pool {
   if (!db) {
     return initializeDatabase();
   }
@@ -106,13 +99,12 @@ export function handleDatabaseError(error: any, operation: string): void {
 export async function cleanupExpiredCache(): Promise<void> {
   try {
     const db = getDatabase();
-    const result = await db.execute({
-      sql: 'DELETE FROM flight_cache WHERE expires_at < datetime("now")',
-      args: [],
-    });
+    const result = await db.query(
+      'DELETE FROM flight_cache WHERE expires_at < NOW()'
+    );
 
-    if (result.rowsAffected > 0) {
-      console.log(`🧹 Cleaned up ${result.rowsAffected} expired cache entries`);
+    if (result.rowCount && result.rowCount > 0) {
+      console.log(`🧹 Cleaned up ${result.rowCount} expired cache entries`);
     }
   } catch (error) {
     handleDatabaseError(error, 'cache cleanup');

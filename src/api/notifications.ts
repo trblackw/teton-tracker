@@ -1,13 +1,12 @@
 import { generateUserId } from '../lib/db';
 import {
-  cleanupOldNotifications,
   createNotification,
   deleteNotification,
   getNotifications,
-  getNotificationStats,
+  getNotificationsStats,
   markAllNotificationsAsRead,
-  updateNotificationReadStatus,
-  type CreateNotificationData,
+  markNotificationAsRead,
+  type NotificationForm,
   type NotificationsQuery,
 } from '../lib/db/notifications';
 
@@ -72,7 +71,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const body = await request.json();
     const { notificationData, userId } = body as {
-      notificationData: CreateNotificationData;
+      notificationData: NotificationForm;
       userId?: string;
     };
 
@@ -118,11 +117,16 @@ export async function PUT(request: Request): Promise<Response> {
             }
           );
         }
-        success = await updateNotificationReadStatus(id, isRead, userId);
+        if (isRead) {
+          success = await markNotificationAsRead(id, userId);
+        } else {
+          // For now, we only support marking as read, not unread
+          success = false;
+        }
         break;
 
       case 'mark_all_read':
-        success = await markAllNotificationsAsRead(userId);
+        success = await markAllNotificationsAsRead(userId || generateUserId());
         break;
 
       default:
@@ -157,10 +161,7 @@ export async function DELETE(request: Request): Promise<Response> {
 
     let success = false;
 
-    if (action === 'cleanup') {
-      const daysToKeep = Number(url.searchParams.get('daysToKeep')) || 30;
-      success = await cleanupOldNotifications(userId || undefined, daysToKeep);
-    } else if (id) {
+    if (id) {
       success = await deleteNotification(id, userId || undefined);
     } else {
       return new Response(JSON.stringify({ error: 'Missing id parameter' }), {
@@ -190,7 +191,7 @@ export async function getStats(request: Request): Promise<Response> {
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId') || generateUserId();
 
-    const stats = await getNotificationStats(userId);
+    const stats = await getNotificationsStats(userId);
 
     return new Response(JSON.stringify(stats), {
       headers: { 'Content-Type': 'application/json' },

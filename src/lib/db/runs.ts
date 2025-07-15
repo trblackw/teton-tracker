@@ -32,15 +32,13 @@ export async function createRun(
       updatedAt: new Date(now),
     };
 
-    await db.execute({
-      sql: `
-        INSERT INTO runs (
-          id, user_id, flight_number, airline, departure_airport, arrival_airport,
-          pickup_location, dropoff_location, scheduled_time, estimated_duration, status, type,
-          price, notes, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
-      args: [
+    await db.query(
+      `INSERT INTO runs (
+        id, user_id, flight_number, airline, departure_airport, arrival_airport,
+        pickup_location, dropoff_location, scheduled_time, estimated_duration, status, type,
+        price, notes, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+      [
         run.id,
         run.userId,
         run.flightNumber,
@@ -57,8 +55,8 @@ export async function createRun(
         run.notes || null,
         now,
         now,
-      ],
-    });
+      ]
+    );
 
     console.log(`✅ Created run: ${run.id}`);
     return run;
@@ -102,12 +100,14 @@ export async function getRuns(query: RunsQuery = {}): Promise<Run[]> {
 
     // Add conditions only if they exist
     if (userId) {
-      conditions.push('user_id = ?');
+      conditions.push('user_id = $' + (args.length + 1));
       args.push(userId);
     }
 
     if (status && Array.isArray(status) && status.length > 0) {
-      const placeholders = status.map(() => '?').join(',');
+      const placeholders = status
+        .map((_, index) => '$' + (args.length + index + 1))
+        .join(',');
       conditions.push(`status IN (${placeholders})`);
       args.push(...status);
     }
@@ -119,39 +119,37 @@ export async function getRuns(query: RunsQuery = {}): Promise<Run[]> {
 
     // Add ORDER BY and LIMIT with validated values
     sql += ` ORDER BY ${orderBy} ${orderDirection}`;
-    sql += ` LIMIT ? OFFSET ?`;
+    sql += ` LIMIT $${args.length + 1} OFFSET $${args.length + 2}`;
     args.push(limit, offset);
 
-    const result = await db.execute({ sql, args });
+    const result = await db.query(sql, args);
 
-    const runs: Run[] = result.rows.map(row => ({
-      id: row.id as string,
-      userId: row.user_id as string,
-      flightNumber: row.flight_number as string,
-      airline: (row.airline as string) || '',
-      departure: row.departure_airport as string,
-      arrival: row.arrival_airport as string,
-      pickupLocation: row.pickup_location as string,
-      dropoffLocation: row.dropoff_location as string,
-      scheduledTime: row.scheduled_time as string,
-      estimatedDuration: row.estimated_duration as number,
-      actualDuration: row.actual_duration as number | undefined,
+    // Transform database rows to Run objects
+    const runs: Run[] = result.rows.map((row: any) => ({
+      id: row.id,
+      userId: row.user_id,
+      flightNumber: row.flight_number,
+      airline: row.airline,
+      departure: row.departure_airport,
+      arrival: row.arrival_airport,
+      pickupLocation: row.pickup_location,
+      dropoffLocation: row.dropoff_location,
+      scheduledTime: row.scheduled_time,
+      estimatedDuration: row.estimated_duration,
+      actualDuration: row.actual_duration,
       status: row.status as RunStatus,
       type: row.type as 'pickup' | 'dropoff',
-      price: row.price as string,
-      notes: row.notes as string | undefined,
-      createdAt: new Date(row.created_at as string),
-      updatedAt: new Date(row.updated_at as string),
-      completedAt: row.completed_at
-        ? new Date(row.completed_at as string)
-        : undefined,
+      price: row.price,
+      notes: row.notes,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      completedAt: row.completed_at,
     }));
 
-    console.log(`📊 Retrieved ${runs.length} runs`);
     return runs;
   } catch (error) {
     handleDatabaseError(error, 'get runs');
-    return []; // Return empty array on error
+    return [];
   }
 }
 
@@ -168,17 +166,18 @@ export async function getRunById(
         id, flight_number, airline, departure_airport, arrival_airport,
         pickup_location, dropoff_location, scheduled_time, estimated_duration, actual_duration, status, type,
         price, notes, user_id, created_at, updated_at, completed_at
-      FROM runs 
-      WHERE id = ?
+      FROM runs
+      WHERE id = $1
     `;
-    const args: any[] = [id];
+
+    const args = [id];
 
     if (userId) {
-      sql += ' AND user_id = ?';
+      sql += ' AND user_id = $2';
       args.push(userId);
     }
 
-    const result = await db.execute({ sql, args });
+    const result = await db.query(sql, args);
 
     if (result.rows.length === 0) {
       return null;
@@ -186,150 +185,193 @@ export async function getRunById(
 
     const row = result.rows[0];
     return {
-      id: row.id as string,
-      userId: row.user_id as string,
-      flightNumber: row.flight_number as string,
-      airline: (row.airline as string) || '',
-      departure: row.departure_airport as string,
-      arrival: row.arrival_airport as string,
-      pickupLocation: row.pickup_location as string,
-      dropoffLocation: row.dropoff_location as string,
-      scheduledTime: row.scheduled_time as string,
-      estimatedDuration: row.estimated_duration as number,
-      actualDuration: row.actual_duration as number | undefined,
+      id: row.id,
+      userId: row.user_id,
+      flightNumber: row.flight_number,
+      airline: row.airline,
+      departure: row.departure_airport,
+      arrival: row.arrival_airport,
+      pickupLocation: row.pickup_location,
+      dropoffLocation: row.dropoff_location,
+      scheduledTime: row.scheduled_time,
+      estimatedDuration: row.estimated_duration,
+      actualDuration: row.actual_duration,
       status: row.status as RunStatus,
       type: row.type as 'pickup' | 'dropoff',
-      price: (row.price as string) || '0',
-      notes: row.notes as string | undefined,
-      createdAt: new Date(row.created_at as string),
-      updatedAt: new Date(row.updated_at as string),
-      completedAt: row.completed_at
-        ? new Date(row.completed_at as string)
-        : undefined,
+      price: row.price,
+      notes: row.notes,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      completedAt: row.completed_at,
     };
   } catch (error) {
-    handleDatabaseError(error, 'get run by ID');
+    handleDatabaseError(error, 'get run by id');
     return null;
   }
 }
 
-// Update run status
-export async function updateRunStatus(
-  id: string,
-  status: RunStatus,
-  userId?: string
-): Promise<boolean> {
-  try {
-    const db = getDatabase();
-    const now = new Date().toISOString();
-
-    let sql = `
-      UPDATE runs 
-      SET status = ?, updated_at = ?
-    `;
-    const args: any[] = [status, now];
-
-    // Set completed_at if status is completed
-    if (status === 'completed') {
-      sql += ', completed_at = ?';
-      args.push(now);
-    }
-
-    sql += ' WHERE id = ?';
-    args.push(id);
-
-    if (userId) {
-      sql += ' AND user_id = ?';
-      args.push(userId);
-    }
-
-    const result = await db.execute({ sql, args });
-
-    const success = result.rowsAffected > 0;
-    if (success) {
-      console.log(`✅ Updated run ${id} status to ${status}`);
-    }
-
-    return success;
-  } catch (error) {
-    handleDatabaseError(error, 'update run status');
-    return false;
-  }
-}
-
-// Update a run
+// Update run
 export async function updateRun(
   id: string,
-  runData: NewRunForm,
+  updateData: Partial<Run>,
   userId?: string
 ): Promise<Run | null> {
   try {
     const db = getDatabase();
     const now = new Date().toISOString();
 
-    let sql = `
-      UPDATE runs 
-      SET flight_number = ?, airline = ?, departure_airport = ?, arrival_airport = ?,
-          pickup_location = ?, dropoff_location = ?, scheduled_time = ?, estimated_duration = ?, type = ?,
-          price = ?, notes = ?, updated_at = ?
-      WHERE id = ?
-    `;
-    const args: any[] = [
-      runData.flightNumber,
-      runData.airline || '',
-      runData.departure,
-      runData.arrival,
-      runData.pickupLocation,
-      runData.dropoffLocation,
-      runData.scheduledTime,
-      runData.estimatedDuration,
-      runData.type,
-      runData.price,
-      runData.notes || '',
-      now,
-      id,
-    ];
+    // Build dynamic SET clause
+    const setFields: string[] = [];
+    const args: any[] = [];
 
-    if (userId) {
-      sql += ' AND user_id = ?';
-      args.push(userId);
+    if (updateData.flightNumber !== undefined) {
+      setFields.push(`flight_number = $${args.length + 1}`);
+      args.push(updateData.flightNumber);
     }
 
-    const result = await db.execute({ sql, args });
+    if (updateData.airline !== undefined) {
+      setFields.push(`airline = $${args.length + 1}`);
+      args.push(updateData.airline);
+    }
 
-    const success = result.rowsAffected > 0;
-    if (success) {
-      console.log(`✅ Updated run ${id}`);
-      // Return the updated run
+    if (updateData.departure !== undefined) {
+      setFields.push(`departure_airport = $${args.length + 1}`);
+      args.push(updateData.departure);
+    }
+
+    if (updateData.arrival !== undefined) {
+      setFields.push(`arrival_airport = $${args.length + 1}`);
+      args.push(updateData.arrival);
+    }
+
+    if (updateData.pickupLocation !== undefined) {
+      setFields.push(`pickup_location = $${args.length + 1}`);
+      args.push(updateData.pickupLocation);
+    }
+
+    if (updateData.dropoffLocation !== undefined) {
+      setFields.push(`dropoff_location = $${args.length + 1}`);
+      args.push(updateData.dropoffLocation);
+    }
+
+    if (updateData.scheduledTime !== undefined) {
+      setFields.push(`scheduled_time = $${args.length + 1}`);
+      args.push(updateData.scheduledTime);
+    }
+
+    if (updateData.estimatedDuration !== undefined) {
+      setFields.push(`estimated_duration = $${args.length + 1}`);
+      args.push(updateData.estimatedDuration);
+    }
+
+    if (updateData.actualDuration !== undefined) {
+      setFields.push(`actual_duration = $${args.length + 1}`);
+      args.push(updateData.actualDuration);
+    }
+
+    if (updateData.status !== undefined) {
+      setFields.push(`status = $${args.length + 1}`);
+      args.push(updateData.status);
+    }
+
+    if (updateData.type !== undefined) {
+      setFields.push(`type = $${args.length + 1}`);
+      args.push(updateData.type);
+    }
+
+    if (updateData.price !== undefined) {
+      setFields.push(`price = $${args.length + 1}`);
+      args.push(updateData.price);
+    }
+
+    if (updateData.notes !== undefined) {
+      setFields.push(`notes = $${args.length + 1}`);
+      args.push(updateData.notes);
+    }
+
+    if (updateData.completedAt !== undefined) {
+      setFields.push(`completed_at = $${args.length + 1}`);
+      args.push(updateData.completedAt);
+    }
+
+    // Always update the updated_at timestamp
+    setFields.push(`updated_at = $${args.length + 1}`);
+    args.push(now);
+
+    if (setFields.length === 1) {
+      // Only updated_at was set, nothing to update
       return await getRunById(id, userId);
     }
 
-    return null;
+    let sql = `
+      UPDATE runs 
+      SET ${setFields.join(', ')}
+      WHERE id = $${args.length + 1}
+    `;
+    args.push(id);
+
+    if (userId) {
+      sql += ` AND user_id = $${args.length + 1}`;
+      args.push(userId);
+    }
+
+    sql += ' RETURNING *';
+
+    const result = await db.query(sql, args);
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const row = result.rows[0];
+    const updatedRun: Run = {
+      id: row.id,
+      userId: row.user_id,
+      flightNumber: row.flight_number,
+      airline: row.airline,
+      departure: row.departure_airport,
+      arrival: row.arrival_airport,
+      pickupLocation: row.pickup_location,
+      dropoffLocation: row.dropoff_location,
+      scheduledTime: row.scheduled_time,
+      estimatedDuration: row.estimated_duration,
+      actualDuration: row.actual_duration,
+      status: row.status as RunStatus,
+      type: row.type as 'pickup' | 'dropoff',
+      price: row.price,
+      notes: row.notes,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      completedAt: row.completed_at,
+    };
+
+    console.log(`✅ Updated run: ${id}`);
+    return updatedRun;
   } catch (error) {
     handleDatabaseError(error, 'update run');
     return null;
   }
 }
 
-// Delete a run
+// Delete run
 export async function deleteRun(id: string, userId?: string): Promise<boolean> {
   try {
     const db = getDatabase();
 
-    // First, delete associated notifications
+    // First delete related notifications
     await deleteNotificationsByRunId(id);
 
-    let sql = 'DELETE FROM runs WHERE id = ?';
-    const args: any[] = [id];
+    let sql = 'DELETE FROM runs WHERE id = $1';
+    const args = [id];
 
     if (userId) {
-      sql += ' AND user_id = ?';
+      sql += ' AND user_id = $2';
       args.push(userId);
     }
 
-    const result = await db.execute({ sql, args });
+    const result = await db.query(sql, args);
 
-    const success = result.rowsAffected > 0;
+    const success = result.rowCount != null && result.rowCount > 0;
     if (success) {
       console.log(`🗑️ Deleted run: ${id}`);
     }
@@ -354,13 +396,13 @@ export async function getRunsStats(userId?: string): Promise<{
     const args: any[] = [];
 
     if (userId) {
-      sql += ' WHERE user_id = ?';
+      sql += ' WHERE user_id = $1';
       args.push(userId);
     }
 
     sql += ' GROUP BY status, type';
 
-    const result = await db.execute({ sql, args });
+    const result = await db.query(sql, args);
 
     const stats = {
       total: 0,
@@ -377,7 +419,7 @@ export async function getRunsStats(userId?: string): Promise<{
     };
 
     result.rows.forEach(row => {
-      const count = row.count as number;
+      const count = parseInt(row.count);
       const status = row.status as RunStatus;
       const type = row.type as 'pickup' | 'dropoff';
 
@@ -409,7 +451,7 @@ export async function createRunsBatch(
     const runs: Run[] = [];
 
     // Start transaction
-    await db.execute('BEGIN TRANSACTION');
+    await db.query('BEGIN TRANSACTION');
 
     try {
       for (const runData of runsData) {
@@ -424,15 +466,13 @@ export async function createRunsBatch(
           updatedAt: new Date(now),
         };
 
-        await db.execute({
-          sql: `
-            INSERT INTO runs (
-              id, user_id, flight_number, airline, departure_airport, arrival_airport,
-              pickup_location, dropoff_location, scheduled_time, estimated_duration, status, type,
-              price, notes, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `,
-          args: [
+        await db.query(
+          `INSERT INTO runs (
+            id, user_id, flight_number, airline, departure_airport, arrival_airport,
+            pickup_location, dropoff_location, scheduled_time, estimated_duration, status, type,
+            price, notes, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+          [
             run.id,
             run.userId,
             run.flightNumber,
@@ -449,20 +489,20 @@ export async function createRunsBatch(
             run.notes || null,
             now,
             now,
-          ],
-        });
+          ]
+        );
 
         runs.push(run);
       }
 
       // Commit transaction
-      await db.execute('COMMIT');
+      await db.query('COMMIT');
 
       console.log(`✅ Created ${runs.length} runs in batch`);
       return runs;
     } catch (error) {
       // Rollback on error
-      await db.execute('ROLLBACK');
+      await db.query('ROLLBACK');
       throw error;
     }
   } catch (error) {
