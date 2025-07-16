@@ -5,8 +5,6 @@ import {
   ArrowDown,
   ArrowUp,
   CheckCircle,
-  ChevronDown,
-  ChevronUp,
   Clock,
   Clock10,
   Edit,
@@ -39,6 +37,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog';
+import { ExpandableActionsDrawer } from '../components/ui/expandable-actions-drawer';
 import { Input } from '../components/ui/input';
 import { RefreshButton } from '../components/ui/refresh-button';
 import {
@@ -83,8 +82,6 @@ function Runs() {
   const [selectedType, setSelectedType] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('scheduledTime');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [isSearchExpanded, setIsSearchExpanded] = useState<boolean>(false);
-  const [isFilterExpanded, setIsFilterExpanded] = useState<boolean>(false);
 
   // Query for runs from API
   const {
@@ -322,6 +319,209 @@ function Runs() {
     }
   };
 
+  // Search content for drawer
+  const SearchContent = () => (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <Input
+            type="text"
+            placeholder="Search flights, airlines, locations..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="flex-1"
+          />
+        </div>
+        {searchTerm && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setSearchTerm('')}
+            title="Clear search"
+          >
+            <X className="h-4 w-4 text-destructive hover:text-destructive/80" />
+          </Button>
+        )}
+      </div>
+
+      <div className="text-sm text-muted-foreground">
+        Search by flight number, airline, locations, or notes
+      </div>
+    </div>
+  );
+
+  // Filter content for drawer
+  const FilterContent = () => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Airline Filter */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Airline</label>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Select
+                value={selectedAirline}
+                onValueChange={setSelectedAirline}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All airlines" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableAirlines.map(airline => (
+                    <SelectItem key={airline} value={airline}>
+                      {airline}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedAirline && (
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setSelectedAirline('')}
+                title="Clear airline filter"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Status Filter */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Status</label>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableStatuses.map(status => (
+                    <SelectItem key={status} value={status}>
+                      <div className="flex items-center gap-2">
+                        <Badge className={`text-xs ${getStatusColor(status)}`}>
+                          {status}
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedStatus && (
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setSelectedStatus('')}
+                title="Clear status filter"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Type Filter */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Type</label>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Select value={selectedType} onValueChange={setSelectedType}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pickup">Pickup</SelectItem>
+                  <SelectItem value="dropoff">Dropoff</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedType && (
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setSelectedType('')}
+                title="Clear type filter"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Sort Options */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Sort by</label>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="scheduledTime">Scheduled Time</SelectItem>
+                  <SelectItem value="createdAt">Created</SelectItem>
+                  <SelectItem value="updatedAt">Updated</SelectItem>
+                  {activeTab === 'past' && (
+                    <SelectItem value="completedAt">Completed</SelectItem>
+                  )}
+                  <SelectItem value="price">Price</SelectItem>
+                  <SelectItem value="estimatedDuration">
+                    Est. Duration
+                  </SelectItem>
+                  {activeTab === 'past' && (
+                    <SelectItem value="actualDuration">
+                      Actual Duration
+                    </SelectItem>
+                  )}
+                  <SelectItem value="flightNumber">Flight Number</SelectItem>
+                  <SelectItem value="airline">Airline</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              title={`Sort ${sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+            >
+              {sortOrder === 'asc' ? (
+                <ArrowUp className="size-4" />
+              ) : (
+                <ArrowDown className="size-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Clear All Filters Button */}
+      {(searchTerm || selectedAirline || selectedStatus || selectedType) && (
+        <div className="pt-4 border-t">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setSearchTerm('');
+              setSelectedAirline('');
+              setSelectedStatus('');
+              setSelectedType('');
+            }}
+            className="w-full"
+          >
+            <X className="h-4 w-4 mr-2" />
+            Clear All Filters
+          </Button>
+        </div>
+      )}
+
+      <div className="text-sm text-muted-foreground">
+        Filter and sort your {activeTab} runs
+      </div>
+    </div>
+  );
+
   const getTabHeader = () => {
     if (activeTab === 'current') {
       return {
@@ -498,294 +698,27 @@ function Runs() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Search and Filter UI */}
-        <div className="space-y-4 mt-4">
-          {/* Collapsible Search */}
-          <Card className="pb-2 pt-3">
-            <CardHeader
-              className="cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => setIsSearchExpanded(!isSearchExpanded)}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2 mb-1">
-                    <Search className="h-5 w-4 text-muted-foreground" />
-                    Search Runs
-                    {searchTerm && (
-                      <span className="text-sm font-normal text-muted-foreground">
-                        ({searchTerm})
-                      </span>
-                    )}
-                  </CardTitle>
-                  <CardDescription>
-                    Search by flight number, airline, locations, or notes
-                  </CardDescription>
-                </div>
-                {isSearchExpanded ? (
-                  <ChevronUp className="size-5 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="size-5 text-muted-foreground" />
-                )}
-              </div>
-            </CardHeader>
-            {isSearchExpanded && (
-              <div className="animate-in slide-in-from-top-2 duration-300">
-                <CardContent className="pt-0">
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <Input
-                        type="text"
-                        placeholder="Search flights, airlines, locations..."
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                        className="flex-1"
-                      />
-                    </div>
-                    {searchTerm && (
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setSearchTerm('')}
-                        title="Clear search"
-                      >
-                        <X className="h-4 w-4 text-destructive hover:text-destructive/80" />
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </div>
-            )}
-          </Card>
-
-          {/* Collapsible Filter */}
-          <Card className="pb-2 pt-3">
-            <CardHeader
-              className="cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => setIsFilterExpanded(!isFilterExpanded)}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2 mb-1">
-                    <Filter className="h-5 w-5 text-muted-foreground" />
-                    Filter & Sort
-                    {(selectedAirline || selectedStatus || selectedType) && (
-                      <span className="text-sm font-normal text-muted-foreground">
-                        (
-                        {[selectedAirline, selectedStatus, selectedType]
-                          .filter(Boolean)
-                          .join(', ')}
-                        )
-                      </span>
-                    )}
-                  </CardTitle>
-                  <CardDescription>
-                    Filter and sort your {activeTab} runs
-                  </CardDescription>
-                </div>
-                {isFilterExpanded ? (
-                  <ChevronUp className="size-5 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="size-5 text-muted-foreground" />
-                )}
-              </div>
-            </CardHeader>
-            {isFilterExpanded && (
-              <div className="animate-in slide-in-from-top-2 duration-300">
-                <CardContent className="pt-0">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* Airline Filter */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">
-                        Airline
-                      </label>
-                      <div className="flex gap-2">
-                        <div className="flex-1">
-                          <Select
-                            value={selectedAirline}
-                            onValueChange={setSelectedAirline}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="All airlines" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableAirlines.map(airline => (
-                                <SelectItem key={airline} value={airline}>
-                                  {airline}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        {selectedAirline && (
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setSelectedAirline('')}
-                            title="Clear airline filter"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Status Filter */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">
-                        Status
-                      </label>
-                      <div className="flex gap-2">
-                        <div className="flex-1">
-                          <Select
-                            value={selectedStatus}
-                            onValueChange={setSelectedStatus}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="All statuses" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableStatuses.map(status => (
-                                <SelectItem key={status} value={status}>
-                                  <div className="flex items-center gap-2">
-                                    <Badge
-                                      className={`text-xs ${getStatusColor(status)}`}
-                                    >
-                                      {status}
-                                    </Badge>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        {selectedStatus && (
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setSelectedStatus('')}
-                            title="Clear status filter"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Type Filter */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">
-                        Type
-                      </label>
-                      <div className="flex gap-2">
-                        <div className="flex-1">
-                          <Select
-                            value={selectedType}
-                            onValueChange={setSelectedType}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="All types" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pickup">Pickup</SelectItem>
-                              <SelectItem value="dropoff">Dropoff</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        {selectedType && (
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setSelectedType('')}
-                            title="Clear type filter"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Sort Options */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">
-                        Sort by
-                      </label>
-                      <div className="flex gap-2">
-                        <div className="flex-1">
-                          <Select value={sortBy} onValueChange={setSortBy}>
-                            <SelectTrigger className="w-full">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="scheduledTime">
-                                Scheduled Time
-                              </SelectItem>
-                              <SelectItem value="createdAt">Created</SelectItem>
-                              <SelectItem value="updatedAt">Updated</SelectItem>
-                              {activeTab === 'past' && (
-                                <SelectItem value="completedAt">
-                                  Completed
-                                </SelectItem>
-                              )}
-                              <SelectItem value="price">Price</SelectItem>
-                              <SelectItem value="estimatedDuration">
-                                Est. Duration
-                              </SelectItem>
-                              {activeTab === 'past' && (
-                                <SelectItem value="actualDuration">
-                                  Actual Duration
-                                </SelectItem>
-                              )}
-                              <SelectItem value="flightNumber">
-                                Flight Number
-                              </SelectItem>
-                              <SelectItem value="airline">Airline</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() =>
-                            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
-                          }
-                          title={`Sort ${sortOrder === 'asc' ? 'descending' : 'ascending'}`}
-                        >
-                          {sortOrder === 'asc' ? (
-                            <ArrowUp className="size-4" />
-                          ) : (
-                            <ArrowDown className="size-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Clear All Filters Button */}
-                  {(searchTerm ||
-                    selectedAirline ||
-                    selectedStatus ||
-                    selectedType) && (
-                    <div className="mt-4 pt-4 border-t">
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setSearchTerm('');
-                          setSelectedAirline('');
-                          setSelectedStatus('');
-                          setSelectedType('');
-                        }}
-                        className="w-full"
-                      >
-                        <X className="h-4 w-4 mr-2" />
-                        Clear All Filters
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </div>
-            )}
-          </Card>
-        </div>
+        {/* Search & Filter Actions */}
+        <ExpandableActionsDrawer
+          actions={[
+            {
+              id: 'search',
+              icon: <Search className="h-4 w-4" />,
+              label: 'Search Runs',
+              content: <SearchContent />,
+              badge: searchTerm ? '1' : undefined,
+            },
+            {
+              id: 'filter',
+              icon: <Filter className="h-4 w-4" />,
+              label: 'Filter & Sort',
+              content: <FilterContent />,
+              badge:
+                [selectedAirline, selectedStatus, selectedType].filter(Boolean)
+                  .length || undefined,
+            },
+          ]}
+        />
 
         <TabsContent value="current" className="space-y-4">
           {currentRuns.length === 0 ? (

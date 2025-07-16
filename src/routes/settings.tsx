@@ -668,7 +668,7 @@ function Settings() {
                     updatePreferencesMutation.isPending
                   }
                 />
-                {notificationPermission.enabled &&
+                {/* {notificationPermission.enabled &&
                   (preferences?.notificationPreferences
                     ?.pushNotificationsEnabled ??
                     true) && (
@@ -679,7 +679,7 @@ function Settings() {
                     >
                       Test
                     </Button>
-                  )}
+                  )} */}
               </div>
             </div>
           </div>
