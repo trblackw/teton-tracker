@@ -41,6 +41,7 @@ import { IOSToggle } from '../components/ui/toggle';
 import airportsData from '../data/airports-comprehensive.json';
 import timezonesData from '../data/timezones.json';
 import { preferencesApi, seedApi } from '../lib/api/client';
+import { useAppContext } from '../lib/AppContextProvider';
 import { type UpdatePreferencesData } from '../lib/db/preferences';
 import { isDebugMode } from '../lib/debug';
 import {
@@ -48,7 +49,6 @@ import {
   type NotificationPermissionState,
 } from '../lib/services/notification-service';
 import { toasts } from '../lib/toast';
-import { useCurrentUser } from '../lib/user-utils';
 
 // Convert airport data from object to array format expected by AirportCombobox
 const airports = Object.entries(airportsData)
@@ -71,7 +71,7 @@ const timezones = timezonesData.timezones;
 function Settings() {
   const { theme, setTheme } = useTheme();
   const queryClient = useQueryClient();
-  const { userId, email, fullName, imageUrl } = useCurrentUser();
+  const { currentUser } = useAppContext();
   const [notificationPermission, setNotificationPermission] =
     useState<NotificationPermissionState>({
       permission: 'default',
@@ -254,10 +254,10 @@ function Settings() {
   // Mutation for generating seed data (debug only)
   const generateSeedDataMutation = useMutation({
     mutationFn: () => {
-      if (!userId) {
+      if (!currentUser?.id) {
         throw new Error('User ID is required');
       }
-      return seedApi.generateData(userId);
+      return seedApi.generateData(currentUser.id);
     },
     onSuccess: result => {
       // Invalidate all queries to refresh the UI
@@ -279,10 +279,10 @@ function Settings() {
   // Mutation for clearing user data (debug only)
   const clearUserDataMutation = useMutation({
     mutationFn: () => {
-      if (!userId) {
+      if (!currentUser?.id) {
         throw new Error('User ID is required');
       }
-      return seedApi.clearUserData(userId);
+      return seedApi.clearUserData(currentUser.id);
     },
     onSuccess: result => {
       // Invalidate all queries to refresh the UI
@@ -318,7 +318,7 @@ function Settings() {
     setShowClearDataDialog(false);
   };
 
-  if (isLoading) {
+  if (isLoading || !currentUser) {
     return (
       <div className="space-y-6 px-4 sm:px-0">
         <div>
@@ -381,16 +381,16 @@ function Settings() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
-            {imageUrl && (
+            {currentUser?.imageUrl && (
               <img
-                src={imageUrl}
+                src={currentUser.imageUrl}
                 alt="User Avatar"
                 className="h-12 w-12 rounded-full border-2 border-gray-200"
               />
             )}
             <div className="flex-1">
               <p className="font-medium text-foreground">
-                {fullName || email || 'User'}
+                {currentUser.name || currentUser.email || 'User'}
               </p>
             </div>
           </div>
@@ -459,7 +459,7 @@ function Settings() {
               <div className="flex-1 min-w-0">
                 <Input
                   type="email"
-                  value={email || 'Not set'}
+                  value={currentUser.email || 'Not set'}
                   readOnly
                   className="bg-muted text-muted-foreground cursor-not-allowed"
                 />

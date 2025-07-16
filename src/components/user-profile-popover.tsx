@@ -2,16 +2,16 @@ import { useAuth } from '@clerk/clerk-react';
 import { Link } from '@tanstack/react-router';
 import { LogOut, Settings, User } from 'lucide-react';
 import { useState } from 'react';
-import { useCurrentUser } from '../lib/user-utils';
+import { useAppContext } from '../lib/AppContextProvider';
 import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 
 export function UserProfilePopover() {
   const [isOpen, setIsOpen] = useState(false);
   const { signOut } = useAuth();
-  const { user, fullName, email, imageUrl } = useCurrentUser();
+  const { currentUser } = useAppContext();
 
-  if (!user) {
+  if (!currentUser) {
     return null;
   }
 
@@ -36,10 +36,10 @@ export function UserProfilePopover() {
           size="sm"
           className="flex items-center gap-2 h-8 px-2"
         >
-          {imageUrl ? (
+          {currentUser.imageUrl ? (
             <img
-              src={imageUrl}
-              alt={fullName || 'User'}
+              src={currentUser.imageUrl}
+              alt={currentUser.name || 'User'}
               className="h-6 w-6 rounded-full"
             />
           ) : (
@@ -48,17 +48,17 @@ export function UserProfilePopover() {
             </div>
           )}
           <span className="hidden md:block text-sm font-medium truncate">
-            {fullName || email || 'User'}
+            {currentUser.name || currentUser.email || 'User'}
           </span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-56 p-0" align="end">
         <div className="p-3 border-b">
           <div className="flex items-center gap-2">
-            {imageUrl ? (
+            {currentUser.imageUrl ? (
               <img
-                src={imageUrl}
-                alt={fullName || 'User'}
+                src={currentUser.imageUrl}
+                alt={currentUser.name || 'User'}
                 className="h-8 w-8 rounded-full"
               />
             ) : (
@@ -68,11 +68,11 @@ export function UserProfilePopover() {
             )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">
-                {fullName || 'User'}
+                {currentUser.name || 'User'}
               </p>
-              {email && (
+              {currentUser.email && (
                 <p className="text-xs text-muted-foreground truncate">
-                  {email}
+                  {currentUser.email}
                 </p>
               )}
             </div>

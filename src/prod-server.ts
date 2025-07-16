@@ -4,7 +4,6 @@ import * as configApi from './api/config';
 import * as notificationsApi from './api/notifications';
 import * as preferencesApi from './api/preferences';
 import * as runsApi from './api/runs';
-import * as usersApi from './api/users';
 
 // API route handlers
 const apiRoutes = {
@@ -19,9 +18,6 @@ const apiRoutes = {
   },
   '/api/auth/logout': {
     POST: authApi.logoutHandler,
-  },
-  '/api/webhooks/clerk': {
-    POST: authApi.clerkWebhookHandler,
   },
   '/api/runs': {
     GET: runsApi.GET,
@@ -45,9 +41,6 @@ const apiRoutes = {
   },
   '/api/notifications/stats': {
     GET: notificationsApi.getStats,
-  },
-  '/api/users/:id': {
-    GET: usersApi.GET,
   },
 };
 

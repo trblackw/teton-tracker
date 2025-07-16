@@ -1,4 +1,4 @@
-import { getDatabase, getOrCreateUser } from '../lib/db/index';
+import { getDatabase } from '../lib/db/index';
 import { createNotification } from '../lib/db/notifications';
 import { createRun } from '../lib/db/runs';
 import type { RunStatus, RunType } from '../lib/schema';
@@ -77,7 +77,6 @@ export async function seedDataForUser(userId: string): Promise<{
 
   try {
     // Ensure the user exists in the database
-    await getOrCreateUser(userId);
     console.log(`👤 Using user ID: ${userId}`);
 
     // Clear existing data for clean seeding

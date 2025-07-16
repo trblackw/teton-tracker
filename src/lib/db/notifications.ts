@@ -1,5 +1,5 @@
 import { type Notification } from '../schema';
-import { getDatabase, getOrCreateUser, handleDatabaseError } from './index';
+import { getDatabase, handleDatabaseError } from './index';
 
 // Form type for creating notifications
 export type NotificationForm = Omit<
@@ -33,13 +33,12 @@ export async function createNotification(
 
   try {
     const db = getDatabase();
-    const currentUserId = await getOrCreateUser(userId);
     const notificationId = crypto.randomUUID();
     const now = new Date().toISOString();
 
     const notification: Notification = {
       id: notificationId,
-      userId: currentUserId,
+      userId: userId,
       ...notificationData,
       isRead: false,
       createdAt: new Date(now),
@@ -470,7 +469,6 @@ export async function createBulkNotifications(
 
   try {
     const db = getDatabase();
-    const currentUserId = await getOrCreateUser(userId);
     const notifications: Notification[] = [];
     const now = new Date().toISOString();
 
@@ -483,7 +481,7 @@ export async function createBulkNotifications(
 
         const notification: Notification = {
           id: notificationId,
-          userId: currentUserId,
+          userId: userId,
           ...notificationData,
           isRead: false,
           createdAt: new Date(now),

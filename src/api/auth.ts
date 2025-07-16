@@ -1,8 +1,9 @@
 /**
  * Authentication API endpoints
+ *
+ * Note: User management is now handled entirely by Clerk.
+ * This file only contains temporary password protection for development.
  */
-
-import { updateUser } from '../lib/db';
 
 // Session storage for authenticated sessions (in production, use Redis or database)
 const authenticatedSessions = new Set<string>();
@@ -24,169 +25,6 @@ export async function validatePassword(password: string): Promise<boolean> {
   return password === correctPassword;
 }
 
-// Verify Clerk webhook signature using Svix library
-async function verifyClerkWebhook(request: Request): Promise<boolean> {
-  const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
-
-  if (!webhookSecret) {
-    console.warn(
-      '⚠️ CLERK_WEBHOOK_SECRET not configured - webhook verification disabled'
-    );
-    // In development, you might want to proceed without verification
-    // In production, this should return false
-    return process.env.NODE_ENV !== 'production';
-  }
-
-  try {
-    const { Webhook } = await import('svix');
-
-    const body = await request.clone().text();
-    const headers = {
-      'svix-id': request.headers.get('svix-id') || '',
-      'svix-timestamp': request.headers.get('svix-timestamp') || '',
-      'svix-signature': request.headers.get('svix-signature') || '',
-    };
-
-    const wh = new Webhook(webhookSecret);
-    wh.verify(body, headers); // Throws on verification failure
-
-    return true;
-  } catch (error) {
-    console.error('❌ Webhook signature verification failed:', error);
-    return false;
-  }
-}
-
-// Clerk webhook handler for user events
-export const clerkWebhookHandler = async (
-  request: Request
-): Promise<Response> => {
-  if (request.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
-  }
-
-  // Verify webhook signature
-  const isVerified = await verifyClerkWebhook(request);
-  if (!isVerified) {
-    return new Response('Unauthorized', { status: 401 });
-  }
-
-  try {
-    const body = await request.json();
-    const { type, data } = body;
-
-    console.log('📨 Clerk webhook received:', type);
-
-    if (type === 'user.created') {
-      // New user signed up - sync their data immediately
-      const userId = data.id;
-      const email = data.email_addresses?.[0]?.email_address;
-      const phoneNumber = data.phone_numbers?.[0]?.phone_number;
-      const firstName = data.first_name;
-      const lastName = data.last_name;
-
-      // Construct full name from first and last name
-      const name = [firstName, lastName].filter(Boolean).join(' ') || undefined;
-
-      console.log(`👤 New user signed up: ${userId}`);
-
-      const userData: {
-        name?: string;
-        email?: string;
-        phoneNumber?: string;
-      } = {};
-
-      if (name) {
-        userData.name = name;
-      }
-
-      if (email) {
-        userData.email = email;
-      }
-
-      if (phoneNumber) {
-        userData.phoneNumber = phoneNumber;
-      }
-
-      const updatedUser = await updateUser(userId, userData);
-
-      if (updatedUser) {
-        console.log(`✅ Synced new user data for ${userId}:`, {
-          name: userData.name || '(none)',
-          email: userData.email || '(none)',
-          phoneNumber: userData.phoneNumber || '(none)',
-        });
-      }
-    } else if (type === 'user.updated') {
-      // User updated their profile - sync changes
-      const userId = data.id;
-      const email = data.email_addresses?.[0]?.email_address;
-      const phoneNumber = data.phone_numbers?.[0]?.phone_number;
-      const firstName = data.first_name;
-      const lastName = data.last_name;
-
-      // Construct full name from first and last name
-      const name = [firstName, lastName].filter(Boolean).join(' ') || undefined;
-
-      console.log(`👤 User updated profile: ${userId}`);
-
-      const userData: {
-        name?: string;
-        email?: string;
-        phoneNumber?: string;
-      } = {};
-
-      if (name) {
-        userData.name = name;
-      }
-
-      if (email) {
-        userData.email = email;
-      }
-
-      if (phoneNumber) {
-        userData.phoneNumber = phoneNumber;
-      }
-
-      const updatedUser = await updateUser(userId, userData);
-
-      if (updatedUser) {
-        console.log(`✅ Updated user data for ${userId}:`, {
-          name: userData.name || '(none)',
-          email: userData.email || '(none)',
-          phoneNumber: userData.phoneNumber || '(none)',
-        });
-      }
-    } else if (type === 'user.deleted') {
-      // User deleted their account - handle cleanup
-      const userId = data.id;
-      console.log(`🗑️ User deleted account: ${userId}`);
-
-      // You might want to implement user deletion logic here
-      // For now, we'll just log it
-      console.log(
-        `ℹ️ User deletion logged - implement cleanup logic if needed`
-      );
-    }
-
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  } catch (error) {
-    console.error('Clerk webhook error:', error);
-    return new Response(
-      JSON.stringify({
-        error: 'Webhook processing failed',
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
-  }
-};
-
 // API handler for password validation
 export const passwordValidationHandler = async (
   request: Request
@@ -198,78 +36,120 @@ export const passwordValidationHandler = async (
   try {
     const { password } = await request.json();
 
-    if (!password || typeof password !== 'string') {
-      return new Response('Invalid password format', { status: 400 });
-    }
-
     const isValid = await validatePassword(password);
 
     if (isValid) {
-      // Generate secure session token
       const sessionToken = generateSessionToken();
       authenticatedSessions.add(sessionToken);
 
-      // Set secure HTTP-only cookie (in production)
-      const isProduction = process.env.NODE_ENV === 'production';
-      const cookieOptions = isProduction
-        ? 'HttpOnly; Secure; SameSite=Strict; Max-Age=86400' // 24 hours
-        : 'HttpOnly; SameSite=Strict; Max-Age=86400'; // 24 hours
+      const response = new Response(
+        JSON.stringify({ success: true, message: 'Access granted' }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
 
-      return new Response(JSON.stringify({ success: true }), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Set-Cookie': `teton-auth=${sessionToken}; ${cookieOptions}`,
-        },
-      });
+      // Set session cookie
+      response.headers.set(
+        'Set-Cookie',
+        `session=${sessionToken}; HttpOnly; Path=/; Max-Age=86400; SameSite=Strict`
+      );
+
+      return response;
     } else {
-      return new Response(JSON.stringify({ error: 'Invalid password' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid password' }),
+        {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
   } catch (error) {
     console.error('Password validation error:', error);
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: 'An error occurred during authentication',
+      }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
+};
+
+// API handler for checking authentication status
+export const checkAuthHandler = async (request: Request): Promise<Response> => {
+  if (request.method !== 'GET') {
+    return new Response('Method not allowed', { status: 405 });
+  }
+
+  try {
+    const cookies = request.headers.get('cookie') || '';
+    const sessionMatch = cookies.match(/session=([^;]+)/);
+    const sessionToken = sessionMatch ? sessionMatch[1] : null;
+
+    const authenticated = sessionToken
+      ? authenticatedSessions.has(sessionToken)
+      : false;
+
+    return new Response(JSON.stringify({ authenticated }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Auth check error:', error);
+    return new Response(JSON.stringify({ authenticated: false }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 };
 
-// Check if session is authenticated
-export const checkAuthHandler = async (request: Request): Promise<Response> => {
-  const cookies = request.headers.get('Cookie') || '';
-  const authCookie = cookies
-    .split(';')
-    .find(c => c.trim().startsWith('teton-auth='))
-    ?.split('=')[1];
-
-  const isAuthenticated = authCookie && authenticatedSessions.has(authCookie);
-
-  return new Response(JSON.stringify({ authenticated: isAuthenticated }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  });
-};
-
-// Logout handler
+// API handler for logout
 export const logoutHandler = async (request: Request): Promise<Response> => {
-  const cookies = request.headers.get('Cookie') || '';
-  const authCookie = cookies
-    .split(';')
-    .find(c => c.trim().startsWith('teton-auth='))
-    ?.split('=')[1];
-
-  if (authCookie) {
-    authenticatedSessions.delete(authCookie);
+  if (request.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405 });
   }
 
-  return new Response(JSON.stringify({ success: true }), {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/json',
-      'Set-Cookie': 'teton-auth=; HttpOnly; Max-Age=0; Path=/',
-    },
-  });
+  try {
+    const cookies = request.headers.get('cookie') || '';
+    const sessionMatch = cookies.match(/session=([^;]+)/);
+    const sessionToken = sessionMatch ? sessionMatch[1] : null;
+
+    if (sessionToken) {
+      authenticatedSessions.delete(sessionToken);
+    }
+
+    const response = new Response(
+      JSON.stringify({ success: true, message: 'Logged out successfully' }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+
+    // Clear session cookie
+    response.headers.set(
+      'Set-Cookie',
+      'session=; HttpOnly; Path=/; Max-Age=0; SameSite=Strict'
+    );
+
+    return response;
+  } catch (error) {
+    console.error('Logout error:', error);
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: 'An error occurred during logout',
+      }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
 };

@@ -98,13 +98,14 @@ export const ThemeSchema = z.enum(['light', 'dark', 'system'], {
 });
 
 // User schema
-export const UserSchema = z.object({
+export const ClerkUserSchema = z.object({
   id: z.string().min(1, 'User ID is required'),
   name: z.string().min(1, 'Name is required').optional(),
   email: z.string().email('Invalid email address').optional(),
   phoneNumber: z.string().min(1, 'Phone number is required').optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
+  imageUrl: z.string().optional(),
 });
 
 // Notification preferences schema
@@ -311,7 +312,7 @@ export const TomTomRouteResponseSchema = z.object({
 });
 
 // Utility types (inferred from schemas)
-export type User = z.infer<typeof UserSchema>;
+export type ClerkUser = z.infer<typeof ClerkUserSchema>;
 export type UserPreferences = z.infer<typeof UserPreferencesSchema>;
 export type NotificationPreferences = z.infer<
   typeof NotificationPreferencesSchema
@@ -331,8 +332,8 @@ export type OpenSkyFlightResponse = z.infer<typeof OpenSkyFlightResponseSchema>;
 export type TomTomRouteResponse = z.infer<typeof TomTomRouteResponseSchema>;
 
 // Validation helper functions
-export const validateUser = (data: unknown): User => {
-  return UserSchema.parse(data);
+export const validateUser = (data: unknown): ClerkUser => {
+  return ClerkUserSchema.parse(data);
 };
 
 export const validateUserPreferences = (data: unknown): UserPreferences => {
@@ -361,7 +362,7 @@ export const validateTrafficData = (data: unknown): TrafficData => {
 
 // Safe validation functions (return results instead of throwing)
 export const safeValidateUser = (data: unknown) => {
-  return UserSchema.safeParse(data);
+  return ClerkUserSchema.safeParse(data);
 };
 
 export const safeValidateUserPreferences = (data: unknown) => {

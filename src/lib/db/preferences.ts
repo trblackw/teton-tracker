@@ -1,5 +1,5 @@
 import { type NotificationPreferences, type UserPreferences } from '../schema';
-import { getDatabase, getOrCreateUser, handleDatabaseError } from './index';
+import { getDatabase, handleDatabaseError } from './index';
 
 // Type for updating user preferences
 export type UpdatePreferencesData = Partial<UserPreferences>;
@@ -14,11 +14,10 @@ export async function getUserPreferences(
 
   try {
     const db = getDatabase();
-    const currentUserId = await getOrCreateUser(userId);
 
     const result = await db.query(
       'SELECT * FROM user_preferences WHERE user_id = $1',
-      [currentUserId]
+      [userId]
     );
 
     if (result.rows.length === 0) {
@@ -52,11 +51,10 @@ export async function saveUserPreferences(
 
   try {
     const db = getDatabase();
-    const currentUserId = await getOrCreateUser(userId);
     const now = new Date().toISOString();
 
-    // Check if preferences exist
-    const existing = await getUserPreferences(currentUserId);
+    // Check if preferences exist (using Clerk user ID directly)
+    const existing = await getUserPreferences(userId);
 
     if (existing) {
       // Update existing preferences
@@ -95,7 +93,7 @@ export async function saveUserPreferences(
           WHERE user_id = $${args.length + 1}
           RETURNING *
         `;
-        args.push(currentUserId);
+        args.push(userId);
 
         const result = await db.query(sql, args);
 
@@ -113,7 +111,7 @@ export async function saveUserPreferences(
             updatedAt: row.updated_at,
           };
 
-          console.log(`✅ Updated preferences for user: ${currentUserId}`);
+          console.log(`✅ Updated preferences for user: ${userId}`);
           return updated;
         }
       }
@@ -122,7 +120,7 @@ export async function saveUserPreferences(
     } else {
       // Create new preferences
       const newPreferences: UserPreferences = {
-        userId: currentUserId,
+        userId: userId,
         homeAirport: preferences.homeAirport || undefined,
         theme: preferences.theme || 'system',
         timezone: preferences.timezone || 'UTC',
@@ -153,7 +151,7 @@ export async function saveUserPreferences(
         ]
       );
 
-      console.log(`✅ Created preferences for user: ${currentUserId}`);
+      console.log(`✅ Created preferences for user: ${userId}`);
       return newPreferences;
     }
   } catch (error) {
@@ -173,21 +171,18 @@ export async function updateNotificationPreferences(
 
   try {
     const db = getDatabase();
-    const currentUserId = await getOrCreateUser(userId);
     const now = new Date().toISOString();
 
     const result = await db.query(
       `UPDATE user_preferences 
        SET notification_preferences = $1, updated_at = $2
        WHERE user_id = $3`,
-      [JSON.stringify(notificationPreferences), now, currentUserId]
+      [JSON.stringify(notificationPreferences), now, userId]
     );
 
     const success = result.rowCount != null && result.rowCount > 0;
     if (success) {
-      console.log(
-        `✅ Updated notification preferences for user: ${currentUserId}`
-      );
+      console.log(`✅ Updated notification preferences for user: ${userId}`);
     }
 
     return success;
@@ -205,16 +200,15 @@ export async function deleteUserPreferences(userId: string): Promise<boolean> {
 
   try {
     const db = getDatabase();
-    const currentUserId = await getOrCreateUser(userId);
 
     const result = await db.query(
       'DELETE FROM user_preferences WHERE user_id = $1',
-      [currentUserId]
+      [userId]
     );
 
     const success = result.rowCount != null && result.rowCount > 0;
     if (success) {
-      console.log(`🗑️ Deleted preferences for user: ${currentUserId}`);
+      console.log(`🗑️ Deleted preferences for user: ${userId}`);
     }
 
     return success;

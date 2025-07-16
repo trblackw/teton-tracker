@@ -1,5 +1,5 @@
 import { type NewRunForm, type Run, type RunStatus } from '../schema';
-import { getDatabase, getOrCreateUser, handleDatabaseError } from './index';
+import { getDatabase, handleDatabaseError } from './index';
 import { deleteNotificationsByRunId } from './notifications';
 
 export interface RunsQuery {
@@ -22,13 +22,12 @@ export async function createRun(
 
   try {
     const db = getDatabase();
-    const currentUserId = await getOrCreateUser(userId);
     const runId = crypto.randomUUID();
     const now = new Date().toISOString();
 
     const run: Run = {
       id: runId,
-      userId: currentUserId,
+      userId: userId,
       ...runData,
       airline: runData.airline || '',
       status: (runData as any).status || 'scheduled', // Use provided status or default to scheduled
@@ -478,7 +477,6 @@ export async function createRunsBatch(
 
   try {
     const db = getDatabase();
-    const currentUserId = await getOrCreateUser(userId);
     const now = new Date().toISOString();
     const runs: Run[] = [];
 
@@ -490,7 +488,7 @@ export async function createRunsBatch(
         const runId = crypto.randomUUID();
         const run: Run = {
           id: runId,
-          userId: currentUserId,
+          userId: userId,
           ...runData,
           airline: runData.airline || '',
           status: 'scheduled',

@@ -6,7 +6,7 @@ import * as notificationsApi from './api/notifications';
 import * as preferencesApi from './api/preferences';
 import * as runsApi from './api/runs';
 import * as seedApi from './api/seed';
-import * as usersApi from './api/users';
+
 import { initializeDatabase } from './lib/db';
 
 // Initialize database
@@ -26,7 +26,6 @@ const apiRoutes = {
   '/api/preferences': preferencesApi,
   '/api/notifications': notificationsApi,
   '/api/seed': seedApi,
-  '/api/users': usersApi,
 };
 
 // Auth routes (these have custom path handling)
@@ -34,7 +33,6 @@ const authRoutes = {
   '/api/auth/validate-password': authApi.passwordValidationHandler,
   '/api/auth/check': authApi.checkAuthHandler,
   '/api/auth/logout': authApi.logoutHandler,
-  '/api/webhooks/clerk': authApi.clerkWebhookHandler,
 };
 
 // Generic API route handler
