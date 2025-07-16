@@ -61,7 +61,7 @@ export async function PUT(request: Request): Promise<Response> {
       try {
         await validateResourceOwnership(
           'user_preferences',
-          existingPreferences.id,
+          existingPreferences.userId,
           userId
         );
       } catch (error) {

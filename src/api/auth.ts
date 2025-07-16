@@ -24,7 +24,7 @@ export async function validatePassword(password: string): Promise<boolean> {
   return password === correctPassword;
 }
 
-// Verify Clerk webhook signature
+// Verify Clerk webhook signature using Svix library
 async function verifyClerkWebhook(request: Request): Promise<boolean> {
   const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
 
@@ -37,57 +37,22 @@ async function verifyClerkWebhook(request: Request): Promise<boolean> {
     return process.env.NODE_ENV !== 'production';
   }
 
-  const signature = request.headers.get('svix-signature');
-  if (!signature) {
-    console.error('❌ Missing webhook signature');
-    return false;
-  }
-
   try {
+    const { Webhook } = await import('svix');
+
     const body = await request.clone().text();
-    const timestamp = request.headers.get('svix-timestamp');
-    const id = request.headers.get('svix-id');
+    const headers = {
+      'svix-id': request.headers.get('svix-id') || '',
+      'svix-timestamp': request.headers.get('svix-timestamp') || '',
+      'svix-signature': request.headers.get('svix-signature') || '',
+    };
 
-    if (!timestamp || !id) {
-      console.error('❌ Missing required webhook headers');
-      return false;
-    }
+    const wh = new Webhook(webhookSecret);
+    wh.verify(body, headers); // Throws on verification failure
 
-    // Create the payload that was signed
-    const payload = `${id}.${timestamp}.${body}`;
-
-    // Create HMAC signature
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      'raw',
-      encoder.encode(webhookSecret),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign']
-    );
-
-    const signature_bytes = await crypto.subtle.sign(
-      'HMAC',
-      key,
-      encoder.encode(payload)
-    );
-    const expected_signature = btoa(
-      String.fromCharCode(...Array.from(new Uint8Array(signature_bytes)))
-    );
-
-    // Extract the signature from the header (format: "v1,signature1 v1,signature2")
-    const signatures = signature.split(' ');
-    for (const sig of signatures) {
-      const [version, sig_value] = sig.split(',');
-      if (version === 'v1' && sig_value === expected_signature) {
-        return true;
-      }
-    }
-
-    console.error('❌ Webhook signature verification failed');
-    return false;
+    return true;
   } catch (error) {
-    console.error('❌ Error verifying webhook signature:', error);
+    console.error('❌ Webhook signature verification failed:', error);
     return false;
   }
 }

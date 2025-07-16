@@ -71,7 +71,7 @@ const timezones = timezonesData.timezones;
 function Settings() {
   const { theme, setTheme } = useTheme();
   const queryClient = useQueryClient();
-  const { userId, email, fullName, imageUrl, isLoaded } = useCurrentUser();
+  const { userId, email, fullName, imageUrl } = useCurrentUser();
   const [notificationPermission, setNotificationPermission] =
     useState<NotificationPermissionState>({
       permission: 'default',
