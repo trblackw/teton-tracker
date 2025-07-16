@@ -105,8 +105,15 @@ function Settings() {
 
   // Mutation for updating preferences
   const updatePreferencesMutation = useMutation({
-    mutationFn: (data: UpdatePreferencesData) =>
-      preferencesApi.updatePreferences(data),
+    mutationFn: (data: UpdatePreferencesData) => {
+      if (!currentUser?.id) {
+        throw new Error('User ID is required');
+      }
+      return preferencesApi.updatePreferences({
+        ...data,
+        userId: currentUser.id,
+      });
+    },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['preferences'] });
 

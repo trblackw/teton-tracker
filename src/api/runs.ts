@@ -1,6 +1,7 @@
 import {
-  createAccessControlResponse,
-  validateResourceOwnership,
+  checkRunOwnership,
+  createErrorResponse,
+  requireAuth,
 } from '../lib/access-control';
 import {
   createRun,
@@ -127,9 +128,10 @@ export async function PUT(request: Request): Promise<Response> {
 
     // Validate that the user owns this run before allowing updates
     try {
-      await validateResourceOwnership('run', id, userId);
+      const authUserId = requireAuth(userId);
+      await checkRunOwnership(id, authUserId);
     } catch (error) {
-      return createAccessControlResponse(
+      return createErrorResponse(
         error instanceof Error ? error : new Error(String(error))
       );
     }
@@ -187,9 +189,10 @@ export async function DELETE(request: Request): Promise<Response> {
 
     // Validate that the user owns this run before allowing deletion
     try {
-      await validateResourceOwnership('run', id, userId);
+      const authUserId = requireAuth(userId);
+      await checkRunOwnership(id, authUserId);
     } catch (error) {
-      return createAccessControlResponse(
+      return createErrorResponse(
         error instanceof Error ? error : new Error(String(error))
       );
     }

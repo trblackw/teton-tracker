@@ -1,6 +1,7 @@
 import {
-  createAccessControlResponse,
-  validateResourceOwnership,
+  checkNotificationOwnership,
+  createErrorResponse,
+  requireAuth,
 } from '../lib/access-control';
 import {
   createNotification,
@@ -145,9 +146,10 @@ export async function PUT(request: Request): Promise<Response> {
 
         // Validate that the user owns this notification before allowing updates
         try {
-          await validateResourceOwnership('notification', id, userId);
+          const authUserId = requireAuth(userId);
+          await checkNotificationOwnership(id, authUserId);
         } catch (error) {
-          return createAccessControlResponse(
+          return createErrorResponse(
             error instanceof Error ? error : new Error(String(error))
           );
         }
@@ -210,9 +212,10 @@ export async function DELETE(request: Request): Promise<Response> {
 
     // Validate that the user owns this notification before allowing deletion
     try {
-      await validateResourceOwnership('notification', id, userId);
+      const authUserId = requireAuth(userId);
+      await checkNotificationOwnership(id, authUserId);
     } catch (error) {
-      return createAccessControlResponse(
+      return createErrorResponse(
         error instanceof Error ? error : new Error(String(error))
       );
     }

@@ -459,7 +459,7 @@ function Notifications() {
       </Card>
 
       {/* Notifications List */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {notifications.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
@@ -480,55 +480,34 @@ function Notifications() {
           notifications.map(notification => (
             <Card
               key={notification.id}
-              className={`${!notification.isRead ? 'border-primary/20 bg-primary/5' : ''}`}
+              className={`transition-colors ${!notification.isRead ? 'border-primary/30 bg-primary/5' : 'hover:bg-muted/30'}`}
             >
-              <CardContent className="p-4">
+              <CardContent className="p-3">
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 mt-1">
-                    {getNotificationIcon(notification)}
+                  {/* Icon */}
+                  <div className="flex-shrink-0 mt-0.5">
+                    <div
+                      className={`p-1.5 rounded-full ${getNotificationTypeColor(notification.type)}`}
+                    >
+                      {getNotificationIcon(notification)}
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 space-y-1">
+                    {/* Header with title, badges, and actions */}
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-medium text-foreground">
-                            {notification.title}
-                          </h3>
-                          <Badge
-                            variant="secondary"
-                            className={`text-xs ${getNotificationTypeColor(notification.type)}`}
-                          >
-                            {getNotificationTypeInfo(notification.type).label}
-                          </Badge>
-                          {!notification.isRead && (
-                            <Badge variant="default" className="text-xs">
-                              New
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {notification.message}
-                        </p>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>
-                            {formatScheduleTime(
-                              notification.createdAt?.toString() || ''
-                            )}
-                          </span>
-                          {notification.flightNumber && (
-                            <span className="flex items-center gap-1">
-                              <Plane className="h-3 w-3" />
-                              {notification.flightNumber}
-                            </span>
-                          )}
-                          {notification.pickupLocation && (
-                            <span className="truncate">
-                              📍 {notification.pickupLocation}
-                            </span>
-                          )}
-                        </div>
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <h3 className="font-medium text-foreground text-sm leading-tight truncate">
+                          {notification.title}
+                        </h3>
+                        {!notification.isRead && (
+                          <div className="flex-shrink-0 w-2 h-2 bg-primary rounded-full"></div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-1">
+
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-0.5 flex-shrink-0">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -539,11 +518,17 @@ function Notifications() {
                             )
                           }
                           disabled={markAsReadMutation.isPending}
+                          className="h-7 w-7 p-0 hover:bg-muted"
+                          title={
+                            notification.isRead
+                              ? 'Mark as unread'
+                              : 'Mark as read'
+                          }
                         >
                           {notification.isRead ? (
-                            <Circle className="h-4 w-4" />
+                            <Circle className="h-3.5 w-3.5 text-muted-foreground" />
                           ) : (
-                            <CheckCircle className="h-4 w-4" />
+                            <CheckCircle className="h-3.5 w-3.5 text-muted-foreground" />
                           )}
                         </Button>
                         <Button
@@ -553,11 +538,57 @@ function Notifications() {
                             handleDeleteNotification(notification.id)
                           }
                           disabled={deleteNotificationMutation.isPending}
+                          className="h-7 w-7 p-0 hover:bg-destructive/10"
+                          title="Delete notification"
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
                         </Button>
                       </div>
                     </div>
+
+                    {/* Message */}
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {notification.message}
+                    </p>
+
+                    {/* Footer with metadata */}
+                    <div
+                      className="flex items-center justify-between gap-2 pt-1 w-full"
+                      style={{ border: '1px solid red' }}
+                    >
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {formatScheduleTime(
+                            notification.createdAt?.toString() || ''
+                          )}
+                        </span>
+                        {notification.flightNumber && (
+                          <span className="flex items-center gap-1">
+                            <Plane className="h-3 w-3" />
+                            {notification.flightNumber}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Type badge */}
+                      <Badge
+                        variant="secondary"
+                        className={`text-xs px-2 py-0.5 ${getNotificationTypeColor(notification.type)}`}
+                      >
+                        {getNotificationTypeInfo(notification.type).label}
+                      </Badge>
+                    </div>
+
+                    {/* Location if available */}
+                    {notification.pickupLocation && (
+                      <div className="text-xs text-muted-foreground flex items-center gap-1 pt-0.5">
+                        <span>📍</span>
+                        <span className="truncate">
+                          {notification.pickupLocation}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardContent>
