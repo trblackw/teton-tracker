@@ -1097,7 +1097,7 @@ function Runs() {
                               {formatScheduleTime(run.scheduledTime)}
                             </span>
                           </div>
-                          {run.completedAt && (
+                          {run.completedAt instanceof Date && (
                             <div className="flex items-center gap-2">
                               <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
                               <span className="text-sm text-green-600">

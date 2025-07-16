@@ -118,7 +118,8 @@ function isScheduleMessage(text: string): boolean {
   return patternCount >= 2;
 }
 
-function AddRun() {
+// Makes use of the default report config fields
+function DefaultAddRun() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const search = useSearch({ from: '/add' });
@@ -134,7 +135,7 @@ function AddRun() {
   );
 
   // Query for edit mode
-  const { data: editingRun, isLoading: isLoadingRun } = useQuery({
+  const { data: editingRun } = useQuery({
     queryKey: ['run', search.edit],
     queryFn: () =>
       runsApi.getRuns().then(runs => runs.find(run => run.id === search.edit)),
@@ -911,7 +912,7 @@ function AddRun() {
 }
 
 export const Route = createFileRoute('/add')({
-  component: AddRun,
+  component: DefaultAddRun,
   validateSearch: (search: Record<string, unknown>) => {
     return {
       edit: search.edit as string | undefined,

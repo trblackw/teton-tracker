@@ -58,7 +58,7 @@ function Calendar({
           'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
           defaultClassNames.selected
         ),
-        today: cn('bg-accent text-accent-foreground', defaultClassNames.today),
+        today: cn('bg-accent text-blue-500', defaultClassNames.today),
         outside: cn(
           'text-muted-foreground opacity-50',
           defaultClassNames.outside
@@ -73,9 +73,9 @@ function Calendar({
       components={{
         Chevron: ({ orientation, ...props }) => {
           if (orientation === 'left') {
-            return <ChevronLeft className='h-4 w-4' />;
+            return <ChevronLeft className="h-4 w-4" />;
           }
-          return <ChevronRight className='h-4 w-4' />;
+          return <ChevronRight className="h-4 w-4" />;
         },
       }}
       {...props}

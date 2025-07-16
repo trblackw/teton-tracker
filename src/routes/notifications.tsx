@@ -552,10 +552,7 @@ function Notifications() {
                     </p>
 
                     {/* Footer with metadata */}
-                    <div
-                      className="flex items-center justify-between gap-2 pt-1 w-full"
-                      style={{ border: '1px solid red' }}
-                    >
+                    <div className="flex items-center justify-between gap-2 pt-1 w-full">
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />

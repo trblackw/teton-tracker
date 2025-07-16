@@ -108,6 +108,52 @@ export const ClerkUserSchema = z.object({
   imageUrl: z.string().optional(),
 });
 
+export enum ReportType {
+  flight = 'flight',
+  traffic = 'traffic',
+  run = 'run',
+}
+
+export type DefaultReportConfigFields =
+  | 'flightNumber'
+  | 'airline'
+  | 'departure'
+  | 'arrival'
+  | 'pickupLocation'
+  | 'type'
+  | 'dropoffLocation'
+  | 'price';
+
+export const defaultReportConfigFields: DefaultReportConfigFields[] = [
+  'flightNumber',
+  'airline',
+  'departure',
+  'arrival',
+  'pickupLocation',
+  'type',
+  'dropoffLocation',
+  'price',
+];
+
+// Report Config schema
+export const ReportConfigSchema = z.object({
+  id: z.string().uuid('Invalid report config ID format'),
+  config: z.array(z.string()).default(defaultReportConfigFields),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+// Report schema
+export const ReportSchema = z.object({
+  id: z.string().uuid('Invalid report ID format'),
+  createdBy: z.string().min(1, 'User ID is required'),
+  startDate: z.date(),
+  endDate: z.date(),
+  reportType: z.nativeEnum(ReportType).default(ReportType.run),
+  createdAt: z.date().optional(),
+  reportConfig: ReportConfigSchema,
+});
+
 // Notification preferences schema
 export const NotificationPreferencesSchema = z.object({
   pushNotificationsEnabled: z.boolean().default(true),
@@ -330,6 +376,8 @@ export type FlightStatusType = z.infer<typeof FlightStatusTypeSchema>;
 export type TrafficStatus = z.infer<typeof TrafficStatusSchema>;
 export type OpenSkyFlightResponse = z.infer<typeof OpenSkyFlightResponseSchema>;
 export type TomTomRouteResponse = z.infer<typeof TomTomRouteResponseSchema>;
+export type ReportConfig = z.infer<typeof ReportConfigSchema>;
+export type Report = z.infer<typeof ReportSchema>;
 
 // Validation helper functions
 export const validateUser = (data: unknown): ClerkUser => {

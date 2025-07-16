@@ -5,7 +5,7 @@ import {
   Outlet,
   useRouterState,
 } from '@tanstack/react-router';
-import { Bell, Car, Plane, Plus, Settings } from 'lucide-react';
+import { BarChart3, Bell, Car, Plane, Settings } from 'lucide-react';
 import { useEffect } from 'react';
 import { Toaster } from 'sonner';
 import { ActiveRunBanner } from '../components/active-run-banner';
@@ -16,7 +16,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { UserProfilePopover } from '../components/user-profile-popover';
 import { AppContextProvider } from '../lib/AppContextProvider';
 import { queryClient } from '../lib/react-query-client';
-import { initializeTomTomServiceWithConfig } from '../lib/services/tomtom-service';
+// import { initializeTomTomServiceWithConfig } from '../lib/services/tomtom-service';
 import { toasts } from '../lib/toast';
 
 const activeNavClass = 'bg-primary/10 text-blue-500';
@@ -25,9 +25,9 @@ function RootComponent() {
   const routerState = useRouterState();
 
   // Initialize services on app start
-  useEffect(() => {
-    initializeTomTomServiceWithConfig();
-  }, []);
+  // useEffect(() => {
+  //   initializeTomTomServiceWithConfig();
+  // }, []);
 
   // Auto-dismiss toasts on route change
   useEffect(() => {
@@ -96,7 +96,7 @@ function RootComponent() {
                               Upcoming Flights
                             </Link>
                           </Button>
-                          <Button
+                          {/* <Button
                             asChild
                             variant="ghost"
                             className="w-full justify-start"
@@ -110,6 +110,22 @@ function RootComponent() {
                             >
                               <Plus className="h-4 w-4" />
                               Add Run
+                            </Link>
+                          </Button> */}
+                          <Button
+                            asChild
+                            variant="ghost"
+                            className="w-full justify-start"
+                          >
+                            <Link
+                              to="/reports"
+                              className="flex items-center gap-2"
+                              activeProps={{
+                                className: activeNavClass,
+                              }}
+                            >
+                              <BarChart3 className="h-4 w-4" />
+                              Reports
                             </Link>
                           </Button>
                           <Button
@@ -179,7 +195,7 @@ function RootComponent() {
                         <Car className="size-7" />
                       </Link>
                     </Button>
-                    <Button
+                    {/* <Button
                       asChild
                       variant="ghost"
                       size="sm"
@@ -194,7 +210,7 @@ function RootComponent() {
                       >
                         <Plus className="size-6" />
                       </Link>
-                    </Button>
+                    </Button> */}
                     <Button
                       asChild
                       variant="ghost"
@@ -209,6 +225,22 @@ function RootComponent() {
                         }}
                       >
                         <Plane className="size-5" />
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                      className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
+                    >
+                      <Link
+                        to="/reports"
+                        className="flex flex-col items-center gap-1"
+                        activeProps={{
+                          className: activeNavClass,
+                        }}
+                      >
+                        <BarChart3 className="size-5" />
                       </Link>
                     </Button>
                     <Button
