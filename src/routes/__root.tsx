@@ -5,7 +5,7 @@ import {
   Outlet,
   useRouterState,
 } from '@tanstack/react-router';
-import { BarChart3, Bell, Car, Plane, Settings } from 'lucide-react';
+import { BarChart3, Bell, Car, Plane } from 'lucide-react';
 import { useEffect } from 'react';
 import { Toaster } from 'sonner';
 import { ActiveRunBanner } from '../components/active-run-banner';
@@ -17,6 +17,7 @@ import { UserProfilePopover } from '../components/user-profile-popover';
 import { AppContextProvider } from '../lib/AppContextProvider';
 import { queryClient } from '../lib/react-query-client';
 // import { initializeTomTomServiceWithConfig } from '../lib/services/tomtom-service';
+import { isFeatureEnabled } from '../lib/features';
 import { toasts } from '../lib/toast';
 
 const activeNavClass = 'bg-primary/10 text-blue-500';
@@ -75,38 +76,24 @@ function RootComponent() {
                               Current Runs
                             </Link>
                           </Button>
-                          <Button
-                            asChild
-                            variant="ghost"
-                            className="w-full justify-start"
-                          >
-                            <Link
-                              to="/flights"
-                              className="flex items-center gap-2"
-                              activeProps={{
-                                className: activeNavClass,
-                              }}
+                          {isFeatureEnabled('realTimeFlightTraffic') && (
+                            <Button
+                              asChild
+                              variant="ghost"
+                              className="w-full justify-start"
                             >
-                              <Plane className="h-4 w-4" />
-                              Upcoming Flights
-                            </Link>
-                          </Button>
-                          {/* <Button
-                            asChild
-                            variant="ghost"
-                            className="w-full justify-start"
-                          >
-                            <Link
-                              to="/add"
-                              className="flex items-center gap-2"
-                              activeProps={{
-                                className: activeNavClass,
-                              }}
-                            >
-                              <Plus className="h-4 w-4" />
-                              Add Run
-                            </Link>
-                          </Button> */}
+                              <Link
+                                to="/flights"
+                                className="flex items-center gap-2"
+                                activeProps={{
+                                  className: activeNavClass,
+                                }}
+                              >
+                                <Plane className="h-4 w-4" />
+                                Upcoming Flights
+                              </Link>
+                            </Button>
+                          )}
                           <Button
                             asChild
                             variant="ghost"
@@ -123,38 +110,24 @@ function RootComponent() {
                               Reports
                             </Link>
                           </Button>
-                          <Button
-                            asChild
-                            variant="ghost"
-                            className="w-full justify-start"
-                          >
-                            <Link
-                              to="/notifications"
-                              className="flex items-center gap-2"
-                              activeProps={{
-                                className: activeNavClass,
-                              }}
+                          {isFeatureEnabled('pushNotifications') && (
+                            <Button
+                              asChild
+                              variant="ghost"
+                              className="w-full justify-start"
                             >
-                              <Bell className="h-4 w-4" />
-                              Notifications
-                            </Link>
-                          </Button>
-                          <Button
-                            asChild
-                            variant="ghost"
-                            className="w-full justify-start"
-                          >
-                            <Link
-                              to="/settings"
-                              className="flex items-center gap-2"
-                              activeProps={{
-                                className: activeNavClass,
-                              }}
-                            >
-                              <Settings className="h-4 w-4" />
-                              Settings
-                            </Link>
-                          </Button>
+                              <Link
+                                to="/notifications"
+                                className="flex items-center gap-2"
+                                activeProps={{
+                                  className: activeNavClass,
+                                }}
+                              >
+                                <Bell className="h-4 w-4" />
+                                Notifications
+                              </Link>
+                            </Button>
+                          )}
                         </nav>
                       </CardContent>
                     </Card>
@@ -178,7 +151,7 @@ function RootComponent() {
                       asChild
                       variant="ghost"
                       size="sm"
-                      className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
+                      className="flex-col h-auto p-3 min-w-[50px] touch-manipulation"
                     >
                       <Link
                         to="/runs"
@@ -190,27 +163,29 @@ function RootComponent() {
                         <Car className="size-7" />
                       </Link>
                     </Button>
-                    <Button
-                      asChild
-                      variant="ghost"
-                      size="sm"
-                      className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
-                    >
-                      <Link
-                        to="/flights"
-                        className="flex flex-col items-center gap-1"
-                        activeProps={{
-                          className: activeNavClass,
-                        }}
+                    {isFeatureEnabled('realTimeFlightTraffic') && (
+                      <Button
+                        asChild
+                        variant="ghost"
+                        size="sm"
+                        className="flex-col h-auto p-3 min-w-[50px] touch-manipulation"
                       >
-                        <Plane className="size-5" />
-                      </Link>
-                    </Button>
+                        <Link
+                          to="/flights"
+                          className="flex flex-col items-center gap-1"
+                          activeProps={{
+                            className: activeNavClass,
+                          }}
+                        >
+                          <Plane className="size-5" />
+                        </Link>
+                      </Button>
+                    )}
                     <Button
                       asChild
                       variant="ghost"
                       size="sm"
-                      className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
+                      className="flex-col h-auto p-3 min-w-[50px] touch-manipulation"
                     >
                       <Link
                         to="/reports"
@@ -222,42 +197,28 @@ function RootComponent() {
                         <BarChart3 className="size-5" />
                       </Link>
                     </Button>
-                    <Button
-                      asChild
-                      variant="ghost"
-                      size="sm"
-                      className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
-                    >
-                      <Link
-                        to="/notifications"
-                        className="flex flex-col items-center gap-1"
-                        activeProps={{
-                          className: activeNavClass,
-                        }}
+                    {isFeatureEnabled('pushNotifications') && (
+                      <Button
+                        asChild
+                        variant="ghost"
+                        size="sm"
+                        className="flex-col h-auto p-2 min-w-[50px] touch-manipulation"
                       >
-                        <Bell className="size-5" />
-                      </Link>
-                    </Button>
-                    <Button
-                      asChild
-                      variant="ghost"
-                      size="sm"
-                      className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
-                    >
-                      <Link
-                        to="/settings"
-                        className="flex flex-col items-center gap-1"
-                        activeProps={{
-                          className: activeNavClass,
-                        }}
-                      >
-                        <Settings className="size-5" />
-                      </Link>
-                    </Button>
+                        <Link
+                          to="/notifications"
+                          className="flex flex-col items-center gap-1"
+                          activeProps={{
+                            className: activeNavClass,
+                          }}
+                        >
+                          <Bell className="size-5" />
+                        </Link>
+                      </Button>
+                    )}
                   </nav>
 
                   {/* User Profile for Mobile */}
-                  <div className="mr-7">
+                  <div className="fixed bottom-3 right-3">
                     <UserProfilePopover />
                   </div>
                 </div>

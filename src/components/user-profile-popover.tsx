@@ -40,10 +40,10 @@ export function UserProfilePopover() {
             <img
               src={currentUser.imageUrl}
               alt={currentUser.name || 'User'}
-              className="h-6 w-6 rounded-full"
+              className="size-7 rounded-full border border-blue-500"
             />
           ) : (
-            <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+            <div className="size-7 rounded-full bg-primary/10 flex items-center justify-center">
               <User className="h-4 w-4 text-primary" />
             </div>
           )}

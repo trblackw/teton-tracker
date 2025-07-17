@@ -44,6 +44,7 @@ import { preferencesApi, seedApi } from '../lib/api/client';
 import { useAppContext } from '../lib/AppContextProvider';
 import { type UpdatePreferencesData } from '../lib/db/preferences';
 import { isDebugMode } from '../lib/debug';
+import { isFeatureEnabled } from '../lib/features';
 import {
   notifications,
   type NotificationPermissionState,
@@ -622,53 +623,54 @@ function Settings() {
       </Card>
 
       {/* Notification Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Notifications
-          </CardTitle>
-          <CardDescription>
-            Configure push notifications for flight updates and alerts
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          {/* Push Notifications Permission */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="font-medium">Push Notifications</p>
-                <p className="text-sm text-muted-foreground">
-                  Enable browser notifications for flight updates and alerts
-                </p>
-                {!notificationPermission.supported && (
-                  <p className="text-sm text-amber-600 mt-1">
-                    Not supported in this browser
+      {isFeatureEnabled('pushNotifications') && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Notifications
+            </CardTitle>
+            <CardDescription>
+              Configure push notifications for flight updates and alerts
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {/* Push Notifications Permission */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium">Push Notifications</p>
+                  <p className="text-sm text-muted-foreground">
+                    Enable browser notifications for flight updates and alerts
                   </p>
-                )}
-                {notificationPermission.permission === 'denied' && (
-                  <p className="text-sm text-red-600 mt-1">
-                    Blocked - please enable in browser settings
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <IOSToggle
-                  pressed={
-                    notificationPermission.enabled &&
-                    (preferences?.notificationPreferences
-                      ?.pushNotificationsEnabled ??
-                      true)
-                  }
-                  onPressedChange={handlePushNotificationsToggle}
-                  disabled={
-                    !notificationPermission.supported ||
-                    notificationPermission.permission === 'denied' ||
-                    requestNotificationPermission.isPending ||
-                    updatePreferencesMutation.isPending
-                  }
-                />
-                {/* {notificationPermission.enabled &&
+                  {!notificationPermission.supported && (
+                    <p className="text-sm text-amber-600 mt-1">
+                      Not supported in this browser
+                    </p>
+                  )}
+                  {notificationPermission.permission === 'denied' && (
+                    <p className="text-sm text-red-600 mt-1">
+                      Blocked - please enable in browser settings
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <IOSToggle
+                    pressed={
+                      notificationPermission.enabled &&
+                      (preferences?.notificationPreferences
+                        ?.pushNotificationsEnabled ??
+                        true)
+                    }
+                    onPressedChange={handlePushNotificationsToggle}
+                    disabled={
+                      !notificationPermission.supported ||
+                      notificationPermission.permission === 'denied' ||
+                      requestNotificationPermission.isPending ||
+                      updatePreferencesMutation.isPending
+                    }
+                  />
+                  {/* {notificationPermission.enabled &&
                   (preferences?.notificationPreferences
                     ?.pushNotificationsEnabled ??
                     true) && (
@@ -680,68 +682,69 @@ function Settings() {
                       Test
                     </Button>
                   )} */}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Notification Preferences */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="font-medium">Flight Updates</p>
-                <p className="text-sm text-muted-foreground">
-                  Get notified about flight status changes, delays, and gate
-                  updates
-                </p>
+            {/* Notification Preferences */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium">Flight Updates</p>
+                  <p className="text-sm text-muted-foreground">
+                    Get notified about flight status changes, delays, and gate
+                    updates
+                  </p>
+                </div>
+                <IOSToggle
+                  pressed={
+                    preferences?.notificationPreferences?.flightUpdates ?? true
+                  }
+                  onPressedChange={(value: boolean) =>
+                    handleNotificationToggle('flightUpdates', value)
+                  }
+                  disabled={updatePreferencesMutation.isPending}
+                />
               </div>
-              <IOSToggle
-                pressed={
-                  preferences?.notificationPreferences?.flightUpdates ?? true
-                }
-                onPressedChange={(value: boolean) =>
-                  handleNotificationToggle('flightUpdates', value)
-                }
-                disabled={updatePreferencesMutation.isPending}
-              />
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="font-medium">Traffic Alerts</p>
-                <p className="text-sm text-muted-foreground">
-                  Get notified about traffic conditions and delays on your
-                  routes
-                </p>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium">Traffic Alerts</p>
+                  <p className="text-sm text-muted-foreground">
+                    Get notified about traffic conditions and delays on your
+                    routes
+                  </p>
+                </div>
+                <IOSToggle
+                  pressed={
+                    preferences?.notificationPreferences?.trafficAlerts ?? true
+                  }
+                  onPressedChange={(value: boolean) =>
+                    handleNotificationToggle('trafficAlerts', value)
+                  }
+                  disabled={updatePreferencesMutation.isPending}
+                />
               </div>
-              <IOSToggle
-                pressed={
-                  preferences?.notificationPreferences?.trafficAlerts ?? true
-                }
-                onPressedChange={(value: boolean) =>
-                  handleNotificationToggle('trafficAlerts', value)
-                }
-                disabled={updatePreferencesMutation.isPending}
-              />
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="font-medium">Run Reminders</p>
-                <p className="text-sm text-muted-foreground">
-                  Get reminded about upcoming shuttle runs and pickups
-                </p>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium">Run Reminders</p>
+                  <p className="text-sm text-muted-foreground">
+                    Get reminded about upcoming shuttle runs and pickups
+                  </p>
+                </div>
+                <IOSToggle
+                  pressed={
+                    preferences?.notificationPreferences?.runReminders ?? true
+                  }
+                  onPressedChange={(value: boolean) =>
+                    handleNotificationToggle('runReminders', value)
+                  }
+                  disabled={updatePreferencesMutation.isPending}
+                />
               </div>
-              <IOSToggle
-                pressed={
-                  preferences?.notificationPreferences?.runReminders ?? true
-                }
-                onPressedChange={(value: boolean) =>
-                  handleNotificationToggle('runReminders', value)
-                }
-                disabled={updatePreferencesMutation.isPending}
-              />
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Debug Tools */}
       {isDebugMode() && (
