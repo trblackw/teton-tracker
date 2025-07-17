@@ -321,38 +321,21 @@ function Runs() {
 
   // Search content for drawer
   const SearchContent = () => (
-    <div className="space-y-4">
-      <div className="flex gap-2">
-        <div className="flex-1">
-          <Input
-            type="text"
-            placeholder="Search flights, airlines, locations..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="flex-1"
-          />
-        </div>
-        {searchTerm && (
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setSearchTerm('')}
-            title="Clear search"
-          >
-            <X className="h-4 w-4 text-destructive hover:text-destructive/80" />
-          </Button>
-        )}
-      </div>
-
-      <div className="text-sm text-muted-foreground">
-        Search by flight number, airline, locations, or notes
-      </div>
+    <div>
+      <Input
+        type="text"
+        placeholder="Search by flight number, airline, locations, or notes"
+        value={searchTerm}
+        onChange={e => setSearchTerm(e.target.value)}
+        className="w-full"
+        autoFocus
+      />
     </div>
   );
 
   // Filter content for drawer
   const FilterContent = () => (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Airline Filter */}
         <div className="space-y-2">
@@ -515,10 +498,6 @@ function Runs() {
           </Button>
         </div>
       )}
-
-      <div className="text-sm text-muted-foreground">
-        Filter and sort your {activeTab} runs
-      </div>
     </div>
   );
 
@@ -707,6 +686,7 @@ function Runs() {
               label: 'Search Runs',
               content: <SearchContent />,
               badge: searchTerm ? '1' : undefined,
+              showHeader: false, // Minimal search with no header
             },
             {
               id: 'filter',
@@ -716,6 +696,7 @@ function Runs() {
               badge:
                 [selectedAirline, selectedStatus, selectedType].filter(Boolean)
                   .length || undefined,
+              showHeader: false, // Minimal filter with no header
             },
           ]}
         />

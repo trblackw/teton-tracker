@@ -1,6 +1,6 @@
+import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { Button } from './button';
 
 export interface DrawerAction {
@@ -9,6 +9,7 @@ export interface DrawerAction {
   label: string;
   content: React.ReactNode;
   badge?: string | number; // Optional badge for active filters/search terms
+  showHeader?: boolean; // Optional flag to show/hide header
 }
 
 interface ExpandableActionsDrawerProps {
@@ -21,22 +22,8 @@ export function ExpandableActionsDrawer({
   className = '',
 }: ExpandableActionsDrawerProps) {
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
-  const drawerRef = useRef<HTMLDivElement>(null);
   const activeAction = actions.find(action => action.id === activeActionId);
-
-  console.log('🎲 ExpandableActionsDrawer render:', {
-    activeActionId,
-    mounted,
-    actionsCount: actions.length,
-    activeAction: activeAction?.label,
-  });
-
-  // Handle mounting for portal
-  useEffect(() => {
-    setMounted(true);
-    console.log('🎲 Component mounted');
-  }, []);
+  const drawerRef = useRef<HTMLDivElement>(null);
 
   // Handle escape key
   useEffect(() => {
@@ -48,40 +35,42 @@ export function ExpandableActionsDrawer({
 
     if (activeActionId) {
       document.addEventListener('keydown', handleEscape);
-      // Prevent body scroll when drawer is open
-      document.body.style.overflow = 'hidden';
     }
 
     return () => {
       document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
+    };
+  }, [activeActionId]);
+
+  // Handle click outside to close
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        activeActionId &&
+        drawerRef.current &&
+        !drawerRef.current.contains(event.target as Node)
+      ) {
+        setActiveActionId(null);
+      }
+    };
+
+    if (activeActionId) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [activeActionId]);
 
   // Handle action button click
   const handleActionClick = (actionId: string) => {
-    console.log(
-      '🔘 Action button clicked:',
-      actionId,
-      'current active:',
-      activeActionId
-    );
-
     if (activeActionId === actionId) {
       // Close if same action clicked
-      console.log('🔘 Closing drawer');
       setActiveActionId(null);
     } else {
       // Switch to new action
-      console.log('🔘 Opening drawer for:', actionId);
       setActiveActionId(actionId);
-    }
-  };
-
-  // Handle backdrop click
-  const handleBackdropClick = (event: React.MouseEvent) => {
-    if (event.target === event.currentTarget) {
-      setActiveActionId(null);
     }
   };
 
@@ -90,44 +79,31 @@ export function ExpandableActionsDrawer({
     setActiveActionId(null);
   };
 
-  // Animation variants
-  const backdropVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1 },
-  };
-
-  const drawerVariants = {
+  // Animation variants for inline expansion
+  const expansionVariants = {
     hidden: {
+      height: 0,
       opacity: 0,
-      y: -20,
-      scale: 0.95,
-    },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: {
-        type: 'spring' as const,
-        stiffness: 300,
-        damping: 25,
-        mass: 0.8,
-      },
-    },
-    exit: {
-      opacity: 0,
-      y: -20,
-      scale: 0.95,
       transition: {
         duration: 0.2,
         ease: 'easeInOut' as const,
       },
     },
+    visible: {
+      height: 'auto',
+      opacity: 1,
+      transition: {
+        duration: 0.3,
+        ease: 'easeOut' as const,
+      },
+    },
   };
 
   const contentVariants = {
-    hidden: { opacity: 0 },
+    hidden: { opacity: 0, y: -10 },
     visible: {
       opacity: 1,
+      y: 0,
       transition: {
         delay: 0.1,
         duration: 0.2,
@@ -135,60 +111,10 @@ export function ExpandableActionsDrawer({
     },
   };
 
-  // Render the drawer overlay
-  const renderDrawer = () => {
-    if (!mounted || !activeAction) {
-      console.log('🎯 Not rendering drawer:', {
-        mounted,
-        activeAction: activeAction?.label,
-      });
-      return null;
-    }
-
-    console.log('🎯 Rendering drawer:', {
-      mounted,
-      activeAction: activeAction?.label,
-    });
-
-    return createPortal(
-      <div
-        className="fixed inset-0 z-50 flex items-start justify-center p-2 md:p-4"
-        onClick={handleBackdropClick}
-        style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-      >
-        <div
-          ref={drawerRef}
-          className="w-full max-w-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden mt-16 md:mt-20"
-          onClick={e => e.stopPropagation()}
-        >
-          {/* Header with close button */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              {activeAction.label}
-            </h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClose}
-              className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-600"
-              aria-label="Close"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Content */}
-          <div className="p-4">{activeAction.content}</div>
-        </div>
-      </div>,
-      document.body
-    );
-  };
-
   return (
-    <>
+    <div className={`space-y-3 ${className}`} ref={drawerRef}>
       {/* Action buttons */}
-      <div className={`flex items-center gap-2 ${className}`}>
+      <div className="flex items-center gap-2">
         {actions.map(action => (
           <Button
             key={action.id}
@@ -209,8 +135,62 @@ export function ExpandableActionsDrawer({
         ))}
       </div>
 
-      {/* Drawer overlay */}
-      {activeActionId && renderDrawer()}
-    </>
+      {/* Inline expanded content */}
+      <AnimatePresence mode="wait">
+        {activeActionId && activeAction && (
+          <motion.div
+            className="overflow-hidden"
+            variants={expansionVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+          >
+            <motion.div
+              className="border border-gray-600 rounded-md bg-accent/50"
+              variants={contentVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              {/* Header with close button - conditional */}
+              {activeAction.showHeader !== false && (
+                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    {activeAction.label}
+                  </h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClose}
+                    className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-600"
+                    aria-label="Close"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
+              {/* Content */}
+              <div
+                className={`${activeAction.showHeader === false ? 'relative p-3' : 'p-4'}`}
+              >
+                {/* Close button for headerless mode */}
+                {activeAction.showHeader === false && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClose}
+                    className="absolute top-2 right-2 h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-600 z-10"
+                    aria-label="Close"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+                {activeAction.content}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

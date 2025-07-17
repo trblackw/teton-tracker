@@ -546,7 +546,7 @@ function UpcomingFlights() {
 
   // Search content for drawer
   const SearchContent = () => (
-    <div className="space-y-4">
+    <div>
       <div className="flex gap-2">
         <div className="flex-1">
           <Input
@@ -554,7 +554,8 @@ function UpcomingFlights() {
             placeholder="Flight number"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="flex-1"
+            className="flex-1 border-none"
+            autoFocus
           />
         </div>
         <Select
@@ -569,16 +570,6 @@ function UpcomingFlights() {
             <SelectItem value="all">All</SelectItem>
           </SelectContent>
         </Select>
-        {searchTerm && (
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setSearchTerm('')}
-            title="Clear search"
-          >
-            <X className="h-4 w-4 text-destructive hover:text-destructive/80" />
-          </Button>
-        )}
       </div>
 
       {/* Clipboard suggestions */}
@@ -621,21 +612,12 @@ function UpcomingFlights() {
           </Button>
         </div>
       )}
-
-      <div className="text-sm text-muted-foreground">
-        Search flights from{' '}
-        {homeAirport ? (
-          <span className="font-bold text-foreground/90">{homeAirport}</span>
-        ) : (
-          'your home airport'
-        )}
-      </div>
     </div>
   );
 
   // Filter content for drawer
   const FilterContent = () => (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Airline</label>
@@ -733,15 +715,6 @@ function UpcomingFlights() {
             )}
           </div>
         </div>
-      </div>
-
-      <div className="text-sm text-muted-foreground">
-        Filter flights from{' '}
-        {homeAirport ? (
-          <span className="font-bold text-foreground/90">{homeAirport}</span>
-        ) : (
-          'your home airport'
-        )}
       </div>
     </div>
   );
@@ -917,6 +890,7 @@ function UpcomingFlights() {
             label: 'Search Flights',
             content: <SearchContent />,
             badge: searchTerm ? '1' : undefined,
+            showHeader: false, // Minimal search with no header
           },
           {
             id: 'filter',
@@ -926,6 +900,7 @@ function UpcomingFlights() {
             badge:
               [selectedAirline, selectedStatus, filterTime].filter(Boolean)
                 .length || undefined,
+            showHeader: false, // Minimal filter with no header
           },
         ]}
       />
