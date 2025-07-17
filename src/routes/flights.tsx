@@ -39,6 +39,7 @@ import { preferencesApi } from '../lib/api/client';
 import { isDebugMode } from '../lib/debug';
 import { useTimezone, useTimezoneFormatters } from '../lib/hooks/use-timezone';
 import { getFlightServiceWithConfig } from '../lib/services/flight-service';
+import { isDevelopmentMode } from '../lib/utils';
 
 interface Airline {
   id: string;
@@ -434,7 +435,7 @@ function UpcomingFlights() {
 
   // Apply time filter client-side when in "selected" mode
   if (searchMode === 'selected' && filterTime) {
-    if (process.env.NODE_ENV === 'development') {
+    if (isDevelopmentMode()) {
       console.log(`🔍 Applying time filter client-side: ${formatTimeFilter()}`);
     }
 
@@ -543,6 +544,9 @@ function UpcomingFlights() {
 
     return airportCode;
   };
+
+  const noFlightData =
+    !homeAirport || (!isLoading && !isError && !flightResponse);
 
   // Search content for drawer
   const SearchContent = () => (
@@ -903,10 +907,11 @@ function UpcomingFlights() {
             showHeader: false, // Minimal filter with no header
           },
         ]}
+        disabled={noFlightData}
       />
 
       {/* No data loaded yet state */}
-      {!isLoading && !isError && !flightResponse && (
+      {noFlightData && (
         <Card>
           <CardContent className="p-6 text-center">
             <Plane className="h-16 w-16 text-muted-foreground mx-auto mb-6" />

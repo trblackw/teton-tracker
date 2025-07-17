@@ -87,14 +87,14 @@ async function startServer() {
       const pathname = url.pathname;
 
       // Temporarily redirect non-www to www (until main domain DNS is ready)
-      if (url.hostname === 'tetontracker.com') {
-        return new Response(null, {
-          status: 301,
-          headers: {
-            Location: `https://www.tetontracker.com${url.pathname}${url.search}`,
-          },
-        });
-      }
+      // if (url.hostname === 'tetontracker.com') {
+      //   return new Response(null, {
+      //     status: 301,
+      //     headers: {
+      //       Location: `https://www.tetontracker.com${url.pathname}${url.search}`,
+      //     },
+      //   });
+      // }
 
       // Handle API routes
       if (pathname.startsWith('/api/')) {

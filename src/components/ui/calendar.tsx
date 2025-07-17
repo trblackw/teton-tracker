@@ -67,6 +67,22 @@ function Calendar({
           'text-muted-foreground opacity-50',
           defaultClassNames.disabled
         ),
+        day_button: cn(
+          defaultClassNames.day_button,
+          'bg-slate-200 text-primary-foreground border-none'
+        ),
+        range_middle: cn(
+          'bg-slate-200 text-primary-foreground border border-red-500',
+          defaultClassNames.range_middle
+        ),
+        range_start: cn(
+          'bg-slate-200 text-primary-foreground border border-red-500',
+          defaultClassNames.range_start
+        ),
+        range_end: cn(
+          'bg-slate-200 text-primary-foreground border border-red-500'
+          // defaultClassNames.range_end
+        ),
         hidden: cn('invisible', defaultClassNames.hidden),
         ...classNames,
       }}

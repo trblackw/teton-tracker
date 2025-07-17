@@ -248,18 +248,22 @@ function Reports() {
     return modifiers;
   }, [runsByDate]);
 
-  // Custom day modifiers styling - simplified
+  // Custom day modifiers styling - improved range and run indicators
   const dayModifiersClassNames = useMemo(() => {
     const classNames: Record<string, string> = {
-      today: 'text-blue-500',
-      range_start: 'bg-blue-500',
-      range_end: 'bg-blue-500',
-      range_middle: 'bg-blue-500',
+      today: 'text-blue-500 font-semibold',
+      range_start:
+        'bg-yellow-200 text-primary-foreground font-medium hover:bg-primary/90',
+      range_end:
+        'bg-yellow-100 text-primary-foreground font-medium hover:bg-primary/90',
+      range_middle:
+        'bg-yellow-100/80 text-primary font-medium hover:bg-primary/30',
     };
 
+    // Style for days with runs - these will layer with range styles
     for (let i = 1; i <= 20; i++) {
       classNames[`runs-${i}`] =
-        'bg-primary/10 text-primary border border-blue-500';
+        'relative after:content-[""] after:absolute after:bottom-1 after:left-1/2 after:transform after:-translate-x-1/2 after:w-1 after:h-1 after:bg-primary';
     }
 
     return classNames;
@@ -369,6 +373,23 @@ function Reports() {
                 disabled={isLoading}
                 modifiers={dayModifiers}
                 modifiersClassNames={dayModifiersClassNames}
+                classNames={{
+                  today: 'text-foreground font-semibold', // Override the default blue styling
+                }}
+                style={
+                  {
+                    '--rdp-accent-color': 'hsl(var(--chart-2))',
+                    '--rdp-accent-background-color': 'hsl(var(--chart-2))',
+                    '--rdp-range-start-color': 'hsl(var(--primary-foreground))',
+                    '--rdp-range-start-background': 'hsl(var(--destructive))',
+                    '--rdp-range-end-color': 'hsl(var(--primary-foreground))',
+                    '--rdp-range-end-background': 'hsl(var(--destructive))',
+                    '--rdp-range-middle-background-color':
+                      'hsl(var(--destructive))',
+                    '--rdp-range-middle-color': 'hsl(var(--destructive))',
+                    '--rdp-selected-border': 'none',
+                  } as React.CSSProperties
+                }
               />
 
               {/* Popover for day details */}

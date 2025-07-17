@@ -24,11 +24,6 @@ const activeNavClass = 'bg-primary/10 text-blue-500';
 function RootComponent() {
   const routerState = useRouterState();
 
-  // Initialize services on app start
-  // useEffect(() => {
-  //   initializeTomTomServiceWithConfig();
-  // }, []);
-
   // Auto-dismiss toasts on route change
   useEffect(() => {
     toasts.dismissAll();
@@ -176,8 +171,8 @@ function RootComponent() {
               </div>
 
               {/* Mobile Navigation */}
-              <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-sm">
-                <div className="flex items-center justify-between p-2">
+              <div className="lg:hidden fixed -bottom-1 left-0 right-0 z-50 border-t border-border bg-card/80 backdrop-blur-lg">
+                <div className="flex items-center justify-between p-1">
                   <nav className="flex items-center justify-center gap-1 flex-1">
                     <Button
                       asChild
@@ -195,22 +190,6 @@ function RootComponent() {
                         <Car className="size-7" />
                       </Link>
                     </Button>
-                    {/* <Button
-                      asChild
-                      variant="ghost"
-                      size="sm"
-                      className="flex-col h-auto p-3 min-w-[60px] touch-manipulation"
-                    >
-                      <Link
-                        to="/add"
-                        className="flex flex-col items-center gap-1"
-                        activeProps={{
-                          className: activeNavClass,
-                        }}
-                      >
-                        <Plus className="size-6" />
-                      </Link>
-                    </Button> */}
                     <Button
                       asChild
                       variant="ghost"

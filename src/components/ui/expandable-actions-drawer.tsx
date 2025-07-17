@@ -15,11 +15,13 @@ export interface DrawerAction {
 interface ExpandableActionsDrawerProps {
   actions: DrawerAction[];
   className?: string;
+  disabled?: boolean;
 }
 
 export function ExpandableActionsDrawer({
   actions,
   className = '',
+  disabled = false,
 }: ExpandableActionsDrawerProps) {
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
   const activeAction = actions.find(action => action.id === activeActionId);
@@ -27,6 +29,7 @@ export function ExpandableActionsDrawer({
 
   // Handle escape key
   useEffect(() => {
+    if (disabled) return;
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && activeActionId) {
         setActiveActionId(null);
@@ -40,11 +43,12 @@ export function ExpandableActionsDrawer({
     return () => {
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [activeActionId]);
+  }, [activeActionId, disabled]);
 
   // Handle click outside to close
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    if (disabled) return;
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (
         activeActionId &&
         drawerRef.current &&
@@ -56,15 +60,18 @@ export function ExpandableActionsDrawer({
 
     if (activeActionId) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
     };
-  }, [activeActionId]);
+  }, [activeActionId, disabled]);
 
   // Handle action button click
   const handleActionClick = (actionId: string) => {
+    if (disabled) return;
     if (activeActionId === actionId) {
       // Close if same action clicked
       setActiveActionId(null);
@@ -112,7 +119,10 @@ export function ExpandableActionsDrawer({
   };
 
   return (
-    <div className={`space-y-3 ${className}`} ref={drawerRef}>
+    <div
+      className={`space-y-3 ${className} ${disabled ? 'pointer-events-none opacity-50' : ''}`}
+      ref={drawerRef}
+    >
       {/* Action buttons */}
       <div className="flex items-center gap-2">
         {actions.map(action => (
@@ -121,6 +131,7 @@ export function ExpandableActionsDrawer({
             variant={activeActionId === action.id ? 'default' : 'outline'}
             size="sm"
             onClick={() => handleActionClick(action.id)}
+            disabled={disabled}
             className="relative h-9 w-9 p-0 shrink-0"
             aria-label={action.label}
             title={action.label}
@@ -173,18 +184,6 @@ export function ExpandableActionsDrawer({
               <div
                 className={`${activeAction.showHeader === false ? 'relative p-3' : 'p-4'}`}
               >
-                {/* Close button for headerless mode */}
-                {activeAction.showHeader === false && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleClose}
-                    className="absolute top-2 right-2 h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-600 z-10"
-                    aria-label="Close"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
                 {activeAction.content}
               </div>
             </motion.div>
