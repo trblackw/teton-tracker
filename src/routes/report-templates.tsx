@@ -15,6 +15,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import {
   Asterisk,
@@ -67,6 +68,7 @@ import {
   SelectValue,
 } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
+import { reportTemplatesApi } from '../lib/api/client';
 import { useAppContext } from '../lib/AppContextProvider';
 import {
   useIsUserAdmin,
@@ -79,63 +81,28 @@ import {
   ReportType,
   validateReportTemplateForm,
 } from '../lib/schema';
+import { toasts } from '../lib/toast';
 
 export const Route = createFileRoute('/report-templates')({
   component: ReportTemplatesPage,
 });
 
-// Mock data for development - this would be replaced with API calls
-const mockTemplates: ReportTemplate[] = [
-  {
-    id: '1',
-    name: 'Standard Run Report',
-    description: 'Default template for run reports with all essential fields',
-    organizationId: 'org-1',
-    reportType: 'run' as ReportType,
-    columnConfig: [
-      {
-        field: 'flightNumber',
-        label: 'Flight Number',
-        order: 0,
-        required: true,
-      },
-      { field: 'airline', label: 'Airline', order: 1, required: true },
-      {
-        field: 'departure',
-        label: 'Departure Airport',
-        order: 2,
-        required: true,
-      },
-      { field: 'arrival', label: 'Arrival Airport', order: 3, required: true },
-      {
-        field: 'pickupLocation',
-        label: 'Pickup Location',
-        order: 4,
-        required: true,
-      },
-      {
-        field: 'dropoffLocation',
-        label: 'Dropoff Location',
-        order: 5,
-        required: false,
-      },
-      { field: 'price', label: 'Price', order: 6, required: false },
-    ],
-    isDefault: true,
-    createdBy: 'user-1',
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-  },
-];
-
 function ReportTemplatesPage() {
   const { data: organization } = useUserOrganization();
   const { isAdmin } = useIsUserAdmin(organization?.id);
-  const [templates, setTemplates] = useState(mockTemplates);
   const [selectedTemplate, setSelectedTemplate] =
     useState<ReportTemplate | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  const queryClient = useQueryClient();
+
+  // Fetch templates using the API client
+  const { data: templates = [], isLoading: isLoadingTemplates } = useQuery({
+    queryKey: ['report-templates'],
+    queryFn: () => reportTemplatesApi.getReportTemplates(),
+    enabled: !!isAdmin,
+  });
 
   // Get all existing column configurations from organization templates
   const existingColumnConfigs = useMemo(() => {
@@ -173,6 +140,94 @@ function ReportTemplatesPage() {
     });
   }, [templates]);
 
+  // Mutations for CRUD operations
+  const createTemplateMutation = useMutation({
+    mutationFn: (templateData: ReportTemplateForm) =>
+      reportTemplatesApi.createReportTemplate(templateData),
+    onSuccess: createdTemplate => {
+      queryClient.invalidateQueries({ queryKey: ['report-templates'] });
+      setIsCreateDialogOpen(false);
+      toasts.success(
+        'Template created successfully',
+        `${createdTemplate.name} has been added to your report templates.`
+      );
+    },
+    onError: error => {
+      console.error('Failed to create template:', error);
+      toasts.error('Failed to create template', error.message);
+    },
+  });
+
+  const updateTemplateMutation = useMutation({
+    mutationFn: ({
+      id,
+      templateData,
+    }: {
+      id: string;
+      templateData: ReportTemplateForm;
+    }) => reportTemplatesApi.updateReportTemplate(id, templateData),
+    onSuccess: updatedTemplate => {
+      queryClient.invalidateQueries({ queryKey: ['report-templates'] });
+      setIsEditDialogOpen(false);
+      setSelectedTemplate(null);
+      toasts.success(
+        'Template updated successfully',
+        `${updatedTemplate.name} has been updated with your changes.`
+      );
+    },
+    onError: error => {
+      console.error('Failed to update template:', error);
+      toasts.error('Failed to update template', error.message);
+    },
+  });
+
+  const deleteTemplateMutation = useMutation({
+    mutationFn: (templateId: string) =>
+      reportTemplatesApi.deleteReportTemplate(templateId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['report-templates'] });
+      toasts.success(
+        'Template deleted successfully',
+        'The report template has been removed from your organization.'
+      );
+    },
+    onError: error => {
+      console.error('Failed to delete template:', error);
+      toasts.error('Failed to delete template', error.message);
+    },
+  });
+
+  const handleCreateTemplate = (newTemplate: ReportTemplateForm) => {
+    createTemplateMutation.mutate(newTemplate);
+  };
+
+  const handleUpdateTemplate = (updatedTemplateForm: ReportTemplateForm) => {
+    if (!selectedTemplate) return;
+
+    updateTemplateMutation.mutate({
+      id: selectedTemplate.id,
+      templateData: updatedTemplateForm,
+    });
+  };
+
+  const handleDeleteTemplate = (templateId: string) => {
+    deleteTemplateMutation.mutate(templateId);
+  };
+
+  // Show loading state
+  if (isLoadingTemplates) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading templates...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Redirect if not admin
   if (!isAdmin) {
     return (
@@ -186,36 +241,6 @@ function ReportTemplatesPage() {
       </div>
     );
   }
-
-  const handleCreateTemplate = (newTemplate: ReportTemplateForm) => {
-    const template: ReportTemplate = {
-      ...newTemplate,
-      id: crypto.randomUUID(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    setTemplates([...templates, template]);
-    setIsCreateDialogOpen(false);
-  };
-
-  const handleUpdateTemplate = (updatedTemplateForm: ReportTemplateForm) => {
-    if (!selectedTemplate) return;
-
-    const updatedTemplate: ReportTemplate = {
-      ...selectedTemplate,
-      ...updatedTemplateForm,
-      updatedAt: new Date(),
-    };
-    setTemplates(
-      templates.map(t => (t.id === updatedTemplate.id ? updatedTemplate : t))
-    );
-    setIsEditDialogOpen(false);
-    setSelectedTemplate(null);
-  };
-
-  const handleDeleteTemplate = (templateId: string) => {
-    setTemplates(templates.filter(t => t.id !== templateId));
-  };
 
   return (
     <div className="container mx-auto py-6 max-w-4xl px-4">
@@ -243,7 +268,8 @@ function ReportTemplatesPage() {
               onSave={handleCreateTemplate}
               organizationId={organization?.id || ''}
               onCancel={() => setIsCreateDialogOpen(false)}
-              existingColumns={existingColumnConfigs}
+              existingColumns={existingColumnConfigs || []}
+              isLoading={createTemplateMutation.isPending}
             />
           </DialogContent>
         </Dialog>
@@ -333,7 +359,8 @@ function ReportTemplatesPage() {
                       onSave={handleUpdateTemplate}
                       organizationId={organization?.id || ''}
                       onCancel={() => setIsEditDialogOpen(false)}
-                      existingColumns={existingColumnConfigs}
+                      existingColumns={existingColumnConfigs || []}
+                      isLoading={updateTemplateMutation.isPending}
                     />
                   </DialogContent>
                 </Dialog>
@@ -343,9 +370,19 @@ function ReportTemplatesPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => handleDeleteTemplate(template.id)}
+                    disabled={deleteTemplateMutation.isPending}
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
+                    {deleteTemplateMutation.isPending ? (
+                      <>
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current mr-2"></div>
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </>
+                    )}
                   </Button>
                 )}
               </div>
@@ -380,6 +417,7 @@ interface TemplateFormDialogProps {
   organizationId: string;
   onCancel: () => void;
   existingColumns: { field: string; label: string; usageCount: number }[];
+  isLoading?: boolean;
 }
 
 interface SortableColumnItemProps {
@@ -491,6 +529,7 @@ function TemplateFormDialog({
   organizationId,
   onCancel,
   existingColumns,
+  isLoading = false,
 }: TemplateFormDialogProps) {
   const { currentUser } = useAppContext();
 
@@ -552,7 +591,10 @@ function TemplateFormDialog({
   const onSubmit = (data: ReportTemplateForm) => {
     // Ensure user is authenticated
     if (!currentUser?.id) {
-      alert('User must be authenticated to save template.');
+      toasts.error(
+        'Authentication required',
+        'User must be authenticated to save template.'
+      );
       return;
     }
 
@@ -568,9 +610,12 @@ function TemplateFormDialog({
       onSave(templateData);
     } catch (error) {
       if (error instanceof Error) {
-        alert(error.message);
+        toasts.error('Invalid template data', error.message);
       } else {
-        alert('Template validation failed.');
+        toasts.error(
+          'Validation failed',
+          'Please check your template configuration and try again.'
+        );
       }
     }
   };
@@ -770,10 +815,17 @@ function TemplateFormDialog({
         </Button>
         <Button
           onClick={handleSubmit(onSubmit)}
-          disabled={!isValid || columnConfig.length < 2}
+          disabled={!isValid || columnConfig.length < 2 || isLoading}
           className="bg-blue-400 text-white hover:bg-blue-500/90"
         >
-          {mode === 'create' ? 'Create' : 'Update'} Template
+          {isLoading ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              {mode === 'create' ? 'Creating...' : 'Updating...'}
+            </>
+          ) : (
+            `${mode === 'create' ? 'Create' : 'Update'} Template`
+          )}
         </Button>
       </div>
     </>

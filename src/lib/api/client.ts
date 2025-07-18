@@ -6,6 +6,8 @@ import { type UpdatePreferencesData } from '../db/preferences';
 import {
   type NewRunForm,
   type Notification,
+  type ReportTemplate,
+  type ReportTemplateForm,
   type Run,
   type RunStatus,
 } from '../schema';
@@ -599,5 +601,97 @@ export const organizationsApi = {
     }
 
     return response.json();
+  },
+};
+
+// API client for report templates
+export const reportTemplatesApi = {
+  // Get all report templates for the organization
+  async getReportTemplates(): Promise<ReportTemplate[]> {
+    const userId = getCurrentUserIdFromClerk();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
+    const response = await fetch(
+      `${API_BASE}/report-templates?userId=${userId}`,
+      {
+        headers: createAuthHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch report templates');
+    }
+
+    return response.json();
+  },
+
+  // Create a new report template
+  async createReportTemplate(
+    templateData: ReportTemplateForm
+  ): Promise<ReportTemplate> {
+    const userId = getCurrentUserIdFromClerk();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
+    const response = await fetch(`${API_BASE}/report-templates`, {
+      method: 'POST',
+      headers: createAuthHeaders(),
+      body: JSON.stringify({ templateData, userId }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create report template');
+    }
+
+    return response.json();
+  },
+
+  // Update an existing report template
+  async updateReportTemplate(
+    id: string,
+    templateData: ReportTemplateForm
+  ): Promise<ReportTemplate> {
+    const userId = getCurrentUserIdFromClerk();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
+    const response = await fetch(`${API_BASE}/report-templates`, {
+      method: 'PUT',
+      headers: createAuthHeaders(),
+      body: JSON.stringify({ id, templateData, userId }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update report template');
+    }
+
+    return response.json();
+  },
+
+  // Delete a report template
+  async deleteReportTemplate(id: string): Promise<void> {
+    const userId = getCurrentUserIdFromClerk();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
+    const response = await fetch(
+      `${API_BASE}/report-templates?id=${id}&userId=${userId}`,
+      {
+        method: 'DELETE',
+        headers: createAuthHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete report template');
+    }
   },
 };

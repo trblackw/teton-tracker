@@ -1,9 +1,9 @@
-import { createClerkClient } from '@clerk/clerk-sdk-node';
 import {
   checkRunOwnership,
   createErrorResponse,
   requireAuth,
 } from '../lib/access-control';
+import { clerk } from '../lib/api/clerk-client';
 import {
   createRun,
   deleteRun,
@@ -12,8 +12,6 @@ import {
   type RunsQuery,
 } from '../lib/db/runs';
 import { type NewRunForm, type RunStatus } from '../lib/schema';
-
-const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! });
 
 // Helper function to get all organization member user IDs for an admin
 async function getOrganizationMemberIds(

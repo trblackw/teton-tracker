@@ -1,4 +1,4 @@
-import { createClerkClient } from '@clerk/clerk-sdk-node';
+import { clerk } from '../lib/api/clerk-client';
 import { getDatabase } from '../lib/db/index';
 import { createNotification } from '../lib/db/notifications';
 import { createReportTemplate } from '../lib/db/report-templates';
@@ -6,7 +6,6 @@ import { createRun } from '../lib/db/runs';
 import type { ReportType, RunStatus, RunType } from '../lib/schema';
 
 // Initialize Clerk client for fetching organization data
-const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! });
 
 // Mock data arrays
 const airlines = [

@@ -2,6 +2,7 @@
 import * as configApi from './api/config';
 import * as organizationsApi from './api/organizations';
 import * as preferencesApi from './api/preferences';
+import * as reportTemplatesApi from './api/report-templates';
 import * as runsApi from './api/runs';
 
 // Start minimal development server - let Bun handle everything else
@@ -56,6 +57,18 @@ async function startDevServer() {
             : request.method === 'PUT'
               ? preferencesApi.PUT(request)
               : new Response('Method not allowed', { status: 405 });
+        }
+
+        if (url.pathname === '/api/report-templates') {
+          return request.method === 'GET'
+            ? reportTemplatesApi.GET(request)
+            : request.method === 'POST'
+              ? reportTemplatesApi.POST(request)
+              : request.method === 'PUT'
+                ? reportTemplatesApi.PUT(request)
+                : request.method === 'DELETE'
+                  ? reportTemplatesApi.DELETE(request)
+                  : new Response('Method not allowed', { status: 405 });
         }
 
         // Handle parameterized routes

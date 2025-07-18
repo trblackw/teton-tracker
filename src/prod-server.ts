@@ -4,6 +4,7 @@ import * as configApi from './api/config';
 import * as notificationsApi from './api/notifications';
 import * as organizationsApi from './api/organizations';
 import * as preferencesApi from './api/preferences';
+import * as reportTemplatesApi from './api/report-templates';
 import * as runsApi from './api/runs';
 
 // API route handlers
@@ -39,6 +40,12 @@ const apiRoutes = {
   '/api/preferences': {
     GET: preferencesApi.GET,
     PUT: preferencesApi.PUT,
+  },
+  '/api/report-templates': {
+    GET: reportTemplatesApi.GET,
+    POST: reportTemplatesApi.POST,
+    PUT: reportTemplatesApi.PUT,
+    DELETE: reportTemplatesApi.DELETE,
   },
   '/api/notifications': {
     GET: notificationsApi.GET,

@@ -1,34 +1,31 @@
-import { type ReportTemplate, type ReportType } from '../schema';
+import {
+  type ReportTemplate,
+  type ReportTemplateForm,
+  ReportType,
+} from '../schema';
 import { getDatabase, handleDatabaseError } from './index';
 
-// Type for creating new report templates
-export type CreateReportTemplateData = Omit<
-  ReportTemplate,
-  'id' | 'createdAt' | 'updatedAt'
->;
-
-// Type for updating report templates
-export type UpdateReportTemplateData = Partial<
-  Omit<ReportTemplate, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>
->;
-
-// Query interface for filtering templates
 export interface ReportTemplatesQuery {
   organizationId?: string;
   reportType?: ReportType;
-  createdBy?: string;
   isDefault?: boolean;
-  search?: string; // Search in name and description
+  createdBy?: string;
   limit?: number;
   offset?: number;
-  orderBy?: 'name' | 'created_at' | 'updated_at';
-  orderDirection?: 'ASC' | 'DESC';
 }
 
 // Create a new report template
 export async function createReportTemplate(
-  templateData: CreateReportTemplateData
+  templateData: ReportTemplateForm
 ): Promise<ReportTemplate> {
+  if (!templateData.organizationId) {
+    throw new Error('Organization ID is required');
+  }
+
+  if (!templateData.createdBy) {
+    throw new Error('Created by user ID is required');
+  }
+
   try {
     const db = getDatabase();
     const templateId = crypto.randomUUID();
@@ -60,7 +57,6 @@ export async function createReportTemplate(
       ]
     );
 
-    console.log(`✅ Created report template: ${template.id}`);
     return template;
   } catch (error) {
     handleDatabaseError(error, 'create report template');
@@ -77,16 +73,12 @@ export async function getReportTemplates(
     const {
       organizationId,
       reportType,
-      createdBy,
       isDefault,
-      search,
+      createdBy,
       limit = 50,
       offset = 0,
-      orderBy = 'created_at',
-      orderDirection = 'DESC',
     } = query;
 
-    // Start with base query
     let sql = `
       SELECT 
         id, name, description, organization_id, report_type, column_config,
@@ -97,7 +89,6 @@ export async function getReportTemplates(
     const conditions: string[] = [];
     const args: any[] = [];
 
-    // Add conditions
     if (organizationId) {
       conditions.push(`organization_id = $${args.length + 1}`);
       args.push(organizationId);
@@ -108,48 +99,58 @@ export async function getReportTemplates(
       args.push(reportType);
     }
 
-    if (createdBy) {
-      conditions.push(`created_by = $${args.length + 1}`);
-      args.push(createdBy);
-    }
-
     if (isDefault !== undefined) {
       conditions.push(`is_default = $${args.length + 1}`);
       args.push(isDefault);
     }
 
-    if (search) {
-      conditions.push(
-        `(name ILIKE $${args.length + 1} OR description ILIKE $${args.length + 1})`
-      );
-      args.push(`%${search}%`);
+    if (createdBy) {
+      conditions.push(`created_by = $${args.length + 1}`);
+      args.push(createdBy);
     }
 
-    // Add WHERE clause if we have conditions
     if (conditions.length > 0) {
       sql += ` WHERE ${conditions.join(' AND ')}`;
     }
 
-    // Add ORDER BY and LIMIT
-    sql += ` ORDER BY ${orderBy} ${orderDirection}`;
+    sql += ` ORDER BY created_at DESC`;
     sql += ` LIMIT $${args.length + 1} OFFSET $${args.length + 2}`;
     args.push(limit, offset);
 
     const result = await db.query(sql, args);
 
-    // Transform database rows to ReportTemplate objects
-    const templates: ReportTemplate[] = result.rows.map((row: any) => ({
-      id: row.id,
-      name: row.name,
-      description: row.description,
-      organizationId: row.organization_id,
-      reportType: row.report_type as ReportType,
-      columnConfig: JSON.parse(row.column_config || '[]'),
-      isDefault: row.is_default,
-      createdBy: row.created_by,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    }));
+    const templates: ReportTemplate[] = result.rows.map((row: any) => {
+      let columnConfig;
+      // PostgreSQL JSONB fields are already parsed objects, not JSON strings
+      if (typeof row.column_config === 'object' && row.column_config !== null) {
+        columnConfig = row.column_config;
+      } else {
+        // Fallback: try to parse as JSON string if it's somehow a string
+        try {
+          columnConfig = JSON.parse(row.column_config || '[]');
+        } catch (parseError) {
+          console.error(
+            `❌ JSON parse error for template ${row.id}:`,
+            parseError
+          );
+          console.error(`❌ Raw column_config value:`, row.column_config);
+          columnConfig = [];
+        }
+      }
+
+      return {
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        organizationId: row.organization_id,
+        reportType: row.report_type as ReportType,
+        columnConfig,
+        isDefault: row.is_default,
+        createdBy: row.created_by,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      };
+    });
 
     return templates;
   } catch (error) {
@@ -206,74 +207,40 @@ export async function getReportTemplateById(
   }
 }
 
-// Update report template
+// Update a report template
 export async function updateReportTemplate(
   id: string,
-  updateData: UpdateReportTemplateData,
+  templateData: ReportTemplateForm,
   organizationId: string
 ): Promise<ReportTemplate | null> {
+  if (!templateData.createdBy) {
+    throw new Error('Created by user ID is required');
+  }
+
   try {
     const db = getDatabase();
     const now = new Date().toISOString();
 
-    // Get existing template to ensure it exists and belongs to organization
-    const existingTemplate = await getReportTemplateById(id, organizationId);
-    if (!existingTemplate) {
-      return null;
-    }
-
-    const setFields: string[] = [];
-    const args: any[] = [];
-
-    // Build dynamic SET clause
-    if (updateData.name !== undefined) {
-      setFields.push(`name = $${args.length + 1}`);
-      args.push(updateData.name);
-    }
-
-    if (updateData.description !== undefined) {
-      setFields.push(`description = $${args.length + 1}`);
-      args.push(updateData.description);
-    }
-
-    if (updateData.reportType !== undefined) {
-      setFields.push(`report_type = $${args.length + 1}`);
-      args.push(updateData.reportType);
-    }
-
-    if (updateData.columnConfig !== undefined) {
-      setFields.push(`column_config = $${args.length + 1}`);
-      args.push(JSON.stringify(updateData.columnConfig));
-    }
-
-    if (updateData.isDefault !== undefined) {
-      setFields.push(`is_default = $${args.length + 1}`);
-      args.push(updateData.isDefault);
-    }
-
-    // Always update the updated_at timestamp
-    setFields.push(`updated_at = $${args.length + 1}`);
-    args.push(now);
-
-    if (setFields.length === 1) {
-      // Only updated_at was set, nothing to update
-      return existingTemplate;
-    }
-
-    // Add WHERE clause with organization validation
-    let sql = `
-      UPDATE report_templates 
-      SET ${setFields.join(', ')}
-      WHERE id = $${args.length + 1} AND organization_id = $${args.length + 2}
-    `;
-    args.push(id, organizationId);
-
-    sql += ' RETURNING *';
-
-    const result = await db.query(sql, args);
+    const result = await db.query(
+      `UPDATE report_templates 
+       SET name = $1, description = $2, report_type = $3, column_config = $4,
+           is_default = $5, updated_at = $6
+       WHERE id = $7 AND organization_id = $8
+       RETURNING *`,
+      [
+        templateData.name,
+        templateData.description || null,
+        templateData.reportType,
+        JSON.stringify(templateData.columnConfig),
+        templateData.isDefault,
+        now,
+        id,
+        organizationId,
+      ]
+    );
 
     if (result.rows.length === 0) {
-      return null;
+      return null; // Template not found or access denied
     }
 
     const row = result.rows[0];
@@ -290,7 +257,6 @@ export async function updateReportTemplate(
       updatedAt: row.updated_at,
     };
 
-    console.log(`✅ Updated report template: ${id}`);
     return updatedTemplate;
   } catch (error) {
     handleDatabaseError(error, 'update report template');
@@ -298,30 +264,36 @@ export async function updateReportTemplate(
   }
 }
 
-// Delete report template
+// Delete a report template
 export async function deleteReportTemplate(
   id: string,
   organizationId: string
 ): Promise<boolean> {
-  if (!id || !organizationId) {
-    throw new Error('Template ID and Organization ID are required');
+  if (!id) {
+    throw new Error('Template ID is required');
+  }
+
+  if (!organizationId) {
+    throw new Error('Organization ID is required');
   }
 
   try {
     const db = getDatabase();
 
-    // Delete the template only if it belongs to the organization
+    // Don't allow deletion of default templates
+    const existing = await getReportTemplateById(id, organizationId);
+    if (existing?.isDefault) {
+      throw new Error('Cannot delete default templates');
+    }
+
     const result = await db.query(
       'DELETE FROM report_templates WHERE id = $1 AND organization_id = $2',
       [id, organizationId]
     );
 
-    const success = result.rowCount !== null && result.rowCount > 0;
-
+    const success = result.rowCount != null && result.rowCount > 0;
     if (success) {
-      console.log(`✅ Deleted report template: ${id}`);
-    } else {
-      console.log(`⚠️ Report template not found or access denied: ${id}`);
+      console.log(`🗑️ Deleted report template: ${id}`);
     }
 
     return success;

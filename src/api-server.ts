@@ -5,6 +5,7 @@ import * as configApi from './api/config';
 import * as notificationsApi from './api/notifications';
 import * as organizationsApi from './api/organizations';
 import * as preferencesApi from './api/preferences';
+import * as reportTemplatesApi from './api/report-templates';
 import * as runsApi from './api/runs';
 import * as seedApi from './api/seed';
 
@@ -26,6 +27,7 @@ const genericApiRoutes = {
   '/api/notifications': notificationsApi,
   '/api/organizations': organizationsApi,
   '/api/preferences': preferencesApi,
+  '/api/report-templates': reportTemplatesApi,
   '/api/runs': runsApi,
   '/api/seed': seedApi,
 };

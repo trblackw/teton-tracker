@@ -1,180 +1,140 @@
-import { z } from 'zod';
+import { requireAuth } from '../lib/access-control';
+import { clerk } from '../lib/api/clerk-client';
 import {
   createReportTemplate,
   deleteReportTemplate,
-  getDefaultReportTemplate,
-  getReportTemplateById,
-  getReportTemplateCount,
   getReportTemplates,
   updateReportTemplate,
-  type CreateReportTemplateData,
-  type UpdateReportTemplateData,
+  type ReportTemplatesQuery,
 } from '../lib/db/report-templates';
-import { ReportTemplateSchema, type ReportType } from '../lib/schema';
+import { type ReportTemplateForm, type ReportType } from '../lib/schema';
 
-// Validation schemas for API requests
-const CreateReportTemplateRequestSchema = ReportTemplateSchema.omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+// Helper function to get user's organization ID
+async function getUserOrganizationId(userId: string): Promise<string | null> {
+  try {
+    const memberships = await clerk.users.getOrganizationMembershipList({
+      userId,
+    });
 
-const UpdateReportTemplateRequestSchema = ReportTemplateSchema.partial().omit({
-  id: true,
-  organizationId: true,
-  createdAt: true,
-  updatedAt: true,
-});
+    if (memberships.data.length === 0) {
+      return null;
+    }
 
-const ReportTemplatesQuerySchema = z.object({
-  reportType: z.enum(['flight', 'traffic', 'run']).default('run'),
-  createdBy: z.string().optional(),
-  isDefault: z.boolean().optional(),
-  search: z.string().optional(),
-  limit: z.number().int().min(1).max(100).default(50),
-  offset: z.number().int().min(0).default(0),
-  orderBy: z.enum(['name', 'created_at', 'updated_at']).default('created_at'),
-  orderDirection: z.enum(['ASC', 'DESC']).default('DESC'),
-});
-
-// Helper to get user info from request (would integrate with your auth system)
-function getUserFromRequest(req: Request): {
-  userId: string;
-  organizationId: string;
-  isAdmin: boolean;
-} {
-  // This would integrate with your Clerk auth system
-  // For now, returning mock data - you'll need to implement this based on your auth setup
-  const userId = req.headers.get('x-user-id');
-  const organizationId = req.headers.get('x-organization-id');
-  const isAdmin = req.headers.get('x-is-admin') === 'true';
-
-  if (!userId || !organizationId) {
-    throw new Error('Authentication required');
+    return memberships.data[0].organization.id;
+  } catch (error) {
+    console.error('Error fetching user organization:', error);
+    return null;
   }
+}
 
-  return { userId, organizationId, isAdmin };
+// Helper function to check if user is admin
+async function checkAdminRole(
+  userId: string,
+  organizationId: string
+): Promise<boolean> {
+  try {
+    const memberships = await clerk.users.getOrganizationMembershipList({
+      userId,
+    });
+
+    const membership = memberships.data.find(
+      m => m.organization.id === organizationId
+    );
+
+    return membership?.role === 'org:admin';
+  } catch (error) {
+    console.error('Error checking admin role:', error);
+    return false;
+  }
 }
 
 // GET /api/report-templates
-export async function getReportTemplatesHandler(
-  req: Request
-): Promise<Response> {
+export async function GET(request: Request): Promise<Response> {
   try {
-    const { userId, organizationId, isAdmin } = getUserFromRequest(req);
+    const url = new URL(request.url);
+    const userId = url.searchParams.get('userId');
 
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: 'Admin access required' }), {
-        status: 403,
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'User ID is required' }), {
+        status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    const url = new URL(req.url);
-    const queryParams = Object.fromEntries(url.searchParams.entries());
-
-    // Parse and validate query parameters
-    const query = ReportTemplatesQuerySchema.parse({
-      ...queryParams,
-      limit: queryParams.limit ? parseInt(queryParams.limit) : undefined,
-      offset: queryParams.offset ? parseInt(queryParams.offset) : undefined,
-      isDefault: queryParams.isDefault
-        ? queryParams.isDefault === 'true'
-        : undefined,
-    });
-
-    const templates = await getReportTemplates({
-      ...query,
-      organizationId,
-      reportType: query.reportType as ReportType | undefined,
-    });
-
-    const total = await getReportTemplateCount(
-      organizationId,
-      query.reportType as ReportType | undefined
-    );
-
-    return new Response(
-      JSON.stringify({
-        templates,
-        pagination: {
-          total,
-          limit: query.limit,
-          offset: query.offset,
-          hasMore: query.offset + query.limit < total,
-        },
-      }),
-      { headers: { 'Content-Type': 'application/json' } }
-    );
-  } catch (error) {
-    console.error('Error getting report templates:', error);
-    const message =
-      error instanceof Error ? error.message : 'Internal server error';
-    const status = message === 'Authentication required' ? 401 : 500;
-
-    return new Response(JSON.stringify({ error: message }), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-}
-
-// GET /api/report-templates/:id
-export async function getReportTemplateHandler(
-  req: Request
-): Promise<Response> {
-  try {
-    const { userId, organizationId, isAdmin } = getUserFromRequest(req);
-
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: 'Admin access required' }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    const url = new URL(req.url);
-    const templateId = url.pathname.split('/').pop();
-
-    if (!templateId) {
+    // Get user's organization
+    const organizationId = await getUserOrganizationId(userId);
+    if (!organizationId) {
       return new Response(
-        JSON.stringify({ error: 'Template ID is required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'User not in organization' }),
+        {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        }
       );
     }
 
-    const template = await getReportTemplateById(templateId, organizationId);
+    // Parse query parameters
+    const query: ReportTemplatesQuery = {
+      organizationId,
+      reportType:
+        (url.searchParams.get('reportType') as ReportType) || undefined,
+      isDefault: url.searchParams.get('isDefault')
+        ? url.searchParams.get('isDefault') === 'true'
+        : undefined,
+      limit: Number(url.searchParams.get('limit')) || 50,
+      offset: Number(url.searchParams.get('offset')) || 0,
+    };
 
-    if (!template) {
-      return new Response(JSON.stringify({ error: 'Template not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    const templates = await getReportTemplates(query);
 
-    return new Response(JSON.stringify({ template }), {
+    return new Response(JSON.stringify(templates), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error getting report template:', error);
-    const message =
-      error instanceof Error ? error.message : 'Internal server error';
-    const status = message === 'Authentication required' ? 401 : 500;
-
-    return new Response(JSON.stringify({ error: message }), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error('Failed to get report templates:', error);
+    return new Response(
+      JSON.stringify({ error: 'Failed to get report templates' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
 }
 
 // POST /api/report-templates
-export async function createReportTemplateHandler(
-  req: Request
-): Promise<Response> {
+export async function POST(request: Request): Promise<Response> {
   try {
-    const { userId, organizationId, isAdmin } = getUserFromRequest(req);
+    const body = await request.json();
+    const { templateData, userId } = body as {
+      templateData: ReportTemplateForm;
+      userId: string;
+    };
 
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'User ID is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Validate auth
+    requireAuth(userId);
+
+    // Get user's organization
+    const organizationId = await getUserOrganizationId(userId);
+    if (!organizationId) {
+      return new Response(
+        JSON.stringify({ error: 'User not in organization' }),
+        {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Check if user is admin (only admins can create templates)
+    const isAdmin = await checkAdminRole(userId, organizationId);
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: 'Admin access required' }), {
         status: 403,
@@ -182,52 +142,68 @@ export async function createReportTemplateHandler(
       });
     }
 
-    const body = await req.json();
-    const validatedData = CreateReportTemplateRequestSchema.parse(body);
-
-    const templateData: CreateReportTemplateData = {
-      ...validatedData,
+    // Ensure the template data has the correct organization and creator
+    const completeTemplateData: ReportTemplateForm = {
+      ...templateData,
       organizationId,
       createdBy: userId,
     };
 
-    const template = await createReportTemplate(templateData);
+    const template = await createReportTemplate(completeTemplateData);
 
-    return new Response(JSON.stringify({ template }), {
+    return new Response(JSON.stringify(template), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error creating report template:', error);
-
-    if (error instanceof z.ZodError) {
-      return new Response(
-        JSON.stringify({
-          error: 'Invalid request data',
-          details: error.errors,
-        }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const message =
-      error instanceof Error ? error.message : 'Internal server error';
-    const status = message === 'Authentication required' ? 401 : 500;
-
-    return new Response(JSON.stringify({ error: message }), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error('Failed to create report template:', error);
+    return new Response(
+      JSON.stringify({ error: 'Failed to create report template' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
 }
 
-// PUT /api/report-templates/:id
-export async function updateReportTemplateHandler(
-  req: Request
-): Promise<Response> {
+// PUT /api/report-templates
+export async function PUT(request: Request): Promise<Response> {
   try {
-    const { userId, organizationId, isAdmin } = getUserFromRequest(req);
+    const body = await request.json();
+    const { id, templateData, userId } = body as {
+      id: string;
+      templateData: ReportTemplateForm;
+      userId: string;
+    };
 
+    if (!userId || !id) {
+      return new Response(
+        JSON.stringify({ error: 'User ID and template ID are required' }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Validate auth
+    requireAuth(userId);
+
+    // Get user's organization
+    const organizationId = await getUserOrganizationId(userId);
+    if (!organizationId) {
+      return new Response(
+        JSON.stringify({ error: 'User not in organization' }),
+        {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Check if user is admin (only admins can update templates)
+    const isAdmin = await checkAdminRole(userId, organizationId);
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: 'Admin access required' }), {
         status: 403,
@@ -235,66 +211,75 @@ export async function updateReportTemplateHandler(
       });
     }
 
-    const url = new URL(req.url);
-    const templateId = url.pathname.split('/').pop();
+    // Ensure the template data has the correct organization and creator
+    const completeTemplateData: ReportTemplateForm = {
+      ...templateData,
+      organizationId,
+      createdBy: userId,
+    };
 
-    if (!templateId) {
-      return new Response(
-        JSON.stringify({ error: 'Template ID is required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const body = await req.json();
-    const validatedData = UpdateReportTemplateRequestSchema.parse(body);
-
-    const template = await updateReportTemplate(
-      templateId,
-      validatedData as UpdateReportTemplateData,
+    const updatedTemplate = await updateReportTemplate(
+      id,
+      completeTemplateData,
       organizationId
     );
 
-    if (!template) {
+    if (!updatedTemplate) {
       return new Response(JSON.stringify({ error: 'Template not found' }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    return new Response(JSON.stringify({ template }), {
+    return new Response(JSON.stringify(updatedTemplate), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error updating report template:', error);
-
-    if (error instanceof z.ZodError) {
-      return new Response(
-        JSON.stringify({
-          error: 'Invalid request data',
-          details: error.errors,
-        }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const message =
-      error instanceof Error ? error.message : 'Internal server error';
-    const status = message === 'Authentication required' ? 401 : 500;
-
-    return new Response(JSON.stringify({ error: message }), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error('Failed to update report template:', error);
+    return new Response(
+      JSON.stringify({ error: 'Failed to update report template' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
 }
 
-// DELETE /api/report-templates/:id
-export async function deleteReportTemplateHandler(
-  req: Request
-): Promise<Response> {
+// DELETE /api/report-templates
+export async function DELETE(request: Request): Promise<Response> {
   try {
-    const { userId, organizationId, isAdmin } = getUserFromRequest(req);
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
+    const userId = url.searchParams.get('userId');
 
+    if (!id || !userId) {
+      return new Response(
+        JSON.stringify({ error: 'Template ID and User ID are required' }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Validate auth
+    requireAuth(userId);
+
+    // Get user's organization
+    const organizationId = await getUserOrganizationId(userId);
+    if (!organizationId) {
+      return new Response(
+        JSON.stringify({ error: 'User not in organization' }),
+        {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Check if user is admin (only admins can delete templates)
+    const isAdmin = await checkAdminRole(userId, organizationId);
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: 'Admin access required' }), {
         status: 403,
@@ -302,80 +287,29 @@ export async function deleteReportTemplateHandler(
       });
     }
 
-    const url = new URL(req.url);
-    const templateId = url.pathname.split('/').pop();
-
-    if (!templateId) {
-      return new Response(
-        JSON.stringify({ error: 'Template ID is required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const success = await deleteReportTemplate(templateId, organizationId);
+    const success = await deleteReportTemplate(id, organizationId);
 
     if (!success) {
-      return new Response(JSON.stringify({ error: 'Template not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    return new Response(
-      JSON.stringify({ message: 'Template deleted successfully' }),
-      { headers: { 'Content-Type': 'application/json' } }
-    );
-  } catch (error) {
-    console.error('Error deleting report template:', error);
-    const message =
-      error instanceof Error ? error.message : 'Internal server error';
-    const status = message === 'Authentication required' ? 401 : 500;
-
-    return new Response(JSON.stringify({ error: message }), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-}
-
-// GET /api/report-templates/default/:reportType
-export async function getDefaultReportTemplateHandler(
-  req: Request
-): Promise<Response> {
-  try {
-    const { userId, organizationId, isAdmin } = getUserFromRequest(req);
-
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: 'Admin access required' }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    const url = new URL(req.url);
-    const reportType = url.pathname.split('/').pop() as ReportType;
-
-    if (!reportType || !['flight', 'traffic', 'run'].includes(reportType)) {
       return new Response(
-        JSON.stringify({ error: 'Valid report type is required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Template not found or cannot be deleted' }),
+        {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        }
       );
     }
 
-    const template = await getDefaultReportTemplate(organizationId, reportType);
-
-    return new Response(JSON.stringify({ template }), {
+    return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error getting default report template:', error);
-    const message =
-      error instanceof Error ? error.message : 'Internal server error';
-    const status = message === 'Authentication required' ? 401 : 500;
-
-    return new Response(JSON.stringify({ error: message }), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error('Failed to delete report template:', error);
+    return new Response(
+      JSON.stringify({ error: 'Failed to delete report template' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
 }
