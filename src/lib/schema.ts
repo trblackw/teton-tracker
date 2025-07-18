@@ -169,6 +169,29 @@ export const ReportTemplateSchema = z.object({
   updatedAt: z.date().optional(),
 });
 
+// Form schema for client-side template creation/editing
+export const ReportTemplateFormSchema = z.object({
+  name: z.string().min(1, 'Template name is required'),
+  description: z.string().optional(),
+  organizationId: z.string().min(1, 'Organization ID is required'),
+  reportType: z.nativeEnum(ReportType).default(ReportType.run),
+  columnConfig: z
+    .array(
+      z.object({
+        field: z.string().min(1, 'Field name is required'),
+        label: z.string().min(1, 'Column label is required'),
+        order: z.number().int().min(0),
+        required: z.boolean().default(false),
+      })
+    )
+    .min(2, 'Template must have at least 2 columns')
+    .refine(columns => columns.every(col => col.label.trim().length > 0), {
+      message: 'All columns must have labels',
+    }),
+  isDefault: z.boolean().default(false),
+  createdBy: z.string().min(1, 'User ID is required'),
+});
+
 // Report schema
 export const ReportSchema = z.object({
   id: z.string().uuid('Invalid report ID format'),
@@ -426,6 +449,7 @@ export type TrafficStatus = z.infer<typeof TrafficStatusSchema>;
 export type OpenSkyFlightResponse = z.infer<typeof OpenSkyFlightResponseSchema>;
 export type TomTomRouteResponse = z.infer<typeof TomTomRouteResponseSchema>;
 export type ReportTemplate = z.infer<typeof ReportTemplateSchema>;
+export type ReportTemplateForm = z.infer<typeof ReportTemplateFormSchema>;
 export type Report = z.infer<typeof ReportSchema>;
 export type ReportColumnConfig = ReportTemplate['columnConfig'][0];
 
@@ -458,6 +482,12 @@ export const validateTrafficData = (data: unknown): TrafficData => {
   return TrafficDataSchema.parse(data);
 };
 
+export const validateReportTemplateForm = (
+  data: unknown
+): ReportTemplateForm => {
+  return ReportTemplateFormSchema.parse(data);
+};
+
 // Safe validation functions (return results instead of throwing)
 export const safeValidateUser = (data: unknown) => {
   return ClerkUserSchema.safeParse(data);
@@ -477,6 +507,10 @@ export const safeValidateRun = (data: unknown) => {
 
 export const safeValidateNewRunForm = (data: unknown) => {
   return NewRunFormSchema.safeParse(data);
+};
+
+export const safeValidateReportTemplateForm = (data: unknown) => {
+  return ReportTemplateFormSchema.safeParse(data);
 };
 
 // Transform functions for external API data

@@ -1,8 +1,9 @@
 import { createClerkClient } from '@clerk/clerk-sdk-node';
 import { getDatabase } from '../lib/db/index';
 import { createNotification } from '../lib/db/notifications';
+import { createReportTemplate } from '../lib/db/report-templates';
 import { createRun } from '../lib/db/runs';
-import type { RunStatus, RunType } from '../lib/schema';
+import type { ReportType, RunStatus, RunType } from '../lib/schema';
 
 // Initialize Clerk client for fetching organization data
 const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! });
@@ -17,6 +18,127 @@ const airlines = [
   { code: 'JB', name: 'JetBlue Airways' },
   { code: 'F9', name: 'Frontier Airlines' },
   { code: 'NK', name: 'Spirit Airlines' },
+];
+
+// Report template samples for seed data
+const sampleReportTemplates = [
+  {
+    name: 'Standard Run Report',
+    description: 'Complete report with all essential run information',
+    reportType: 'run' as ReportType,
+    isDefault: true,
+    columnConfig: [
+      {
+        field: 'flightNumber',
+        label: 'Flight Number',
+        order: 0,
+        required: true,
+      },
+      { field: 'airline', label: 'Airline', order: 1, required: true },
+      {
+        field: 'departure',
+        label: 'Departure Airport',
+        order: 2,
+        required: true,
+      },
+      { field: 'arrival', label: 'Arrival Airport', order: 3, required: true },
+      {
+        field: 'pickupLocation',
+        label: 'Pickup Location',
+        order: 4,
+        required: true,
+      },
+      {
+        field: 'dropoffLocation',
+        label: 'Dropoff Location',
+        order: 5,
+        required: false,
+      },
+      { field: 'price', label: 'Price', order: 6, required: false },
+      { field: 'type', label: 'Run Type', order: 7, required: true },
+    ],
+  },
+  {
+    name: 'Quick Run Summary',
+    description: 'Minimal report focusing on key operational details',
+    reportType: 'run' as ReportType,
+    isDefault: false,
+    columnConfig: [
+      { field: 'flightNumber', label: 'Flight #', order: 0, required: true },
+      { field: 'airline', label: 'Airline', order: 1, required: true },
+      { field: 'pickupLocation', label: 'Pickup', order: 2, required: true },
+      { field: 'type', label: 'Type', order: 3, required: true },
+    ],
+  },
+  {
+    name: 'Financial Run Report',
+    description: 'Focused on pricing and financial tracking',
+    reportType: 'run' as ReportType,
+    isDefault: false,
+    columnConfig: [
+      {
+        field: 'flightNumber',
+        label: 'Flight Number',
+        order: 0,
+        required: true,
+      },
+      { field: 'airline', label: 'Airline', order: 1, required: true },
+      { field: 'price', label: 'Price ($)', order: 2, required: true },
+      { field: 'type', label: 'Service Type', order: 3, required: true },
+      { field: 'pickupLocation', label: 'Origin', order: 4, required: false },
+      {
+        field: 'dropoffLocation',
+        label: 'Destination',
+        order: 5,
+        required: false,
+      },
+    ],
+  },
+  {
+    name: 'Flight Operations Report',
+    description: 'Detailed flight information for operations team',
+    reportType: 'flight' as ReportType,
+    isDefault: true,
+    columnConfig: [
+      {
+        field: 'flightNumber',
+        label: 'Flight Number',
+        order: 0,
+        required: true,
+      },
+      { field: 'airline', label: 'Carrier', order: 1, required: true },
+      { field: 'departure', label: 'Origin Airport', order: 2, required: true },
+      {
+        field: 'arrival',
+        label: 'Destination Airport',
+        order: 3,
+        required: true,
+      },
+    ],
+  },
+  {
+    name: 'Driver Assignment Report',
+    description: 'Simplified view for driver assignments and scheduling',
+    reportType: 'run' as ReportType,
+    isDefault: false,
+    columnConfig: [
+      {
+        field: 'pickupLocation',
+        label: 'Pickup Location',
+        order: 0,
+        required: true,
+      },
+      {
+        field: 'dropoffLocation',
+        label: 'Dropoff Location',
+        order: 1,
+        required: false,
+      },
+      { field: 'flightNumber', label: 'Flight', order: 2, required: true },
+      { field: 'airline', label: 'Airline', order: 3, required: false },
+      { field: 'type', label: 'Service', order: 4, required: true },
+    ],
+  },
 ];
 
 const airports = [
@@ -49,7 +171,6 @@ const jacksonHoleLocations = [
   'Jackson Hole Airport (JAC)',
 ];
 
-const statuses: RunStatus[] = ['scheduled', 'active', 'completed', 'cancelled'];
 const runTypes: RunType[] = ['pickup', 'dropoff'];
 
 function randomDate(start: Date, end: Date): Date {
@@ -70,6 +191,73 @@ function generateFlightNumber(airlineCode: string): string {
 function generatePrice(): string {
   const price = Math.floor(Math.random() * 400) + 100; // $100-$500
   return price.toString();
+}
+
+// Helper function to get organization ID for a user
+async function getUserOrganizationId(userId: string): Promise<string | null> {
+  try {
+    const organizationMemberships =
+      await clerk.users.getOrganizationMembershipList({
+        userId,
+      });
+
+    if (organizationMemberships.data.length === 0) {
+      return null;
+    }
+
+    return organizationMemberships.data[0].organization.id;
+  } catch (error) {
+    console.error('Error fetching user organization:', error);
+    return null;
+  }
+}
+
+// Generate sample report templates for organization
+async function generateReportTemplates(userId: string): Promise<number> {
+  console.log('📋 Generating sample report templates...');
+
+  try {
+    const organizationId = await getUserOrganizationId(userId);
+
+    if (!organizationId) {
+      console.log(
+        '⚠️ User not in organization, skipping report template generation'
+      );
+      return 0;
+    }
+
+    // Clear existing report templates for this organization
+    const db = getDatabase();
+    await db.query('DELETE FROM report_templates WHERE organization_id = $1', [
+      organizationId,
+    ]);
+    console.log('🧹 Cleared existing report templates for organization');
+
+    let templatesCreated = 0;
+
+    for (const templateData of sampleReportTemplates) {
+      try {
+        await createReportTemplate({
+          ...templateData,
+          organizationId,
+          createdBy: userId,
+        });
+        templatesCreated++;
+        console.log(`✅ Created template: ${templateData.name}`);
+      } catch (error) {
+        console.error(
+          `❌ Failed to create template ${templateData.name}:`,
+          error
+        );
+      }
+    }
+
+    console.log(`📋 Generated ${templatesCreated} report templates`);
+    return templatesCreated;
+  } catch (error) {
+    console.error('❌ Error generating report templates:', error);
+    return 0;
+  }
 }
 
 // Helper function to get organization drivers
@@ -151,6 +339,7 @@ async function getOrganizationDrivers(
 export async function seedDataForUser(userId: string): Promise<{
   runs: number;
   notifications: number;
+  templates: number;
   message: string;
 }> {
   console.log(`🌱 Starting data seeding for user: ${userId}`);
@@ -359,12 +548,7 @@ export async function seedDataForUser(userId: string): Promise<{
           'traffic_alert',
           'run_reminder',
           'status_change',
-          'weather_alert',
-          'customer_message',
-          'route_optimization',
-          'vehicle_assigned',
-          'early_arrival',
-          'payment_processed',
+          'system',
         ];
         const type = randomItem(notificationTypes);
 
@@ -389,29 +573,9 @@ export async function seedDataForUser(userId: string): Promise<{
             title = 'Run Status Changed';
             message = `Your run for flight ${run.flightNumber} status has been updated to ${run.status}.`;
             break;
-          case 'weather_alert':
-            title = 'Weather Advisory';
-            message = `Weather conditions may affect your route to ${run.dropoffLocation}. Snow/rain expected. Allow extra time.`;
-            break;
-          case 'customer_message':
-            title = 'Customer Request';
-            message = `Customer for flight ${run.flightNumber} has requested ${randomItem(['early pickup', 'vehicle type change', 'additional stops', 'luggage assistance', 'child seat'])}.`;
-            break;
-          case 'route_optimization':
-            title = 'Route Update';
-            message = `Optimized route suggested for ${run.flightNumber}. New estimated time: ${run.estimatedDuration + Math.floor(Math.random() * 20) - 10} minutes.`;
-            break;
-          case 'vehicle_assigned':
-            title = 'Vehicle Assignment';
-            message = `Vehicle ${randomItem(['SUV-001', 'VAN-203', 'SED-045', 'LUX-012', 'VAN-156'])} assigned for flight ${run.flightNumber}.`;
-            break;
-          case 'early_arrival':
-            title = 'Early Arrival Notice';
-            message = `Flight ${run.flightNumber} arrived ${Math.floor(Math.random() * 30) + 5} minutes early. Customer ready for pickup.`;
-            break;
-          case 'payment_processed':
-            title = 'Payment Confirmed';
-            message = `Payment of $${run.price} processed successfully for flight ${run.flightNumber}.`;
+          case 'system':
+            title = 'System Notification';
+            message = `System update for flight ${run.flightNumber}: ${randomItem(['Vehicle assignment updated', 'Route optimization completed', 'Weather advisory issued', 'Payment processed successfully', 'Customer message received'])}.`;
             break;
         }
 
@@ -468,10 +632,13 @@ export async function seedDataForUser(userId: string): Promise<{
       totalNotificationCount++;
     }
 
-    console.log('🎉 Data seeding completed successfully!');
     console.log(
-      `📊 Generated total: ${allRuns.length} runs, ${totalNotificationCount} notifications`
+      `🎉 Successfully created ${allRuns.length} runs and ${totalNotificationCount} notifications!`
     );
+
+    // Generate sample report templates for the organization
+    const templatesCreated = await generateReportTemplates(userId);
+
     console.log(`👥 Data distributed across ${allUserIds.length} users:`);
     console.log(`   - Current user received substantial data for testing`);
     if (organizationMembers.length > 0) {
@@ -483,7 +650,8 @@ export async function seedDataForUser(userId: string): Promise<{
     return {
       runs: allRuns.length,
       notifications: totalNotificationCount,
-      message: `🚀 Enhanced data seeding completed! Generated ${allRuns.length} runs and ${totalNotificationCount} notifications across ${allUserIds.length} users. Current user received 15-20 runs for optimal testing experience. Organization members: ${organizationMembers.map(m => m.name).join(', ')}.`,
+      templates: templatesCreated,
+      message: `🚀 Enhanced data seeding completed! Generated ${allRuns.length} runs, ${totalNotificationCount} notifications, and ${templatesCreated} report templates across ${allUserIds.length} users. Current user received 15-20 runs for optimal testing experience. Organization members: ${organizationMembers.map(m => m.name).join(', ')}.`,
     };
   } catch (error) {
     console.error('❌ Error during data seeding:', error);

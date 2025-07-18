@@ -9,7 +9,6 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
@@ -26,7 +25,8 @@ import {
   Settings,
   Trash2,
 } from 'lucide-react';
-import { useState } from 'react';
+import { type CSSProperties, useMemo, useState } from 'react';
+import { useFieldArray, useForm } from 'react-hook-form';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import {
@@ -38,6 +38,13 @@ import {
   CardTitle,
 } from '../components/ui/card';
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from '../components/ui/command';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -48,6 +55,11 @@ import {
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '../components/ui/popover';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -55,15 +67,17 @@ import {
   SelectValue,
 } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
+import { useAppContext } from '../lib/AppContextProvider';
 import {
   useIsUserAdmin,
   useUserOrganization,
 } from '../lib/hooks/use-organizations';
 import {
-  defaultReportTemplateFields,
   type ReportColumnConfig,
   type ReportTemplate,
-  type ReportType,
+  type ReportTemplateForm,
+  ReportType,
+  validateReportTemplateForm,
 } from '../lib/schema';
 
 export const Route = createFileRoute('/report-templates')({
@@ -123,6 +137,42 @@ function ReportTemplatesPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
+  // Get all existing column configurations from organization templates
+  const existingColumnConfigs = useMemo(() => {
+    const allColumns = templates.flatMap(template => template.columnConfig);
+
+    // Deduplicate by field name and create a map with the most descriptive label
+    const uniqueColumns = new Map<
+      string,
+      { field: string; label: string; usageCount: number }
+    >();
+
+    allColumns.forEach(col => {
+      if (uniqueColumns.has(col.field)) {
+        const existing = uniqueColumns.get(col.field)!;
+        existing.usageCount++;
+        // Keep the longer/more descriptive label
+        if (col.label.length > existing.label.length) {
+          existing.label = col.label;
+        }
+      } else {
+        uniqueColumns.set(col.field, {
+          field: col.field,
+          label: col.label,
+          usageCount: 1,
+        });
+      }
+    });
+
+    return Array.from(uniqueColumns.values()).sort((a, b) => {
+      // Sort by usage count (most used first), then alphabetically
+      if (a.usageCount !== b.usageCount) {
+        return b.usageCount - a.usageCount;
+      }
+      return a.label.localeCompare(b.label);
+    });
+  }, [templates]);
+
   // Redirect if not admin
   if (!isAdmin) {
     return (
@@ -137,9 +187,7 @@ function ReportTemplatesPage() {
     );
   }
 
-  const handleCreateTemplate = (
-    newTemplate: Omit<ReportTemplate, 'id' | 'createdAt' | 'updatedAt'>
-  ) => {
+  const handleCreateTemplate = (newTemplate: ReportTemplateForm) => {
     const template: ReportTemplate = {
       ...newTemplate,
       id: crypto.randomUUID(),
@@ -150,13 +198,16 @@ function ReportTemplatesPage() {
     setIsCreateDialogOpen(false);
   };
 
-  const handleUpdateTemplate = (updatedTemplate: ReportTemplate) => {
+  const handleUpdateTemplate = (updatedTemplateForm: ReportTemplateForm) => {
+    if (!selectedTemplate) return;
+
+    const updatedTemplate: ReportTemplate = {
+      ...selectedTemplate,
+      ...updatedTemplateForm,
+      updatedAt: new Date(),
+    };
     setTemplates(
-      templates.map(t =>
-        t.id === updatedTemplate.id
-          ? { ...updatedTemplate, updatedAt: new Date() }
-          : t
-      )
+      templates.map(t => (t.id === updatedTemplate.id ? updatedTemplate : t))
     );
     setIsEditDialogOpen(false);
     setSelectedTemplate(null);
@@ -192,6 +243,7 @@ function ReportTemplatesPage() {
               onSave={handleCreateTemplate}
               organizationId={organization?.id || ''}
               onCancel={() => setIsCreateDialogOpen(false)}
+              existingColumns={existingColumnConfigs}
             />
           </DialogContent>
         </Dialog>
@@ -281,6 +333,7 @@ function ReportTemplatesPage() {
                       onSave={handleUpdateTemplate}
                       organizationId={organization?.id || ''}
                       onCancel={() => setIsEditDialogOpen(false)}
+                      existingColumns={existingColumnConfigs}
                     />
                   </DialogContent>
                 </Dialog>
@@ -323,19 +376,28 @@ function ReportTemplatesPage() {
 interface TemplateFormDialogProps {
   mode: 'create' | 'edit';
   template?: ReportTemplate;
-  onSave: (template: any) => void;
+  onSave: (template: ReportTemplateForm) => void;
   organizationId: string;
   onCancel: () => void;
+  existingColumns: { field: string; label: string; usageCount: number }[];
+}
+
+interface SortableColumnItemProps {
+  column: ReportColumnConfig & { id: string };
+  index: number;
+  register: any;
+  errors: any;
+  onRemove: (field: string) => void;
 }
 
 // Sortable item component for drag and drop
 function SortableColumnItem({
   column,
-  onUpdate,
-}: {
-  column: ReportColumnConfig & { id: string };
-  onUpdate: (field: string, updates: Partial<ReportColumnConfig>) => void;
-}) {
+  index,
+  register,
+  errors,
+  onRemove,
+}: SortableColumnItemProps) {
   const {
     attributes,
     listeners,
@@ -345,13 +407,12 @@ function SortableColumnItem({
     isDragging,
   } = useSortable({ id: column.id });
 
-  const style = {
+  const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const isDevMode = false;
   return (
     <div
       ref={setNodeRef}
@@ -371,29 +432,34 @@ function SortableColumnItem({
 
         <div className="flex-1 min-w-0 space-y-3">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              {isDevMode && (
-                <code className="text-sm font-bold text-red-400">
-                  {column.field}
-                </code>
-              )}
-            </div>
+            {/* Hidden inputs for field and order */}
+            <input type="hidden" {...register(`columnConfig.${index}.field`)} />
+            <input type="hidden" {...register(`columnConfig.${index}.order`)} />
             <Input
-              value={column.label}
-              onChange={e => onUpdate(column.field, { label: e.target.value })}
+              {...register(`columnConfig.${index}.label`, {
+                required: 'Column label is required',
+                validate: (value: string) =>
+                  value.trim().length > 0 || 'Column label cannot be empty',
+              })}
               placeholder="Column label"
               className="text-sm"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
             />
+            {errors.columnConfig?.[index]?.label && (
+              <p className="text-sm text-red-500 mt-1">
+                {errors.columnConfig[index].label.message}
+              </p>
+            )}
           </div>
 
           <div className="flex items-center space-x-2">
             <input
               type="checkbox"
               id={`required-${column.field}`}
-              checked={column.required}
-              onChange={e =>
-                onUpdate(column.field, { required: e.target.checked })
-              }
+              {...register(`columnConfig.${index}.required`)}
               className="rounded"
             />
             <Label
@@ -404,6 +470,15 @@ function SortableColumnItem({
             </Label>
           </div>
         </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onRemove(column.field)}
+          className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );
@@ -415,23 +490,46 @@ function TemplateFormDialog({
   onSave,
   organizationId,
   onCancel,
+  existingColumns,
 }: TemplateFormDialogProps) {
-  const [formData, setFormData] = useState({
-    name: template?.name || '',
-    description: template?.description || '',
-    reportType: template?.reportType || ('run' as ReportType),
-    isDefault: template?.isDefault || false,
-    columnConfig:
-      template?.columnConfig ||
-      defaultReportTemplateFields.map((field, index) => ({
-        field,
-        label:
-          field.charAt(0).toUpperCase() +
-          field.slice(1).replace(/([A-Z])/g, ' $1'),
-        order: index,
-        required: false,
-      })),
+  const { currentUser } = useAppContext();
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    watch,
+    setValue,
+    formState: { errors, isValid },
+    reset,
+  } = useForm<ReportTemplateForm>({
+    defaultValues: {
+      name: template?.name || '',
+      description: template?.description || '',
+      reportType: template?.reportType || ReportType.run,
+      isDefault: template?.isDefault || false,
+      columnConfig: template?.columnConfig || [],
+      organizationId,
+      createdBy: currentUser?.id || '',
+    },
+    mode: 'onChange',
+    resolver: undefined, // We'll use manual validation with the schema
   });
+
+  const { fields, append, remove, move } = useFieldArray({
+    control,
+    name: 'columnConfig',
+    rules: {
+      minLength: {
+        value: 2,
+        message: 'Template must have at least 2 columns',
+      },
+    },
+  });
+
+  console.log(fields);
+
+  const columnConfig = watch('columnConfig');
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -451,63 +549,57 @@ function TemplateFormDialog({
     })
   );
 
-  const handleSave = () => {
-    const templateData = {
-      ...formData,
+  const onSubmit = (data: ReportTemplateForm) => {
+    // Ensure user is authenticated
+    if (!currentUser?.id) {
+      alert('User must be authenticated to save template.');
+      return;
+    }
+
+    const templateData: ReportTemplateForm = {
+      ...data,
       organizationId,
-      createdBy: 'current-user-id', // This would come from your auth system
+      createdBy: currentUser.id,
     };
 
-    if (mode === 'edit' && template) {
-      onSave({ ...template, ...templateData });
-    } else {
+    // Validate the template data using the schema
+    try {
+      validateReportTemplateForm(templateData);
       onSave(templateData);
+    } catch (error) {
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert('Template validation failed.');
+      }
     }
   };
 
-  const updateColumnConfig = (
-    field: string,
-    updates: Partial<ReportColumnConfig>
-  ) => {
-    setFormData(prev => ({
-      ...prev,
-      columnConfig: prev.columnConfig.map(col =>
-        col.field === field ? { ...col, ...updates } : col
-      ),
-    }));
+  const removeColumn = (field: string) => {
+    remove(columnConfig.findIndex(col => col.field === field));
+  };
+
+  const addColumn = (field: string, label: string) => {
+    append({
+      field,
+      label,
+      order: columnConfig.length,
+      required: false,
+    });
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      setFormData(prev => {
-        const oldIndex = prev.columnConfig.findIndex(
-          col => col.field === active.id
-        );
-        const newIndex = prev.columnConfig.findIndex(
-          col => col.field === over.id
-        );
-
-        // Reorder the array and update order values
-        const reorderedConfig = arrayMove(
-          prev.columnConfig,
-          oldIndex,
-          newIndex
-        ).map((col, index) => ({
-          ...col,
-          order: index,
-        }));
-
-        return {
-          ...prev,
-          columnConfig: reorderedConfig,
-        };
-      });
+      move(
+        columnConfig.findIndex(col => col.field === active.id),
+        columnConfig.findIndex(col => col.field === over.id)
+      );
     }
   };
 
-  const sortableColumns = formData.columnConfig
+  const sortableColumns = columnConfig
     .sort((a, b) => a.order - b.order)
     .map(col => ({
       ...col,
@@ -529,23 +621,29 @@ function TemplateFormDialog({
       <div className="grid gap-6 py-4 max-h-[60vh] overflow-y-auto">
         <div className="grid grid-cols-1 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Template Name</Label>
+            <Label htmlFor="name">
+              Template Name <span className="text-xs text-destructive">*</span>
+            </Label>
             <Input
               id="name"
-              value={formData.name}
-              onChange={e =>
-                setFormData(prev => ({ ...prev, name: e.target.value }))
-              }
+              {...register('name', { required: 'Template name is required' })}
               placeholder="e.g., Standard Run Report"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
             />
+            {errors.name && (
+              <p className="text-sm text-red-500">{errors.name.message}</p>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="reportType">Report Type</Label>
             <Select
-              value={formData.reportType}
+              value={watch('reportType')}
               onValueChange={(value: ReportType) =>
-                setFormData(prev => ({ ...prev, reportType: value }))
+                setValue('reportType', value)
               }
             >
               <SelectTrigger>
@@ -557,6 +655,11 @@ function TemplateFormDialog({
                 <SelectItem value="traffic">Traffic Report</SelectItem>
               </SelectContent>
             </Select>
+            {errors.reportType && (
+              <p className="text-sm text-red-500">
+                {errors.reportType.message}
+              </p>
+            )}
           </div>
         </div>
 
@@ -564,61 +667,94 @@ function TemplateFormDialog({
           <Label htmlFor="description">Description</Label>
           <Textarea
             id="description"
-            value={formData.description}
-            onChange={e =>
-              setFormData(prev => ({ ...prev, description: e.target.value }))
-            }
+            {...register('description')}
             placeholder="Describe what this template is used for..."
             rows={3}
           />
+          {errors.description && (
+            <p className="text-sm text-red-500">{errors.description.message}</p>
+          )}
+          <div className="flex items-center justify-start gap-2">
+            <input
+              type="checkbox"
+              id="isDefault"
+              checked={watch('isDefault')}
+              onChange={e => setValue('isDefault', e.target.checked)}
+            />
+            <Label
+              htmlFor="isDefault"
+              className="text-sm text-muted-foreground"
+            >
+              Set as default
+            </Label>
+          </div>
         </div>
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <Label className="text-base">Column Configuration</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="isDefault"
-                checked={formData.isDefault}
-                onChange={e =>
-                  setFormData(prev => ({
-                    ...prev,
-                    isDefault: e.target.checked,
-                  }))
-                }
-              />
-              <Label
-                htmlFor="isDefault"
-                className="text-sm text-muted-foreground"
-              >
-                Set as default
-              </Label>
+              {errors.columnConfig?.root && (
+                <p className="text-sm text-red-500 mt-1">
+                  {errors.columnConfig.root.message}
+                </p>
+              )}
             </div>
           </div>
 
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={sortableColumns.map(col => col.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="space-y-3" style={{ userSelect: 'none' }}>
-                {sortableColumns.map(col => (
-                  <SortableColumnItem
-                    key={col.id}
-                    column={col}
-                    onUpdate={updateColumnConfig}
-                  />
-                ))}
+          {/* Add Column Dropdown */}
+          <AddColumnCombobox
+            existingColumns={existingColumns}
+            usedFields={columnConfig.map(col => col.field)}
+            onAddColumn={addColumn}
+          />
+
+          {/* Show message when all available fields have been added */}
+          {existingColumns.length > 0 &&
+            existingColumns.filter(
+              col => !columnConfig.some(config => config.field === col.field)
+            ).length === 0 &&
+            columnConfig.length > 0 && (
+              <div className="text-sm text-muted-foreground">
+                All existing columns have been added. You can still create new
+                columns by typing in the search above.
               </div>
-            </SortableContext>
-          </DndContext>
+            )}
+
+          {/* Columns List */}
+          {columnConfig.length > 0 ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={sortableColumns.map(col => col.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-3" style={{ userSelect: 'none' }}>
+                  {sortableColumns.map((col, index) => (
+                    <SortableColumnItem
+                      key={col.id}
+                      column={col}
+                      index={index}
+                      register={register}
+                      errors={errors}
+                      onRemove={removeColumn}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Plus className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No columns added yet.</p>
+              <p className="text-xs">
+                Use the "Add Column" dropdown above to get started.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -627,14 +763,14 @@ function TemplateFormDialog({
           variant="secondary"
           onClick={() => {
             onCancel();
-            setFormData(prev => ({ ...prev }));
+            reset(); // Reset form values
           }}
         >
           Cancel
         </Button>
         <Button
-          onClick={handleSave}
-          disabled={!formData.name.trim()}
+          onClick={handleSubmit(onSubmit)}
+          disabled={!isValid || columnConfig.length < 2}
           className="bg-blue-400 text-white hover:bg-blue-500/90"
         >
           {mode === 'create' ? 'Create' : 'Update'} Template
@@ -685,5 +821,129 @@ function TemplatePreview({ template }: { template: ReportTemplate }) {
         </div>
       </div>
     </div>
+  );
+}
+
+// Add Column Combobox component
+function AddColumnCombobox({
+  existingColumns,
+  usedFields,
+  onAddColumn,
+}: {
+  existingColumns: { field: string; label: string; usageCount: number }[];
+  usedFields: string[];
+  onAddColumn: (field: string, label: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
+
+  // Filter existing columns that haven't been used yet
+  const availableColumns = existingColumns.filter(
+    col => !usedFields.includes(col.field)
+  );
+
+  // Check if the search value could be a new column
+  const isNewColumn =
+    searchValue.length > 0 &&
+    !availableColumns.some(
+      col =>
+        col.field.toLowerCase() === searchValue.toLowerCase() ||
+        col.label.toLowerCase() === searchValue.toLowerCase()
+    );
+
+  const handleSelect = (field: string, label: string) => {
+    onAddColumn(field, label);
+    setSearchValue('');
+    setOpen(false);
+  };
+
+  const handleCreateNew = () => {
+    if (searchValue.trim()) {
+      // Convert search value to a field name (camelCase)
+      const field = searchValue
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+(.)/g, (_, char) => char.toUpperCase())
+        .replace(/^\w/, char => char.toLowerCase());
+
+      const label = searchValue.trim();
+      handleSelect(field, label);
+    }
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between"
+        >
+          Add Column...
+          <Plus className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-0" align="start">
+        <Command>
+          <CommandInput
+            placeholder="Search existing columns or type new name..."
+            value={searchValue}
+            onValueChange={setSearchValue}
+          />
+          <CommandEmpty>
+            {isNewColumn ? (
+              <div className="p-2">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start"
+                  onClick={handleCreateNew}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create "{searchValue}"
+                </Button>
+              </div>
+            ) : (
+              'No columns found.'
+            )}
+          </CommandEmpty>
+          {availableColumns.length > 0 && (
+            <CommandGroup heading="Existing Columns">
+              {availableColumns
+                .filter(
+                  col =>
+                    col.field
+                      .toLowerCase()
+                      .includes(searchValue.toLowerCase()) ||
+                    col.label.toLowerCase().includes(searchValue.toLowerCase())
+                )
+                .map(col => (
+                  <CommandItem
+                    key={col.field}
+                    onSelect={() => handleSelect(col.field, col.label)}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">{col.label}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {col.field} • usage: {col.usageCount}
+                        {col.usageCount !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </CommandItem>
+                ))}
+            </CommandGroup>
+          )}
+          {searchValue && isNewColumn && availableColumns.length > 0 && (
+            <CommandGroup heading="Create New">
+              <CommandItem onSelect={handleCreateNew}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create "{searchValue}"
+              </CommandItem>
+            </CommandGroup>
+          )}
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }

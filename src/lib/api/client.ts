@@ -414,6 +414,7 @@ export const seedApi = {
   async generateData(userId: string): Promise<{
     runs: number;
     notifications: number;
+    templates: number;
     message: string;
   }> {
     const response = await fetch(`${API_BASE}/seed`, {

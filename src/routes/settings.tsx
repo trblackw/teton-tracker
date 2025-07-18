@@ -863,16 +863,16 @@ function Settings() {
               <Button
                 onClick={handleGenerateSeedData}
                 disabled={generateSeedDataMutation.isPending}
-                className="bg-amber-600 hover:bg-amber-700 text-white"
+                className="bg-amber-600 hover:bg-amber-700 text-white flex items-center"
               >
                 {generateSeedDataMutation.isPending ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
                     Generating...
                   </>
                 ) : (
                   <>
-                    <Database className="h-4 w-4 mr-2" />
+                    <Database className="h-4 w-4" />
                     Generate Data
                   </>
                 )}
