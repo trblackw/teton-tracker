@@ -5,7 +5,15 @@ import {
   Outlet,
   useRouterState,
 } from '@tanstack/react-router';
-import { BarChart3, Bell, Building2, Car, Plane } from 'lucide-react';
+import {
+  BarChart3,
+  Bell,
+  Building2,
+  Car,
+  Plane,
+  Plus,
+  Users,
+} from 'lucide-react';
 import { useEffect } from 'react';
 import { Toaster } from 'sonner';
 import { ActiveRunBanner } from '../components/active-run-banner';
@@ -31,7 +39,10 @@ import { UserProfilePopover } from '../components/user-profile-popover';
 import { AppContextProvider } from '../lib/AppContextProvider';
 import { isFeatureEnabled } from '../lib/features';
 import { useMobile } from '../lib/hooks/use-mobile';
-import { useUserOrganization } from '../lib/hooks/use-organizations';
+import {
+  useIsUserAdmin,
+  useUserOrganization,
+} from '../lib/hooks/use-organizations';
 import { queryClient } from '../lib/react-query-client';
 import { toasts } from '../lib/toast';
 
@@ -49,6 +60,49 @@ function OrganizationDisplay() {
       <Building2 className="h-4 w-4 shrink-0" />
       <span className="truncate max-w-[200px]">{organization.name}</span>
     </div>
+  );
+}
+
+function AdminNavItems() {
+  const { data: organization } = useUserOrganization();
+  const { isAdmin } = useIsUserAdmin(organization?.id);
+
+  if (!isAdmin) {
+    return null;
+  }
+
+  return (
+    <>
+      <div className="px-3 py-2">
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Administration
+        </div>
+      </div>
+      <Button asChild variant="ghost" className="w-full justify-start">
+        <Link
+          to="/drivers"
+          className="flex items-center gap-2"
+          activeProps={{
+            className: activeNavClass,
+          }}
+        >
+          <Users className="h-4 w-4" />
+          Drivers
+        </Link>
+      </Button>
+      <Button asChild variant="ghost" className="w-full justify-start">
+        <Link
+          to="/create-runs"
+          className="flex items-center gap-2"
+          activeProps={{
+            className: activeNavClass,
+          }}
+        >
+          <Plus className="h-4 w-4" />
+          Create Runs
+        </Link>
+      </Button>
+    </>
   );
 }
 
@@ -75,8 +129,8 @@ function RootComponent() {
                     <SidebarHeader>
                       <TopNavLogo />
                     </SidebarHeader>
-                    <SidebarContent>
-                      <SidebarNav>
+                    <SidebarContent className="flex flex-col">
+                      <SidebarNav className="flex-1">
                         <Button
                           asChild
                           variant="ghost"
@@ -146,6 +200,11 @@ function RootComponent() {
                           </Button>
                         )}
                       </SidebarNav>
+
+                      {/* Admin section at bottom */}
+                      <div className="mt-auto pt-4 border-t border-border">
+                        <AdminNavItems />
+                      </div>
                     </SidebarContent>
                   </Sidebar>
                 )}
@@ -156,8 +215,8 @@ function RootComponent() {
                     <SidebarHeader>
                       <TopNavLogo />
                     </SidebarHeader>
-                    <SidebarContent>
-                      <SidebarNav>
+                    <SidebarContent className="flex flex-col">
+                      <SidebarNav className="flex-1">
                         <Button
                           asChild
                           variant="ghost"
@@ -227,6 +286,11 @@ function RootComponent() {
                           </Button>
                         )}
                       </SidebarNav>
+
+                      {/* Admin section at bottom */}
+                      <div className="mt-auto pt-4 border-t border-border">
+                        <AdminNavItems />
+                      </div>
                     </SidebarContent>
                   </Sidebar>
                 )}

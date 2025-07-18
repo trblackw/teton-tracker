@@ -15,6 +15,8 @@ import { Route as ReportsRouteImport } from './routes/reports';
 import { Route as OrganizationRouteImport } from './routes/organization';
 import { Route as NotificationsRouteImport } from './routes/notifications';
 import { Route as FlightsRouteImport } from './routes/flights';
+import { Route as DriversRouteImport } from './routes/drivers';
+import { Route as CreateRunsRouteImport } from './routes/create-runs';
 import { Route as AddRouteImport } from './routes/add';
 import { Route as ActiveRunRouteImport } from './routes/active-run';
 import { Route as IndexRouteImport } from './routes/index';
@@ -49,6 +51,16 @@ const FlightsRoute = FlightsRouteImport.update({
   path: '/flights',
   getParentRoute: () => rootRouteImport,
 } as any);
+const DriversRoute = DriversRouteImport.update({
+  id: '/drivers',
+  path: '/drivers',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const CreateRunsRoute = CreateRunsRouteImport.update({
+  id: '/create-runs',
+  path: '/create-runs',
+  getParentRoute: () => rootRouteImport,
+} as any);
 const AddRoute = AddRouteImport.update({
   id: '/add',
   path: '/add',
@@ -69,6 +81,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute;
   '/active-run': typeof ActiveRunRoute;
   '/add': typeof AddRoute;
+  '/create-runs': typeof CreateRunsRoute;
+  '/drivers': typeof DriversRoute;
   '/flights': typeof FlightsRoute;
   '/notifications': typeof NotificationsRoute;
   '/organization': typeof OrganizationRoute;
@@ -80,6 +94,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute;
   '/active-run': typeof ActiveRunRoute;
   '/add': typeof AddRoute;
+  '/create-runs': typeof CreateRunsRoute;
+  '/drivers': typeof DriversRoute;
   '/flights': typeof FlightsRoute;
   '/notifications': typeof NotificationsRoute;
   '/organization': typeof OrganizationRoute;
@@ -92,6 +108,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute;
   '/active-run': typeof ActiveRunRoute;
   '/add': typeof AddRoute;
+  '/create-runs': typeof CreateRunsRoute;
+  '/drivers': typeof DriversRoute;
   '/flights': typeof FlightsRoute;
   '/notifications': typeof NotificationsRoute;
   '/organization': typeof OrganizationRoute;
@@ -105,6 +123,8 @@ export interface FileRouteTypes {
     | '/'
     | '/active-run'
     | '/add'
+    | '/create-runs'
+    | '/drivers'
     | '/flights'
     | '/notifications'
     | '/organization'
@@ -116,6 +136,8 @@ export interface FileRouteTypes {
     | '/'
     | '/active-run'
     | '/add'
+    | '/create-runs'
+    | '/drivers'
     | '/flights'
     | '/notifications'
     | '/organization'
@@ -127,6 +149,8 @@ export interface FileRouteTypes {
     | '/'
     | '/active-run'
     | '/add'
+    | '/create-runs'
+    | '/drivers'
     | '/flights'
     | '/notifications'
     | '/organization'
@@ -139,6 +163,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
   ActiveRunRoute: typeof ActiveRunRoute;
   AddRoute: typeof AddRoute;
+  CreateRunsRoute: typeof CreateRunsRoute;
+  DriversRoute: typeof DriversRoute;
   FlightsRoute: typeof FlightsRoute;
   NotificationsRoute: typeof NotificationsRoute;
   OrganizationRoute: typeof OrganizationRoute;
@@ -191,6 +217,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FlightsRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/drivers': {
+      id: '/drivers';
+      path: '/drivers';
+      fullPath: '/drivers';
+      preLoaderRoute: typeof DriversRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/create-runs': {
+      id: '/create-runs';
+      path: '/create-runs';
+      fullPath: '/create-runs';
+      preLoaderRoute: typeof CreateRunsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/add': {
       id: '/add';
       path: '/add';
@@ -219,6 +259,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActiveRunRoute: ActiveRunRoute,
   AddRoute: AddRoute,
+  CreateRunsRoute: CreateRunsRoute,
+  DriversRoute: DriversRoute,
   FlightsRoute: FlightsRoute,
   NotificationsRoute: NotificationsRoute,
   OrganizationRoute: OrganizationRoute,

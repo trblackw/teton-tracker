@@ -1,7 +1,11 @@
+import { createClerkClient } from '@clerk/clerk-sdk-node';
 import { getDatabase } from '../lib/db/index';
 import { createNotification } from '../lib/db/notifications';
 import { createRun } from '../lib/db/runs';
 import type { RunStatus, RunType } from '../lib/schema';
+
+// Initialize Clerk client for fetching organization data
+const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! });
 
 // Mock data arrays
 const airlines = [
@@ -68,6 +72,49 @@ function generatePrice(): string {
   return price.toString();
 }
 
+// Helper function to get organization drivers
+async function getOrganizationDrivers(userId: string): Promise<string[]> {
+  try {
+    console.log(`🔍 Fetching organization drivers for user: ${userId}`);
+
+    // Get user's organization memberships
+    const organizationMemberships =
+      await clerk.users.getOrganizationMembershipList({
+        userId,
+      });
+
+    if (organizationMemberships.data.length === 0) {
+      console.log('ℹ️ User is not a member of any organization');
+      return [];
+    }
+
+    // For single organization model, get the first (and only) organization
+    const userOrg = organizationMemberships.data[0];
+    const orgId = userOrg.organization.id;
+
+    console.log(
+      `✅ Found user organization: ${userOrg.organization.name} (${orgId})`
+    );
+
+    // Get all organization members
+    const orgMemberships =
+      await clerk.organizations.getOrganizationMembershipList({
+        organizationId: orgId,
+      });
+
+    // Filter for driver role and extract user IDs
+    const driverIds = orgMemberships.data
+      .filter((membership: any) => membership.role === 'org:driver')
+      .map((membership: any) => membership.publicUserData.userId);
+
+    console.log(`✅ Found ${driverIds.length} drivers in organization`);
+    return driverIds;
+  } catch (error) {
+    console.error('❌ Error fetching organization drivers:', error);
+    return [];
+  }
+}
+
 export async function seedDataForUser(userId: string): Promise<{
   runs: number;
   notifications: number;
@@ -76,20 +123,29 @@ export async function seedDataForUser(userId: string): Promise<{
   console.log(`🌱 Starting data seeding for user: ${userId}`);
 
   try {
-    // Ensure the user exists in the database
-    console.log(`👤 Using user ID: ${userId}`);
+    // Get organization drivers
+    const driverIds = await getOrganizationDrivers(userId);
+    const allUserIds = driverIds.length > 0 ? [userId, ...driverIds] : [userId];
+
+    console.log(
+      `👥 Will create runs for ${allUserIds.length} users (including drivers)`
+    );
 
     // Clear existing data for clean seeding
     console.log('🧹 Clearing existing data for clean seeding...');
     const db = getDatabase();
 
     try {
-      // Delete existing runs and notifications for this user
-      await db.query(`DELETE FROM runs WHERE user_id = $1`, [userId]);
-
-      await db.query(`DELETE FROM notifications WHERE user_id = $1`, [userId]);
-
-      console.log('✅ Cleared existing runs and notifications');
+      // Delete existing runs and notifications for all users in the organization
+      for (const targetUserId of allUserIds) {
+        await db.query(`DELETE FROM runs WHERE user_id = $1`, [targetUserId]);
+        await db.query(`DELETE FROM notifications WHERE user_id = $1`, [
+          targetUserId,
+        ]);
+      }
+      console.log(
+        '✅ Cleared existing runs and notifications for all organization users'
+      );
     } catch (error) {
       console.warn('⚠️ Error clearing existing data:', error);
       // Continue anyway - might be first run
@@ -100,91 +156,100 @@ export async function seedDataForUser(userId: string): Promise<{
     const pastDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); // 90 days ago
     const futureDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days future
 
-    const runs = [];
+    const allRuns = [];
+    let totalNotificationCount = 0;
 
-    // Generate 20 total runs with realistic distribution:
-    // - 15-17 past runs (completed/cancelled)
-    // - 2-3 current/future runs (scheduled/active)
+    // Create runs for each user (distribute across drivers)
+    for (const targetUserId of allUserIds) {
+      const isDriver = driverIds.includes(targetUserId);
+      const runsPerUser = isDriver ? 8 : 5; // Drivers get more runs
 
-    for (let i = 0; i < 20; i++) {
-      const airline = randomItem(airlines);
-      const flightNumber = generateFlightNumber(airline.code);
-      const runType: RunType = randomItem(runTypes);
+      console.log(
+        `🚗 Creating ${runsPerUser} runs for ${isDriver ? 'driver' : 'admin'}: ${targetUserId}`
+      );
 
-      let scheduledTime: Date;
-      let status: RunStatus;
+      for (let i = 0; i < runsPerUser; i++) {
+        const airline = randomItem(airlines);
+        const flightNumber = generateFlightNumber(airline.code);
+        const runType: RunType = randomItem(runTypes);
 
-      // First 2-3 runs are current/future (realistic current runs)
-      if (i < 3) {
-        // Current/future runs - scheduled between now and 30 days from now
-        scheduledTime = randomDate(now, futureDate);
-        status = Math.random() > 0.7 ? 'active' : 'scheduled'; // Mostly scheduled, some active
-      } else {
-        // Past runs - scheduled between 90 days ago and now
-        scheduledTime = randomDate(pastDate, now);
+        let scheduledTime: Date;
+        let status: RunStatus;
 
-        // Past runs should be completed or cancelled
-        if (Math.random() > 0.85) {
-          status = 'cancelled'; // 15% cancelled
+        // First 2 runs per user are current/future (realistic current runs)
+        if (i < 2) {
+          // Current/future runs - scheduled between now and 30 days from now
+          scheduledTime = randomDate(now, futureDate);
+          status = Math.random() > 0.7 ? 'active' : 'scheduled'; // Mostly scheduled, some active
         } else {
-          status = 'completed'; // 85% completed
+          // Past runs - scheduled between 90 days ago and now
+          scheduledTime = randomDate(pastDate, now);
+
+          // Past runs should be completed or cancelled
+          if (Math.random() > 0.85) {
+            status = 'cancelled'; // 15% cancelled
+          } else {
+            status = 'completed'; // 85% completed
+          }
         }
+
+        // Generate locations
+        const pickupLocation = randomItem(jacksonHoleLocations);
+        const dropoffLocation =
+          runType === 'pickup'
+            ? 'Jackson Hole Airport (JAC)'
+            : randomItem(jacksonHoleLocations);
+
+        // Generate departure/arrival airports (JAC is always one of them)
+        const otherAirport = randomItem(airports.filter(a => a.code !== 'JAC'));
+        const departure = runType === 'pickup' ? 'JAC' : otherAirport.code;
+        const arrival = runType === 'pickup' ? otherAirport.code : 'JAC';
+
+        // Create notes occasionally (more likely for VIP/special runs)
+        const notes =
+          Math.random() > 0.8
+            ? [
+                'Client requested early arrival',
+                'Large group - 6 passengers',
+                'Vehicle preference: SUV',
+                'Flight might be delayed',
+                'VIP client',
+                'Ski equipment transport needed',
+                'Pet-friendly vehicle required',
+                'Client has mobility assistance needs',
+              ][Math.floor(Math.random() * 8)]
+            : undefined;
+
+        const runData = {
+          userId: targetUserId,
+          flightNumber,
+          airline: airline.name,
+          departure,
+          arrival,
+          pickupLocation,
+          dropoffLocation,
+          scheduledTime: scheduledTime.toISOString(),
+          estimatedDuration: Math.floor(Math.random() * 60) + 30, // 30-90 minutes
+          type: runType,
+          status,
+          price: generatePrice(),
+          notes,
+        };
+
+        allRuns.push({ ...runData, targetUserId });
       }
-
-      // Generate locations
-      const pickupLocation = randomItem(jacksonHoleLocations);
-      const dropoffLocation =
-        runType === 'pickup'
-          ? 'Jackson Hole Airport (JAC)'
-          : randomItem(jacksonHoleLocations);
-
-      // Generate departure/arrival airports (JAC is always one of them)
-      const otherAirport = randomItem(airports.filter(a => a.code !== 'JAC'));
-      const departure = runType === 'pickup' ? 'JAC' : otherAirport.code;
-      const arrival = runType === 'pickup' ? otherAirport.code : 'JAC';
-
-      // Create notes occasionally (more likely for VIP/special runs)
-      const notes =
-        Math.random() > 0.8
-          ? [
-              'Client requested early arrival',
-              'Large group - 6 passengers',
-              'Vehicle preference: SUV',
-              'Flight might be delayed',
-              'VIP client',
-              'Ski equipment transport needed',
-              'Pet-friendly vehicle required',
-              'Client has mobility assistance needs',
-            ][Math.floor(Math.random() * 8)]
-          : undefined;
-
-      const runData = {
-        userId,
-        flightNumber,
-        airline: airline.name,
-        departure,
-        arrival,
-        pickupLocation,
-        dropoffLocation,
-        scheduledTime: scheduledTime.toISOString(),
-        estimatedDuration: Math.floor(Math.random() * 60) + 30, // 30-90 minutes
-        type: runType,
-        status,
-        price: generatePrice(),
-        notes,
-      };
-
-      runs.push(runData);
     }
 
     // Create runs in database
-    let notificationCount = 0;
-    for (const runData of runs) {
-      const run = await createRun(runData, userId);
-      console.log(`✅ Created run: ${run.flightNumber} (${run.status})`);
+    for (const runData of allRuns) {
+      const { targetUserId, ...runCreateData } = runData;
+      const run = await createRun(runCreateData, targetUserId);
+      console.log(
+        `✅ Created run: ${run.flightNumber} (${run.status}) for user ${targetUserId}`
+      );
 
-      // Generate 1-4 notifications per run
-      const runNotificationCount = Math.floor(Math.random() * 4) + 1;
+      // Generate 1-3 notifications per run
+      const runNotificationCount = Math.floor(Math.random() * 3) + 1;
       for (let i = 0; i < runNotificationCount; i++) {
         const notificationTypes = [
           'flight_update',
@@ -228,13 +293,15 @@ export async function seedDataForUser(userId: string): Promise<{
           metadata: {},
         };
 
-        await createNotification(notificationData, userId);
-        console.log(`✅ Created notification: ${notificationData.title}`);
-        notificationCount++;
+        await createNotification(notificationData, targetUserId);
+        console.log(
+          `✅ Created notification: ${notificationData.title} for user ${targetUserId}`
+        );
+        totalNotificationCount++;
       }
     }
 
-    // Create some additional system notifications
+    // Create some additional system notifications for the requesting user
     console.log('📬 Creating additional system notifications...');
     const systemNotifications = [
       {
@@ -246,36 +313,38 @@ export async function seedDataForUser(userId: string): Promise<{
       },
       {
         type: 'system' as const,
+        title: 'Organization Data Synced',
+        message: `Successfully created runs for ${allUserIds.length} organization members including drivers.`,
+        metadata: { category: 'organization', driverCount: driverIds.length },
+      },
+      {
+        type: 'system' as const,
         title: 'Weather Alert',
         message:
           'Snow conditions expected this weekend. Plan extra time for your airport runs.',
         metadata: { category: 'weather', severity: 'info' },
-      },
-      {
-        type: 'system' as const,
-        title: 'Airport Traffic Update',
-        message:
-          'Heavy traffic reported on Highway 22. Consider alternate routes to Jackson Hole Airport.',
-        metadata: { category: 'traffic', severity: 'warning' },
       },
     ];
 
     for (const notification of systemNotifications) {
       await createNotification(notification, userId);
       console.log(`✅ Created system notification: ${notification.title}`);
-      notificationCount++;
+      totalNotificationCount++;
     }
 
     console.log('🎉 Data seeding completed successfully!');
     console.log('📊 Summary:');
-    console.log(`  • Created ${runs.length} runs`);
-    console.log(`  • Created ${notificationCount} notifications`);
-    console.log(`  • User ID: ${userId}`);
+    console.log(
+      `  • Created ${allRuns.length} runs across ${allUserIds.length} users`
+    );
+    console.log(`  • Created ${totalNotificationCount} notifications`);
+    console.log(`  • Organization drivers: ${driverIds.length}`);
+    console.log(`  • Admin user: ${userId}`);
 
     return {
-      runs: runs.length,
-      notifications: notificationCount,
-      message: 'Data seeding completed successfully!',
+      runs: allRuns.length,
+      notifications: totalNotificationCount,
+      message: `Data seeding completed! Created runs for ${allUserIds.length} organization members (${driverIds.length} drivers).`,
     };
   } catch (error) {
     console.error('❌ Error during data seeding:', error);
