@@ -1,4 +1,6 @@
 #!/usr/bin/env bun
+import * as configApi from './api/config';
+import * as organizationsApi from './api/organizations';
 import * as preferencesApi from './api/preferences';
 import * as runsApi from './api/runs';
 
@@ -13,6 +15,27 @@ async function startDevServer() {
       // Only handle API routes - let Bun handle everything else automatically
       if (url.pathname.startsWith('/api/')) {
         // Simple routing for API endpoints
+        if (url.pathname === '/api/config') {
+          return request.method === 'GET'
+            ? configApi.GET(request)
+            : new Response('Method not allowed', { status: 405 });
+        }
+
+        if (url.pathname === '/api/organizations') {
+          return request.method === 'GET'
+            ? organizationsApi.GET(request)
+            : new Response('Method not allowed', { status: 405 });
+        }
+
+        // Handle organization member routes
+        const orgMembersMatch = url.pathname.match(
+          /^\/api\/organizations\/([^\/]+)\/members$/
+        );
+        if (orgMembersMatch && request.method === 'GET') {
+          (request as any).params = { orgId: orgMembersMatch[1] };
+          return organizationsApi.getOrganizationMembers(request);
+        }
+
         if (url.pathname === '/api/runs') {
           return request.method === 'GET'
             ? runsApi.GET(request)

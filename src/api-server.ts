@@ -20,13 +20,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
-// API route configuration
-const apiRoutes = {
+// Generic API routes
+const genericApiRoutes = {
   '/api/config': configApi,
-  '/api/runs': runsApi,
-  '/api/preferences': preferencesApi,
   '/api/notifications': notificationsApi,
   '/api/organizations': organizationsApi,
+  '/api/preferences': preferencesApi,
+  '/api/runs': runsApi,
   '/api/seed': seedApi,
 };
 
@@ -229,7 +229,8 @@ const server = serve({
       }
 
       // Check for standard API routes
-      const apiModule = apiRoutes[url.pathname as keyof typeof apiRoutes];
+      const apiModule =
+        genericApiRoutes[url.pathname as keyof typeof genericApiRoutes];
       if (apiModule) {
         // Special handling for seed endpoint (development only)
         if (

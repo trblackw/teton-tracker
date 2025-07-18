@@ -2,6 +2,7 @@
 import * as authApi from './api/auth';
 import * as configApi from './api/config';
 import * as notificationsApi from './api/notifications';
+import * as organizationsApi from './api/organizations';
 import * as preferencesApi from './api/preferences';
 import * as runsApi from './api/runs';
 
@@ -18,6 +19,9 @@ const apiRoutes = {
   },
   '/api/auth/logout': {
     POST: authApi.logoutHandler,
+  },
+  '/api/organizations': {
+    GET: organizationsApi.GET,
   },
   '/api/runs': {
     GET: runsApi.GET,
@@ -73,6 +77,17 @@ function matchRoute(pathname: string): {
     return {
       handler: apiRoutes['/api/runs/:id'],
       params: { id },
+    };
+  }
+
+  // Organization member routes
+  const orgMembersMatch = pathname.match(
+    /^\/api\/organizations\/([^\/]+)\/members$/
+  );
+  if (orgMembersMatch && pathname.includes('/members')) {
+    return {
+      handler: { GET: organizationsApi.getOrganizationMembers },
+      params: { orgId: orgMembersMatch[1] },
     };
   }
 
