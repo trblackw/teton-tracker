@@ -424,3 +424,85 @@ export const seedApi = {
     return response.json();
   },
 };
+
+export const smsApi = {
+  // Send SMS message
+  async sendSMS(
+    phoneNumber: string,
+    message: string
+  ): Promise<{
+    success: boolean;
+    messageId?: string;
+    deliveryStatus?: string;
+    error?: string;
+  }> {
+    const userId = getCurrentUserIdFromClerk();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
+    const response = await fetch(`${API_BASE}/sms/send`, {
+      method: 'POST',
+      headers: createAuthHeaders(),
+      body: JSON.stringify({ phoneNumber, message, userId }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to send SMS');
+    }
+
+    return response.json();
+  },
+
+  // Validate phone number
+  async validatePhoneNumber(phoneNumber: string): Promise<{
+    isValid: boolean;
+    formatted?: string;
+    country?: string;
+    type?: string;
+    error?: string;
+  }> {
+    const userId = getCurrentUserIdFromClerk();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
+    const response = await fetch(`${API_BASE}/sms/validate`, {
+      method: 'POST',
+      headers: createAuthHeaders(),
+      body: JSON.stringify({ phoneNumber, userId }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to validate phone number');
+    }
+
+    return response.json();
+  },
+
+  // Get SMS service status
+  async getStatus(): Promise<{
+    configured: boolean;
+    provider: string;
+    fromNumber: string | null;
+    mode: string;
+  }> {
+    const userId = getCurrentUserIdFromClerk();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
+    const response = await fetch(`${API_BASE}/sms/status?userId=${userId}`, {
+      headers: createAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to get SMS status');
+    }
+
+    return response.json();
+  },
+};

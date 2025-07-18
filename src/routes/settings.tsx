@@ -481,15 +481,15 @@ function Settings() {
         </CardContent>
       </Card>
 
-      {/* Phone Number - Managed by Clerk */}
+      {/* Phone Number & SMS Settings */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Phone className="h-5 w-5" />
-            Phone Number
+            Phone Number & SMS
           </CardTitle>
           <CardDescription>
-            Your phone number is managed by your account provider
+            Configure your phone number for SMS notifications
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -498,18 +498,36 @@ function Settings() {
               <div className="flex-1 min-w-0">
                 <Input
                   type="tel"
-                  value="Managed by Clerk"
-                  readOnly
-                  className="bg-muted text-muted-foreground cursor-not-allowed"
+                  placeholder="+1 (555) 123-4567"
+                  value={preferences?.phoneNumber || ''}
+                  onChange={e => {
+                    updatePreferencesMutation.mutate({
+                      phoneNumber: e.target.value,
+                    });
+                  }}
+                  disabled={updatePreferencesMutation.isPending}
                 />
               </div>
+              {preferences?.phoneNumber && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() =>
+                    updatePreferencesMutation.mutate({ phoneNumber: '' })
+                  }
+                  disabled={updatePreferencesMutation.isPending}
+                  title="Clear phone number"
+                >
+                  <X className="h-4 w-4 text-destructive hover:text-destructive/80" />
+                </Button>
+              )}
             </div>
             <p className="text-sm text-muted-foreground">
-              To change your phone number, please use the account settings in
-              your profile.
+              Enter your phone number in international format (e.g.,
+              +1234567890) to receive SMS notifications.
             </p>
 
-            {/* SMS Notifications Toggle - always available for notification preferences */}
+            {/* SMS Notifications Toggle */}
             <div className="pt-3 border-t">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex-1 min-w-0">
@@ -526,9 +544,84 @@ function Settings() {
                   onPressedChange={(value: boolean) =>
                     handleNotificationToggle('smsNotificationsEnabled', value)
                   }
-                  disabled={updatePreferencesMutation.isPending}
+                  disabled={
+                    updatePreferencesMutation.isPending ||
+                    !preferences?.phoneNumber
+                  }
                 />
               </div>
+
+              {/* SMS Notification Type Preferences */}
+              {preferences?.notificationPreferences
+                ?.smsNotificationsEnabled && (
+                <div className="mt-4 space-y-3 pl-4 border-l-2 border-muted">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Flight Updates</p>
+                      <p className="text-xs text-muted-foreground">
+                        Status changes, delays, gate changes
+                      </p>
+                    </div>
+                    <IOSToggle
+                      pressed={
+                        preferences?.notificationPreferences
+                          ?.smsFlightUpdates ?? true
+                      }
+                      onPressedChange={(value: boolean) =>
+                        handleNotificationToggle('smsFlightUpdates', value)
+                      }
+                      disabled={updatePreferencesMutation.isPending}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Traffic Alerts</p>
+                      <p className="text-xs text-muted-foreground">
+                        Road conditions and route delays
+                      </p>
+                    </div>
+                    <IOSToggle
+                      pressed={
+                        preferences?.notificationPreferences
+                          ?.smsTrafficAlerts ?? true
+                      }
+                      onPressedChange={(value: boolean) =>
+                        handleNotificationToggle('smsTrafficAlerts', value)
+                      }
+                      disabled={updatePreferencesMutation.isPending}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Run Reminders</p>
+                      <p className="text-xs text-muted-foreground">
+                        Upcoming pickup and dropoff times
+                      </p>
+                    </div>
+                    <IOSToggle
+                      pressed={
+                        preferences?.notificationPreferences?.smsRunReminders ??
+                        true
+                      }
+                      onPressedChange={(value: boolean) =>
+                        handleNotificationToggle('smsRunReminders', value)
+                      }
+                      disabled={updatePreferencesMutation.isPending}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {!preferences?.phoneNumber &&
+                preferences?.notificationPreferences
+                  ?.smsNotificationsEnabled && (
+                  <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800">
+                    Please add a phone number above to receive SMS
+                    notifications.
+                  </div>
+                )}
             </div>
           </div>
         </CardContent>

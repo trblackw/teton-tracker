@@ -154,6 +154,19 @@ export const ReportSchema = z.object({
   reportConfig: ReportConfigSchema,
 });
 
+// Phone number validation schema
+export const PhoneNumberSchema = z
+  .string()
+  .optional()
+  .refine(
+    value => {
+      if (!value || value.trim().length === 0) return true; // Optional field
+      // Basic phone number validation - will be validated more thoroughly by SMS service
+      return /^\+?[\d\s\-\(\)]{10,15}$/.test(value.replace(/\s/g, ''));
+    },
+    { message: 'Invalid phone number format' }
+  );
+
 // Notification preferences schema
 export const NotificationPreferencesSchema = z.object({
   pushNotificationsEnabled: z.boolean().default(true),
@@ -161,12 +174,16 @@ export const NotificationPreferencesSchema = z.object({
   trafficAlerts: z.boolean().default(true),
   runReminders: z.boolean().default(true),
   smsNotificationsEnabled: z.boolean().default(false),
+  smsFlightUpdates: z.boolean().default(true),
+  smsTrafficAlerts: z.boolean().default(true),
+  smsRunReminders: z.boolean().default(true),
 });
 
 // User preferences schema (updated to use userId as primary key)
 export const UserPreferencesSchema = z.object({
   userId: z.string().min(1, 'User ID is required'),
   homeAirport: AirportCodeSchema.optional(),
+  phoneNumber: PhoneNumberSchema,
   theme: ThemeSchema.default('system'),
   timezone: z.string().min(1, 'Timezone is required').default('UTC'),
   notificationPreferences: NotificationPreferencesSchema.default({}),

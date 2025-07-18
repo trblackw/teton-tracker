@@ -1,4 +1,4 @@
-import { notificationsApi, preferencesApi } from '../api/client';
+import { notificationsApi, preferencesApi, smsApi } from '../api/client';
 import { type NotificationType as DbNotificationType } from '../schema';
 import { toasts } from '../toast';
 import { isDevelopmentMode } from '../utils';
@@ -447,6 +447,9 @@ export class NotificationService {
       return;
     }
 
+    // Send SMS notification if enabled
+    await this.sendSMSNotification(notification);
+
     // In development mode, show mock notifications
     if (isDevelopmentMode()) {
       this.showMockNotification(notification);
@@ -631,6 +634,134 @@ export class NotificationService {
       console.error('❌ Failed to check notification preferences:', error);
       return true; // Default to enabled on error
     }
+  }
+
+  /**
+   * Send SMS notification if enabled and configured
+   */
+  private async sendSMSNotification(
+    notification: AppNotification
+  ): Promise<void> {
+    try {
+      const preferences = await preferencesApi.getPreferences();
+
+      // Check if SMS notifications are enabled globally
+      if (!preferences?.notificationPreferences?.smsNotificationsEnabled) {
+        return;
+      }
+
+      // Check if this specific type of SMS notification is enabled
+      const shouldSendSMS = this.shouldSendSMSForType(
+        notification.type,
+        preferences.notificationPreferences
+      );
+      if (!shouldSendSMS) {
+        return;
+      }
+
+      // Check if user has a phone number configured
+      if (!preferences.phoneNumber) {
+        if (this.debug) {
+          console.warn(
+            '📱 SMS notification requested but no phone number configured'
+          );
+        }
+        return;
+      }
+
+      // Format SMS message
+      const smsMessage = this.formatSMSMessage(notification);
+
+      // Send SMS via API
+      const result = await smsApi.sendSMS(preferences.phoneNumber, smsMessage);
+
+      if (result.success) {
+        if (this.debug) {
+          console.log(
+            '📱 SMS notification sent successfully:',
+            result.messageId
+          );
+        }
+      } else {
+        console.error('❌ Failed to send SMS notification:', result.error);
+      }
+    } catch (error) {
+      console.error('❌ Failed to send SMS notification:', error);
+    }
+  }
+
+  /**
+   * Check if SMS should be sent for this notification type
+   */
+  private shouldSendSMSForType(
+    type: NotificationType,
+    preferences: any
+  ): boolean {
+    switch (type) {
+      case 'flight-status-change':
+      case 'flight-departure-reminder':
+      case 'flight-arrival-reminder':
+        return preferences.smsFlightUpdates ?? true;
+
+      case 'traffic-alert':
+        return preferences.smsTrafficAlerts ?? true;
+
+      case 'run-reminder':
+        return preferences.smsRunReminders ?? true;
+
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Format notification for SMS
+   */
+  private formatSMSMessage(notification: AppNotification): string {
+    // SMS has character limits, so we need to keep it concise
+    const maxLength = 160; // Standard SMS length
+
+    // Create a short, informative message
+    let message = `${notification.title}: ${notification.body}`;
+
+    // Add specific formatting for different notification types
+    switch (notification.type) {
+      case 'flight-status-change':
+        if (notification.data?.flightNumber) {
+          message = `Flight ${notification.data.flightNumber}: ${notification.data.newStatus}`;
+          if (notification.data.gate) {
+            message += ` (Gate ${notification.data.gate})`;
+          }
+        }
+        break;
+
+      case 'traffic-alert':
+        if (notification.data?.severity) {
+          message = `Traffic Alert: ${notification.data.severity} conditions on your route`;
+        }
+        break;
+
+      case 'run-reminder':
+        if (notification.data?.pickupTime && notification.data?.location) {
+          const time = new Date(
+            notification.data.pickupTime
+          ).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+          message = `Run reminder: Pickup at ${notification.data.location} at ${time}`;
+        }
+        break;
+    }
+
+    // Truncate if too long and add attribution
+    if (message.length > maxLength - 15) {
+      message = message.substring(0, maxLength - 18) + '...';
+    }
+
+    message += ' - Teton Tracker';
+
+    return message;
   }
 
   /**

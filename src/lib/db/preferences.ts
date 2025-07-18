@@ -28,6 +28,7 @@ export async function getUserPreferences(
     return {
       userId: row.user_id,
       homeAirport: row.home_airport || undefined,
+      phoneNumber: row.phone_number || undefined,
       theme: row.theme,
       timezone: row.timezone,
       notificationPreferences: JSON.parse(row.notification_preferences || '{}'),
@@ -66,6 +67,11 @@ export async function saveUserPreferences(
         args.push(preferences.homeAirport);
       }
 
+      if (preferences.phoneNumber !== undefined) {
+        setFields.push(`phone_number = $${args.length + 1}`);
+        args.push(preferences.phoneNumber);
+      }
+
       if (preferences.theme !== undefined) {
         setFields.push(`theme = $${args.length + 1}`);
         args.push(preferences.theme);
@@ -102,6 +108,7 @@ export async function saveUserPreferences(
           const updated: UserPreferences = {
             userId: row.user_id,
             homeAirport: row.home_airport || undefined,
+            phoneNumber: row.phone_number || undefined,
             theme: row.theme,
             timezone: row.timezone,
             notificationPreferences: JSON.parse(
@@ -122,6 +129,7 @@ export async function saveUserPreferences(
       const newPreferences: UserPreferences = {
         userId: userId,
         homeAirport: preferences.homeAirport || undefined,
+        phoneNumber: preferences.phoneNumber || undefined,
         theme: preferences.theme || 'system',
         timezone: preferences.timezone || 'UTC',
         notificationPreferences: preferences.notificationPreferences || {
@@ -130,6 +138,9 @@ export async function saveUserPreferences(
           trafficAlerts: true,
           runReminders: true,
           smsNotificationsEnabled: false,
+          smsFlightUpdates: true,
+          smsTrafficAlerts: true,
+          smsRunReminders: true,
         },
         createdAt: new Date(now),
         updatedAt: new Date(now),
@@ -137,12 +148,13 @@ export async function saveUserPreferences(
 
       await db.query(
         `INSERT INTO user_preferences (
-          user_id, home_airport, theme, timezone, 
+          user_id, home_airport, phone_number, theme, timezone, 
           notification_preferences, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
         [
           newPreferences.userId,
           newPreferences.homeAirport || null,
+          newPreferences.phoneNumber || null,
           newPreferences.theme,
           newPreferences.timezone,
           JSON.stringify(newPreferences.notificationPreferences),
