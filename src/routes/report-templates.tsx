@@ -1,5 +1,31 @@
+import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { createFileRoute } from '@tanstack/react-router';
-import { Edit3, Eye, Plus, Settings, Trash2 } from 'lucide-react';
+import {
+  Asterisk,
+  Edit3,
+  Eye,
+  GripVertical,
+  Plus,
+  Settings,
+  Trash2,
+} from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -7,6 +33,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '../components/ui/card';
@@ -28,16 +55,15 @@ import {
   SelectValue,
 } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
-import { Toggle } from '../components/ui/toggle';
 import {
   useIsUserAdmin,
   useUserOrganization,
 } from '../lib/hooks/use-organizations';
 import {
+  defaultReportTemplateFields,
   type ReportColumnConfig,
   type ReportTemplate,
   type ReportType,
-  defaultReportTemplateFields,
 } from '../lib/schema';
 
 export const Route = createFileRoute('/report-templates')({
@@ -56,30 +82,30 @@ const mockTemplates: ReportTemplate[] = [
       {
         field: 'flightNumber',
         label: 'Flight Number',
-        enabled: true,
         order: 0,
+        required: true,
       },
-      { field: 'airline', label: 'Airline', enabled: true, order: 1 },
+      { field: 'airline', label: 'Airline', order: 1, required: true },
       {
         field: 'departure',
         label: 'Departure Airport',
-        enabled: true,
         order: 2,
+        required: true,
       },
-      { field: 'arrival', label: 'Arrival Airport', enabled: true, order: 3 },
+      { field: 'arrival', label: 'Arrival Airport', order: 3, required: true },
       {
         field: 'pickupLocation',
         label: 'Pickup Location',
-        enabled: true,
         order: 4,
+        required: true,
       },
       {
         field: 'dropoffLocation',
         label: 'Dropoff Location',
-        enabled: true,
         order: 5,
+        required: false,
       },
-      { field: 'price', label: 'Price', enabled: true, order: 6 },
+      { field: 'price', label: 'Price', order: 6, required: false },
     ],
     isDefault: true,
     createdBy: 'user-1',
@@ -141,36 +167,38 @@ function ReportTemplatesPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 max-w-6xl">
-      <div className="flex items-center justify-between mb-6">
+    <div className="container mx-auto py-6 max-w-4xl px-4">
+      <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Report Templates</h1>
-          <p className="text-muted-foreground">
-            Manage report templates & configure which columns appear in
-            generated reports.
+          <p className="text-muted-foreground text-sm">
+            Manage report templates and configure which columns appear in
+            reports.
           </p>
         </div>
-      </div>
-      <div className="flex justify-end pb-2">
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-blue-400 text-foreground hover:bg-blue-500/90 font-bold flex items-center">
-              <Plus className="size-5" strokeWidth={3} />
+            <Button
+              size="sm"
+              className="flex items-center gap-2 font-bold bg-green-400 text-white hover:bg-green-400/90"
+            >
+              <Plus className="h-4 w-4" strokeWidth={3} />
               Create Template
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <TemplateFormDialog
               mode="create"
               onSave={handleCreateTemplate}
               organizationId={organization?.id || ''}
+              onCancel={() => setIsCreateDialogOpen(false)}
             />
           </DialogContent>
         </Dialog>
       </div>
 
       {/* Templates Grid */}
-      <div className="grid gap-6">
+      <div className="grid gap-4">
         {templates.map(template => (
           <Card key={template.id}>
             <CardHeader>
@@ -186,14 +214,33 @@ function ReportTemplatesPage() {
                 </div>
                 <CardDescription>{template.description}</CardDescription>
               </div>
-              <div className="flex items-center gap-2 justify-end">
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {template.columnConfig
+                    .sort((a, b) => a.order - b.order)
+                    .map(col => (
+                      <Badge
+                        key={col.field}
+                        variant="outline"
+                        className="text-xs bg-blue-400/10 text-blue-400"
+                      >
+                        {col.label}
+                      </Badge>
+                    ))}
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <div className="flex items-center gap-2 justify-between w-full">
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button
                       size="sm"
-                      className="bg-accent text-accent-foreground hover:bg-accent/90 font-bold flex items-center gap-2"
+                      className="bg-accent text-accent-foreground hover:bg-accent/90 flex items-center gap-2"
                     >
-                      <Eye className="h-4 w-4" strokeWidth={3} />
+                      <Eye className="h-4 w-4" />
                       Preview
                     </Button>
                   </DialogTrigger>
@@ -220,11 +267,10 @@ function ReportTemplatesPage() {
                   <DialogTrigger asChild>
                     <Button
                       size="sm"
-                      //   variant="secondary"
-                      className="bg-green-500 text-white font-bold flex items-center hover:bg-green-500/90 gap-2"
+                      className="bg-slate-600 text-white flex items-center hover:bg-slate-600/90 gap-2"
                       onClick={() => setSelectedTemplate(template)}
                     >
-                      <Edit3 className="h-4 w-4" strokeWidth={3} />
+                      <Edit3 className="h-4 w-4" />
                       Edit
                     </Button>
                   </DialogTrigger>
@@ -234,6 +280,7 @@ function ReportTemplatesPage() {
                       template={template}
                       onSave={handleUpdateTemplate}
                       organizationId={organization?.id || ''}
+                      onCancel={() => setIsEditDialogOpen(false)}
                     />
                   </DialogContent>
                 </Dialog>
@@ -249,32 +296,7 @@ function ReportTemplatesPage() {
                   </Button>
                 )}
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex flex-wrap gap-2">
-                  {template.columnConfig
-                    .filter(col => col.enabled)
-                    .sort((a, b) => a.order - b.order)
-                    .map(col => (
-                      <Badge
-                        key={col.field}
-                        variant="outline"
-                        className="text-xs bg-blue-400/10 text-blue-400"
-                      >
-                        {col.label}
-                      </Badge>
-                    ))}
-                </div>
-                <div className="text-sm text-muted-foreground flex items-center gap-2 justify-center">
-                  <strong>
-                    {template.columnConfig.filter(c => c.enabled).length}
-                  </strong>{' '}
-                  of <strong>{template.columnConfig.length}</strong> columns
-                  enabled
-                </div>
-              </div>
-            </CardContent>
+            </CardFooter>
           </Card>
         ))}
 
@@ -283,10 +305,10 @@ function ReportTemplatesPage() {
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Settings className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">No templates found</h3>
-              <p className="text-muted-foreground text-center mb-4">
+              <p className="text-muted-foreground text-center mb-4 text-sm">
                 Create your first report template to get started.
               </p>
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Button onClick={() => setIsCreateDialogOpen(true)} size="sm">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Template
               </Button>
@@ -303,6 +325,88 @@ interface TemplateFormDialogProps {
   template?: ReportTemplate;
   onSave: (template: any) => void;
   organizationId: string;
+  onCancel: () => void;
+}
+
+// Sortable item component for drag and drop
+function SortableColumnItem({
+  column,
+  onUpdate,
+}: {
+  column: ReportColumnConfig & { id: string };
+  onUpdate: (field: string, updates: Partial<ReportColumnConfig>) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: column.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const isDevMode = false;
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`bg-card border rounded-lg p-4 touch-manipulation ${isDragging ? 'shadow-lg' : ''}`}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          {...attributes}
+          {...listeners}
+          className="touch-manipulation cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded mt-1"
+          style={{ touchAction: 'none' }}
+          onTouchStart={e => e.stopPropagation()}
+        >
+          <GripVertical className="h-5 w-5 text-muted-foreground" />
+        </div>
+
+        <div className="flex-1 min-w-0 space-y-3">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              {isDevMode && (
+                <code className="text-sm font-bold text-red-400">
+                  {column.field}
+                </code>
+              )}
+            </div>
+            <Input
+              value={column.label}
+              onChange={e => onUpdate(column.field, { label: e.target.value })}
+              placeholder="Column label"
+              className="text-sm"
+            />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id={`required-${column.field}`}
+              checked={column.required}
+              onChange={e =>
+                onUpdate(column.field, { required: e.target.checked })
+              }
+              className="rounded"
+            />
+            <Label
+              htmlFor={`required-${column.field}`}
+              className="text-sm text-muted-foreground"
+            >
+              Required field for drivers
+            </Label>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function TemplateFormDialog({
@@ -310,6 +414,7 @@ function TemplateFormDialog({
   template,
   onSave,
   organizationId,
+  onCancel,
 }: TemplateFormDialogProps) {
   const [formData, setFormData] = useState({
     name: template?.name || '',
@@ -323,10 +428,28 @@ function TemplateFormDialog({
         label:
           field.charAt(0).toUpperCase() +
           field.slice(1).replace(/([A-Z])/g, ' $1'),
-        enabled: true,
         order: index,
+        required: false,
       })),
   });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 15, // Increased distance to prevent accidental activation during scrolling
+        delay: 100, // Small delay to distinguish from scrolling
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const handleSave = () => {
     const templateData = {
@@ -354,24 +477,42 @@ function TemplateFormDialog({
     }));
   };
 
-  const moveColumn = (field: string, direction: 'up' | 'down') => {
-    setFormData(prev => {
-      const config = [...prev.columnConfig];
-      const index = config.findIndex(col => col.field === field);
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
 
-      if (direction === 'up' && index > 0) {
-        [config[index], config[index - 1]] = [config[index - 1], config[index]];
-        config[index - 1].order = index - 1;
-        config[index].order = index;
-      } else if (direction === 'down' && index < config.length - 1) {
-        [config[index], config[index + 1]] = [config[index + 1], config[index]];
-        config[index].order = index;
-        config[index + 1].order = index + 1;
-      }
+    if (over && active.id !== over.id) {
+      setFormData(prev => {
+        const oldIndex = prev.columnConfig.findIndex(
+          col => col.field === active.id
+        );
+        const newIndex = prev.columnConfig.findIndex(
+          col => col.field === over.id
+        );
 
-      return { ...prev, columnConfig: config };
-    });
+        // Reorder the array and update order values
+        const reorderedConfig = arrayMove(
+          prev.columnConfig,
+          oldIndex,
+          newIndex
+        ).map((col, index) => ({
+          ...col,
+          order: index,
+        }));
+
+        return {
+          ...prev,
+          columnConfig: reorderedConfig,
+        };
+      });
+    }
   };
+
+  const sortableColumns = formData.columnConfig
+    .sort((a, b) => a.order - b.order)
+    .map(col => ({
+      ...col,
+      id: col.field,
+    }));
 
   return (
     <>
@@ -380,13 +521,13 @@ function TemplateFormDialog({
           {mode === 'create' ? 'Create' : 'Edit'} Report Template
         </DialogTitle>
         <DialogDescription>
-          Configure the template name, type, and which columns should appear in
-          reports.
+          Configure the template and drag to reorder columns as they'll appear
+          in reports.
         </DialogDescription>
       </DialogHeader>
 
-      <div className="grid gap-6 py-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid gap-6 py-4 max-h-[60vh] overflow-y-auto">
+        <div className="grid grid-cols-1 gap-4">
           <div className="space-y-2">
             <Label htmlFor="name">Template Name</Label>
             <Input
@@ -434,7 +575,9 @@ function TemplateFormDialog({
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <Label>Column Configuration</Label>
+            <div>
+              <Label className="text-base">Column Configuration</Label>
+            </div>
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -447,90 +590,53 @@ function TemplateFormDialog({
                   }))
                 }
               />
-              <Label htmlFor="isDefault" className="text-sm">
-                Set as default template
+              <Label
+                htmlFor="isDefault"
+                className="text-sm text-muted-foreground"
+              >
+                Set as default
               </Label>
             </div>
           </div>
 
-          <div className="border rounded-lg">
-            <div className="grid grid-cols-12 gap-4 p-3 border-b bg-muted/50 font-medium text-sm">
-              <div className="col-span-3">Field</div>
-              <div className="col-span-4">Display Label</div>
-              <div className="col-span-2">Enabled</div>
-              <div className="col-span-3">Order</div>
-            </div>
-
-            {formData.columnConfig
-              .sort((a, b) => a.order - b.order)
-              .map(col => (
-                <div
-                  key={col.field}
-                  className="grid grid-cols-12 gap-4 p-3 border-b last:border-b-0"
-                >
-                  <div className="col-span-3 font-mono text-sm text-muted-foreground">
-                    {col.field}
-                  </div>
-
-                  <div className="col-span-4">
-                    <Input
-                      value={col.label}
-                      onChange={e =>
-                        updateColumnConfig(col.field, { label: e.target.value })
-                      }
-                      className="text-sm"
-                    />
-                  </div>
-
-                  <div className="col-span-2">
-                    <Toggle
-                      pressed={col.enabled}
-                      onPressedChange={enabled =>
-                        updateColumnConfig(col.field, { enabled })
-                      }
-                      aria-label={`Toggle ${col.field}`}
-                    >
-                      {col.enabled ? 'Yes' : 'No'}
-                    </Toggle>
-                  </div>
-
-                  <div className="col-span-3 flex items-center gap-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => moveColumn(col.field, 'up')}
-                      disabled={col.order === 0}
-                    >
-                      ↑
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => moveColumn(col.field, 'down')}
-                      disabled={col.order === formData.columnConfig.length - 1}
-                    >
-                      ↓
-                    </Button>
-                    <span className="text-sm text-muted-foreground ml-2">
-                      {col.order + 1}
-                    </span>
-                  </div>
-                </div>
-              ))}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={sortableColumns.map(col => col.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-3" style={{ userSelect: 'none' }}>
+                {sortableColumns.map(col => (
+                  <SortableColumnItem
+                    key={col.id}
+                    column={col}
+                    onUpdate={updateColumnConfig}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         </div>
       </div>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
         <Button
-          variant="outline"
-          onClick={() => setFormData(prev => ({ ...prev }))}
+          variant="secondary"
+          onClick={() => {
+            onCancel();
+            setFormData(prev => ({ ...prev }));
+          }}
         >
           Cancel
         </Button>
-        <Button onClick={handleSave} disabled={!formData.name.trim()}>
+        <Button
+          onClick={handleSave}
+          disabled={!formData.name.trim()}
+          className="bg-blue-400 text-white hover:bg-blue-500/90"
+        >
           {mode === 'create' ? 'Create' : 'Update'} Template
         </Button>
       </div>
@@ -539,10 +645,6 @@ function TemplateFormDialog({
 }
 
 function TemplatePreview({ template }: { template: ReportTemplate }) {
-  const enabledColumns = template.columnConfig
-    .filter(col => col.enabled)
-    .sort((a, b) => a.order - b.order);
-
   return (
     <div className="space-y-4">
       <div className="text-sm text-muted-foreground">
@@ -556,22 +658,29 @@ function TemplatePreview({ template }: { template: ReportTemplate }) {
         </div>
         <div className="p-4">
           <div className="grid gap-2">
-            {enabledColumns.map((col, index) => (
-              <div
-                key={col.field}
-                className="flex items-center gap-3 p-2 border rounded"
-              >
-                <div className="w-8 h-8 bg-primary/10 rounded flex items-center justify-center text-sm font-medium">
-                  {index + 1}
-                </div>
-                <div className="flex-1">
-                  <div className="font-medium">{col.label}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {col.field}
+            {template.columnConfig
+              .sort((a, b) => a.order - b.order)
+              .map((col, index) => (
+                <div
+                  key={col.field}
+                  className="flex items-center gap-3 p-3 border rounded"
+                >
+                  <div className="w-8 h-8 bg-primary/10 rounded flex items-center justify-center text-sm font-medium">
+                    {index + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium">{col.label}</div>
+                      {col.required && (
+                        <Asterisk className="h-3 w-3 text-red-500" />
+                      )}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {col.field}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       </div>

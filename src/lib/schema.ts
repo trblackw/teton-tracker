@@ -149,8 +149,8 @@ export const ReportTemplateSchema = z.object({
       z.object({
         field: z.string().min(1, 'Field name is required'),
         label: z.string().min(1, 'Column label is required'),
-        enabled: z.boolean().default(true),
         order: z.number().int().min(0),
+        required: z.boolean().default(false),
       })
     )
     .default(
@@ -159,8 +159,8 @@ export const ReportTemplateSchema = z.object({
         label:
           field.charAt(0).toUpperCase() +
           field.slice(1).replace(/([A-Z])/g, ' $1'),
-        enabled: true,
         order: index,
+        required: false,
       }))
     ),
   isDefault: z.boolean().default(false),
