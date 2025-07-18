@@ -818,9 +818,9 @@ export default function App() {
                   </p>
                   <Button
                     onClick={() => setCurrentTab('add')}
-                    className="mt-2 bg-green-600 hover:bg-green-700 text-white"
+                    className="mt-2 bg-blue-400 hover:bg-blue-500/90 text-white"
                   >
-                    <Plus className="h-4 w-4 mr-2 " />
+                    <Plus className="h-4 w-4 mr-2" strokeWidth={3} />
                     Add Your First Run
                   </Button>
                 </CardContent>
@@ -1302,7 +1302,7 @@ export default function App() {
                   className="w-full h-12 text-lg"
                   disabled={runsApiData.isLoading || !currentUser}
                 >
-                  <Plus className="h-5 w-5 mr-2" />
+                  <Plus className="h-5 w-5 mr-2" strokeWidth={3} />
                   Add Run
                 </Button>
               </CardContent>

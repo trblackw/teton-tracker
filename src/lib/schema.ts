@@ -139,8 +139,32 @@ export const defaultReportTemplateFields: DefaultReportConfigFields[] = [
 
 // Report Template schema
 export const ReportTemplateSchema = z.object({
-  id: z.string().uuid('Invalid report config ID format'),
-  config: z.array(z.string()).default(defaultReportTemplateFields),
+  id: z.string().uuid('Invalid report template ID format'),
+  name: z.string().min(1, 'Template name is required'),
+  description: z.string().optional(),
+  organizationId: z.string().min(1, 'Organization ID is required'),
+  reportType: z.nativeEnum(ReportType).default(ReportType.run),
+  columnConfig: z
+    .array(
+      z.object({
+        field: z.string().min(1, 'Field name is required'),
+        label: z.string().min(1, 'Column label is required'),
+        enabled: z.boolean().default(true),
+        order: z.number().int().min(0),
+      })
+    )
+    .default(
+      defaultReportTemplateFields.map((field, index) => ({
+        field,
+        label:
+          field.charAt(0).toUpperCase() +
+          field.slice(1).replace(/([A-Z])/g, ' $1'),
+        enabled: true,
+        order: index,
+      }))
+    ),
+  isDefault: z.boolean().default(false),
+  createdBy: z.string().min(1, 'User ID is required'),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
@@ -148,12 +172,18 @@ export const ReportTemplateSchema = z.object({
 // Report schema
 export const ReportSchema = z.object({
   id: z.string().uuid('Invalid report ID format'),
+  name: z.string().min(1, 'Report name is required'),
+  organizationId: z.string().min(1, 'Organization ID is required'),
   createdBy: z.string().min(1, 'User ID is required'),
+  templateId: z.string().uuid('Invalid template ID format'),
   startDate: z.date(),
   endDate: z.date(),
   reportType: z.nativeEnum(ReportType).default(ReportType.run),
+  status: z.enum(['generating', 'completed', 'failed']).default('generating'),
+  generatedAt: z.date().optional(),
+  downloadUrl: z.string().optional(),
   createdAt: z.date().optional(),
-  reportConfig: ReportTemplateSchema,
+  updatedAt: z.date().optional(),
 });
 
 // Phone number validation schema
@@ -395,8 +425,9 @@ export type FlightStatusType = z.infer<typeof FlightStatusTypeSchema>;
 export type TrafficStatus = z.infer<typeof TrafficStatusSchema>;
 export type OpenSkyFlightResponse = z.infer<typeof OpenSkyFlightResponseSchema>;
 export type TomTomRouteResponse = z.infer<typeof TomTomRouteResponseSchema>;
-export type ReportConfig = z.infer<typeof ReportTemplateSchema>;
+export type ReportTemplate = z.infer<typeof ReportTemplateSchema>;
 export type Report = z.infer<typeof ReportSchema>;
+export type ReportColumnConfig = ReportTemplate['columnConfig'][0];
 
 // Validation helper functions
 export const validateUser = (data: unknown): ClerkUser => {

@@ -11,6 +11,7 @@ import {
   Building2,
   Car,
   FileText,
+  LayoutTemplate,
   Plane,
   Plus,
   Users,
@@ -135,6 +136,18 @@ function AdminNavItems() {
         >
           <FileText className="h-4 w-4" />
           Request Run Report
+        </MobileAwareNavLink>
+      </Button>
+      <Button asChild variant="ghost" className="w-full justify-start">
+        <MobileAwareNavLink
+          to="/report-templates"
+          className="flex items-center gap-2"
+          activeProps={{
+            className: activeNavClass,
+          }}
+        >
+          <LayoutTemplate className="h-4 w-4" />
+          Report Templates
         </MobileAwareNavLink>
       </Button>
     </>
