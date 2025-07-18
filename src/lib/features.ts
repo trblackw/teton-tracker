@@ -43,7 +43,7 @@ function shouldSimulateProduction(): boolean {
   }
 
   // Check environment variable
-  if (typeof process !== 'undefined') {
+  if (typeof process !== 'undefined' && process.env) {
     if (process.env.SIMULATE_PRODUCTION_IN_DEV === 'true') {
       return true;
     }
@@ -69,8 +69,12 @@ function getFeatureEnvVar(feature: Feature): string {
  * Check if a specific feature is enabled via environment variable
  */
 function isFeatureEnabledByEnv(feature: Feature): boolean | null {
-  console.log('isFeatureEnabledByEnv', feature);
   if (isDevelopmentMode()) return true;
+
+  // Check if process.env is available (it won't be in browser)
+  if (typeof process === 'undefined' || !process.env) {
+    return null;
+  }
 
   const envVar = getFeatureEnvVar(feature);
   const envValue = process.env[envVar];
