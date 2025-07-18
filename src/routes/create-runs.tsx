@@ -1,13 +1,28 @@
+import { useQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
-import { Calendar, Clock, MapPin, Plane, Plus, Users } from 'lucide-react';
+import { Check, ChevronDown, MapPin, Plus, Search } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Button } from '../components/ui/button';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '../components/ui/card';
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from '../components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '../components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
+import { reportTemplatesApi } from '../lib/api/client';
 import {
   useIsUserAdmin,
   useUserOrganization,
@@ -20,6 +35,28 @@ export const Route = createFileRoute('/create-runs')({
 function CreateRunsPage() {
   const { data: organization } = useUserOrganization();
   const { isAdmin } = useIsUserAdmin(organization?.id);
+
+  // Fetch templates using the same API client as report-templates.tsx
+  const { data: templates = [], isLoading } = useQuery({
+    queryKey: ['report-templates'],
+    queryFn: () => reportTemplatesApi.getReportTemplates(),
+    enabled: !!isAdmin,
+  });
+
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [runType, setRunType] = useState<string>('pickup');
+  const [templateOpen, setTemplateOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
+
+  // Set default template when templates load
+  useEffect(() => {
+    if (templates.length > 0 && !selectedTemplate) {
+      const defaultTemplate = templates.find(t => t.isDefault);
+      if (defaultTemplate) {
+        setSelectedTemplate(defaultTemplate.id);
+      }
+    }
+  }, [templates, selectedTemplate]);
 
   // Redirect non-admins
   if (!isAdmin) {
@@ -36,6 +73,23 @@ function CreateRunsPage() {
     );
   }
 
+  const selectedTemplateObj = templates.find(t => t.id === selectedTemplate);
+
+  // Filter templates based on search
+  const filteredTemplates = templates.filter(
+    template =>
+      template.name.toLowerCase().includes(searchValue.toLowerCase()) ||
+      (template.description &&
+        template.description.toLowerCase().includes(searchValue.toLowerCase()))
+  );
+
+  const handleCreateRun = () => {
+    if (!selectedTemplate) return;
+
+    // TODO: Implement run creation logic
+    console.log('Creating run:', { templateId: selectedTemplate, runType });
+  };
+
   return (
     <div className="container mx-auto py-2 max-w-full overflow-hidden">
       {/* Header */}
@@ -48,110 +102,124 @@ function CreateRunsPage() {
         </p>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        <Card className="cursor-pointer hover:shadow-md transition-shadow">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Plane className="h-5 w-5 text-blue-500" />
-              <CardTitle className="text-base">Flight Pickup</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <CardDescription>
-              Create a pickup run from a location to the airport
-            </CardDescription>
-            <Button className="w-full mt-3" variant="outline">
-              Create Pickup
-            </Button>
-          </CardContent>
-        </Card>
+      {/* Template Selector and Create Run CTA */}
+      <div className="space-y-4 mb-8">
+        {/* Template Selector */}
+        <div className="space-y-2">
+          <label className="text-md font-medium block text-muted-foreground mb-2">
+            Report Template
+          </label>
+          <Popover open={templateOpen} onOpenChange={setTemplateOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={templateOpen}
+                className="w-full justify-between h-10"
+                disabled={isLoading}
+              >
+                {selectedTemplateObj ? (
+                  <div className="flex flex-col items-start text-left">
+                    <span className="font-medium">
+                      {selectedTemplateObj.name}
+                    </span>
+                    {selectedTemplateObj.description && (
+                      <span className="text-xs text-muted-foreground truncate">
+                        {selectedTemplateObj.description}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground">
+                    {isLoading ? 'Loading templates...' : 'Select template...'}
+                  </span>
+                )}
+                <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0" align="start">
+              <Command>
+                <div className="flex items-center border-b px-3">
+                  <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                  <input
+                    placeholder="Search templates..."
+                    value={searchValue}
+                    onChange={e => setSearchValue(e.target.value)}
+                    className="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
+                <CommandList>
+                  <CommandEmpty>No templates found.</CommandEmpty>
+                  <CommandGroup>
+                    {filteredTemplates.map(template => (
+                      <CommandItem
+                        key={template.id}
+                        value={template.id}
+                        onSelect={currentValue => {
+                          setSelectedTemplate(
+                            currentValue === selectedTemplate
+                              ? ''
+                              : currentValue
+                          );
+                          setTemplateOpen(false);
+                          setSearchValue('');
+                        }}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-medium">{template.name}</span>
+                          {template.description && (
+                            <span className="text-xs text-muted-foreground">
+                              {template.description}
+                            </span>
+                          )}
+                          {template.isDefault && (
+                            <span className="text-xs text-blue-600">
+                              Default
+                            </span>
+                          )}
+                        </div>
+                        <Check
+                          className={`ml-2 h-4 w-4 ${
+                            selectedTemplate === template.id
+                              ? 'opacity-100'
+                              : 'opacity-0'
+                          }`}
+                        />
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
 
-        <Card className="cursor-pointer hover:shadow-md transition-shadow">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-green-600" />
-              <CardTitle className="text-base">Flight Dropoff</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <CardDescription>
-              Create a dropoff run from the airport to a destination
-            </CardDescription>
-            <Button className="w-full mt-3" variant="outline">
-              Create Dropoff
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer hover:shadow-md transition-shadow">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-purple-600" />
-              <CardTitle className="text-base">Batch Import</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <CardDescription>
-              Import multiple runs from a schedule or CSV file
-            </CardDescription>
-            <Button className="w-full mt-3" variant="outline">
-              Import Runs
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Create Run CTA with Run Type Dropdown */}
+        <div className="flex gap-2">
+          <Button
+            onClick={handleCreateRun}
+            disabled={!selectedTemplate}
+            className="flex-1 bg-green-400 text-white hover:bg-green-400/90 font-bold"
+          >
+            <Plus className="h-4 w-4" strokeWidth={3} />
+            Create Run
+          </Button>
+          <Select value={runType} onValueChange={setRunType}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pickup">
+                <MapPin className="h-4 w-4 text-green-500" /> Pickup
+              </SelectItem>
+              <SelectItem value="dropoff">
+                <MapPin className="h-4 w-4 text-blue-500" /> Dropoff
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Recent Run Creation Activity
-          </CardTitle>
-          <CardDescription>
-            Recently created runs and assignments
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {/* Example recent activity */}
-            <div className="border rounded-lg p-4 bg-muted/50">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-blue-600" />
-                  <span className="font-medium">
-                    AA 1234 assigned to John Smith
-                  </span>
-                </div>
-                <span className="text-sm text-muted-foreground">
-                  2 hours ago
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Pickup run from Hotel Jackson to JAC Airport at 2:30 PM
-              </p>
-            </div>
-
-            <div className="border rounded-lg p-4 bg-muted/50">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-green-600" />
-                  <span className="font-medium">
-                    DL 5678 assigned to Sarah Johnson
-                  </span>
-                </div>
-                <span className="text-sm text-muted-foreground">
-                  4 hours ago
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Dropoff run from JAC Airport to Four Seasons at 4:15 PM
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

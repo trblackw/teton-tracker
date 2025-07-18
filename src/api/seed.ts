@@ -97,7 +97,7 @@ const sampleReportTemplates = [
     name: 'Flight Operations Report',
     description: 'Detailed flight information for operations team',
     reportType: 'flight' as ReportType,
-    isDefault: true,
+    isDefault: false,
     columnConfig: [
       {
         field: 'flightNumber',
@@ -233,16 +233,31 @@ async function generateReportTemplates(userId: string): Promise<number> {
     console.log('🧹 Cleared existing report templates for organization');
 
     let templatesCreated = 0;
+    let defaultTemplateCreated = false;
 
     for (const templateData of sampleReportTemplates) {
       try {
+        // Ensure only one default template per organization
+        const isDefaultTemplate =
+          templateData.isDefault && !defaultTemplateCreated;
+
         await createReportTemplate({
           ...templateData,
+          isDefault: isDefaultTemplate,
           organizationId,
           createdBy: userId,
         });
+
+        if (isDefaultTemplate) {
+          defaultTemplateCreated = true;
+          console.log(`✅ Created DEFAULT template: ${templateData.name}`);
+        } else {
+          console.log(
+            `✅ Created template: ${templateData.name}${templateData.isDefault ? ' (default flag removed - only one default allowed)' : ''}`
+          );
+        }
+
         templatesCreated++;
-        console.log(`✅ Created template: ${templateData.name}`);
       } catch (error) {
         console.error(
           `❌ Failed to create template ${templateData.name}:`,

@@ -20,6 +20,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import {
   Asterisk,
   Edit3,
+  Ellipsis,
   Eye,
   GripVertical,
   Plus,
@@ -324,10 +325,9 @@ function ReportTemplatesPage() {
                   </DialogTrigger>
                   <DialogContent className="max-w-3xl">
                     <DialogHeader>
-                      <DialogTitle>Preview: {template.name}</DialogTitle>
-                      <DialogDescription>
-                        Column configuration for this template
-                      </DialogDescription>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Eye className="h-4 w-4" /> Preview: {template.name}
+                      </DialogTitle>
                     </DialogHeader>
                     <TemplatePreview template={template} />
                   </DialogContent>
@@ -833,42 +833,70 @@ function TemplateFormDialog({
 }
 
 function TemplatePreview({ template }: { template: ReportTemplate }) {
+  const sortedColumns = template.columnConfig.sort((a, b) => a.order - b.order);
+
+  // Sample data for preview
+  const sampleRows = ['Sample Row 1', 'Sample Row 2', 'Sample Row 3'];
+
   return (
     <div className="space-y-4">
-      <div className="text-sm text-muted-foreground">
-        This template will generate reports with the following columns in this
-        order:
-      </div>
-
       <div className="border rounded-lg overflow-hidden">
-        <div className="bg-muted/50 p-3 border-b font-medium">
-          Report Preview
-        </div>
-        <div className="p-4">
-          <div className="grid gap-2">
-            {template.columnConfig
-              .sort((a, b) => a.order - b.order)
-              .map((col, index) => (
-                <div
-                  key={col.field}
-                  className="flex items-center gap-3 p-3 border rounded"
-                >
-                  <div className="w-8 h-8 bg-primary/10 rounded flex items-center justify-center text-sm font-medium">
-                    {index + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <div className="font-medium">{col.label}</div>
-                      {col.required && (
-                        <Asterisk className="h-3 w-3 text-red-500" />
-                      )}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {col.field}
-                    </div>
-                  </div>
-                </div>
-              ))}
+        {/* <div className="bg-muted/50 p-3 border-b font-medium flex items-center gap-2">
+          <File className="h-4 w-4" /> Report Preview
+        </div> */}
+        <div className="p-4 bg-muted/50 border-b font-medium">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border-collapse">
+              {/* Table Header */}
+              <thead>
+                <tr className="border-b bg-muted/30 border-gray-500">
+                  {sortedColumns.map(col => (
+                    <th
+                      key={col.field}
+                      className="text-left p-2 font-medium border-r last:border-r-0 min-w-[80px] max-w-[120px]"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span className="truncate">{col.label}</span>
+                        {col.required && (
+                          <Asterisk className="h-2 w-2 text-red-500 shrink-0" />
+                        )}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              {/* Table Body - Sample Data */}
+              <tbody>
+                {sampleRows.map((rowLabel, rowIndex) => (
+                  <tr
+                    key={rowIndex}
+                    className="border-b last:border-b-0 hover:bg-muted/20"
+                  >
+                    {sortedColumns.map((col, colIndex) => (
+                      <td
+                        key={col.field}
+                        className="p-2 border-r last:border-r-0 text-muted-foreground"
+                      >
+                        <div className="truncate">
+                          <Ellipsis className="h-4 w-4" />
+                        </div>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Column count and metadata */}
+          <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <span>{sortedColumns.length} columns configured</span>
+              <span>
+                {sortedColumns.filter(col => col.required).length} required
+                fields
+              </span>
+            </div>
           </div>
         </div>
       </div>
