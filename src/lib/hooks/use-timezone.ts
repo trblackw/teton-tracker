@@ -1,15 +1,25 @@
 import { useQuery } from '@tanstack/react-query';
 import { preferencesApi } from '../api/client';
+import { queryKeys } from '../react-query-client';
+import { useNetworkAwareOptions } from './use-network-status';
 
 /**
  * Hook to get the user's timezone preference
  * Returns UTC as default if no preference is set
  */
 export function useTimezone() {
+  const networkOptions = useNetworkAwareOptions();
+
   const { data: preferences } = useQuery({
-    queryKey: ['preferences'],
+    queryKey: queryKeys.userPreferences(),
     queryFn: () => preferencesApi.getPreferences(),
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 15 * 60 * 1000, // 15 minutes - timezone doesn't change often
+    gcTime: 60 * 60 * 1000, // 1 hour cache time
+    refetchOnWindowFocus: false, // Don't refetch timezone on window focus
+    refetchOnReconnect: networkOptions.refetchOnReconnect,
+    retry: networkOptions.retry,
+    // Return cached data even when offline
+    placeholderData: previousData => previousData,
   });
 
   return preferences?.timezone || 'UTC';

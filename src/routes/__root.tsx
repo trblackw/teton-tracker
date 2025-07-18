@@ -21,6 +21,7 @@ import { ActiveRunBanner } from '../components/active-run-banner';
 import { PasswordProtection } from '../components/password-protection';
 import { ThemeProvider } from '../components/theme-provider';
 import { Button } from '../components/ui/button';
+import { OfflineIndicator } from '../components/ui/offline-indicator';
 import {
   Sidebar,
   SidebarContent,
@@ -151,12 +152,13 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <AppContextProvider>
+      <AppContextProvider>
+        <ThemeProvider>
           <PasswordProtection>
             <SidebarProvider isMobile={isMobile} defaultOpen={!isMobile}>
               <div className="min-h-screen bg-background flex">
                 <style>{`body { overflow-x: hidden; }`}</style>
+
                 {/* Sidebar - only affects layout on desktop */}
                 {!isMobile && (
                   <Sidebar>
@@ -354,6 +356,9 @@ function RootComponent() {
                 </div>
               </div>
 
+              {/* Offline Indicator */}
+              <OfflineIndicator />
+
               {/* Toast Notifications */}
               <Toaster
                 position="top-center"
@@ -373,8 +378,8 @@ function RootComponent() {
               />
             </SidebarProvider>
           </PasswordProtection>
-        </AppContextProvider>
-      </ThemeProvider>
+        </ThemeProvider>
+      </AppContextProvider>
     </QueryClientProvider>
   );
 }
