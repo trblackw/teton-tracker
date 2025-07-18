@@ -198,10 +198,6 @@ function OrganizationPage() {
                 tableCell: 'px-2 py-3 text-xs sm:text-sm',
                 tableHead: 'px-2 py-3 text-xs sm:text-sm font-medium',
               },
-              layout: {
-                socialButtonsPlacement: 'bottom',
-                socialButtonsVariant: 'blockButton',
-              },
             }}
           />
         </div>

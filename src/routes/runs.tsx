@@ -14,7 +14,6 @@ import {
   MapPin,
   Navigation,
   Plane,
-  Play,
   Plus,
   Search,
   Trash2,
@@ -767,7 +766,7 @@ function Runs() {
                           </Badge>
 
                           {/* Start/Stop Controls */}
-                          {run.status === 'scheduled' && (
+                          {/* {run.status === 'scheduled' && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -780,7 +779,7 @@ function Runs() {
                             >
                               <Play className="size-4" />
                             </Button>
-                          )}
+                          )} */}
 
                           {run.status === 'active' && (
                             <Button

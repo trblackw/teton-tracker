@@ -138,7 +138,7 @@ export function ExpandableActionsDrawer({
           >
             {action.icon}
             {action.badge && (
-              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-medium min-w-[1rem]">
+              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-300 text-primary-foreground text-xs flex items-center justify-center font-medium min-w-[1rem]">
                 {action.badge}
               </span>
             )}

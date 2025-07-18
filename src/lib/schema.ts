@@ -126,7 +126,7 @@ export type DefaultReportConfigFields =
   | 'dropoffLocation'
   | 'price';
 
-export const defaultReportConfigFields: DefaultReportConfigFields[] = [
+export const defaultReportTemplateFields: DefaultReportConfigFields[] = [
   'flightNumber',
   'airline',
   'departure',
@@ -137,10 +137,10 @@ export const defaultReportConfigFields: DefaultReportConfigFields[] = [
   'price',
 ];
 
-// Report Config schema
-export const ReportConfigSchema = z.object({
+// Report Template schema
+export const ReportTemplateSchema = z.object({
   id: z.string().uuid('Invalid report config ID format'),
-  config: z.array(z.string()).default(defaultReportConfigFields),
+  config: z.array(z.string()).default(defaultReportTemplateFields),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });
@@ -153,7 +153,7 @@ export const ReportSchema = z.object({
   endDate: z.date(),
   reportType: z.nativeEnum(ReportType).default(ReportType.run),
   createdAt: z.date().optional(),
-  reportConfig: ReportConfigSchema,
+  reportConfig: ReportTemplateSchema,
 });
 
 // Phone number validation schema
@@ -395,7 +395,7 @@ export type FlightStatusType = z.infer<typeof FlightStatusTypeSchema>;
 export type TrafficStatus = z.infer<typeof TrafficStatusSchema>;
 export type OpenSkyFlightResponse = z.infer<typeof OpenSkyFlightResponseSchema>;
 export type TomTomRouteResponse = z.infer<typeof TomTomRouteResponseSchema>;
-export type ReportConfig = z.infer<typeof ReportConfigSchema>;
+export type ReportConfig = z.infer<typeof ReportTemplateSchema>;
 export type Report = z.infer<typeof ReportSchema>;
 
 // Validation helper functions

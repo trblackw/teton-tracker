@@ -28,7 +28,7 @@ import {
 } from '../components/ui/popover';
 import { runsApi } from '../lib/api/client';
 import {
-  defaultReportConfigFields,
+  defaultReportTemplateFields,
   type DefaultReportConfigFields,
   type Run,
 } from '../lib/schema';
@@ -105,7 +105,7 @@ function Reports() {
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [selectedFields, setSelectedFields] = useState<
     DefaultReportConfigFields[]
-  >(defaultReportConfigFields);
+  >(defaultReportTemplateFields);
   const [selectedRunIds, setSelectedRunIds] = useState<Set<string>>(new Set());
 
   // Fetch all runs
@@ -469,7 +469,7 @@ function Reports() {
               <div className="space-y-2">
                 <h4 className="text-sm font-medium">Report includes:</h4>
                 <div className="space-y-2">
-                  {defaultReportConfigFields.map(field => (
+                  {defaultReportTemplateFields.map(field => (
                     <label
                       key={field}
                       className="flex items-center gap-2 cursor-pointer"
