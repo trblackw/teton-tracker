@@ -7,6 +7,7 @@ import {
   CheckCircle,
   Clock,
   Clock10,
+  DollarSignIcon,
   Edit,
   FileText,
   Filter,
@@ -740,8 +741,7 @@ function Runs() {
                 .map(({ run, flightStatus, trafficData }) => (
                   <Card
                     key={run.id}
-                    className="w-full cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => handleEditRun(run)}
+                    className="w-full hover:shadow-md transition-shadow"
                   >
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
@@ -846,6 +846,10 @@ function Runs() {
                               {run.pickupLocation} → {run.dropoffLocation}
                             </span>
                           </div>
+                          <div className="flex items-start gap-2">
+                            <DollarSignIcon className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                            <span className="text-sm">{run.price}</span>
+                          </div>
                           {run.notes && (
                             <div className="flex items-start gap-2">
                               <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
@@ -891,24 +895,25 @@ function Runs() {
                               </span>
                             </div>
                           )}
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold">
-                              ${run.price}
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs text-muted-foreground">
+                              Last updated: <br />
+                              {new Date().toLocaleString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
                             </span>
-                            <Button
-                              variant="ghost"
+                            <RefreshButton
+                              onRefresh={() => refreshRunData(run)}
+                              // variant="outline"
                               size="sm"
-                              onClick={e => {
-                                e.stopPropagation();
-                                refreshRunData(run);
-                              }}
+                              onClick={e => e.stopPropagation()}
                               className="text-muted-foreground"
                               title="Refresh data"
-                            >
-                              <RefreshButton
-                                onRefresh={() => refreshRunData(run)}
-                              />
-                            </Button>
+                            />
                           </div>
                         </div>
                       </div>

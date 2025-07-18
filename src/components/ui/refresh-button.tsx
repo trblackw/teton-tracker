@@ -3,7 +3,11 @@ import { RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from './button';
 
-interface RefreshButtonProps {
+interface RefreshButtonProps
+  extends Omit<
+    React.ButtonHTMLAttributes<HTMLButtonElement>,
+    'onClick' | 'disabled' | 'className' | 'children'
+  > {
   onRefresh: () => Promise<void> | void;
   variant?:
     | 'default'
