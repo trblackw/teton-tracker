@@ -73,9 +73,11 @@ function generatePrice(): string {
 }
 
 // Helper function to get organization drivers
-async function getOrganizationDrivers(userId: string): Promise<string[]> {
+async function getOrganizationDrivers(
+  userId: string
+): Promise<Array<{ userId: string; name: string; email: string }>> {
   try {
-    console.log(`🔍 Fetching organization drivers for user: ${userId}`);
+    console.log(`🔍 Fetching organization members for user: ${userId}`);
 
     // Get user's organization memberships
     const organizationMemberships =
@@ -102,15 +104,46 @@ async function getOrganizationDrivers(userId: string): Promise<string[]> {
         organizationId: orgId,
       });
 
-    // Filter for driver role and extract user IDs
-    const driverIds = orgMemberships.data
-      .filter((membership: any) => membership.role === 'org:driver')
-      .map((membership: any) => membership.publicUserData.userId);
+    // Get detailed user info for all members (treating all as potential drivers)
+    const memberDetails = await Promise.all(
+      orgMemberships.data.map(async (membership: any) => {
+        try {
+          const user = await clerk.users.getUser(
+            membership.publicUserData.userId
+          );
+          return {
+            userId: user.id,
+            name:
+              `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+              'Unknown User',
+            email: user.emailAddresses[0]?.emailAddress || 'No email',
+            role: membership.role,
+          };
+        } catch (error) {
+          console.warn(
+            `Failed to fetch user details for ${membership.publicUserData.userId}:`,
+            error
+          );
+          return null;
+        }
+      })
+    );
 
-    console.log(`✅ Found ${driverIds.length} drivers in organization`);
-    return driverIds;
+    // Filter out failed fetches and the requesting user (admin)
+    const validMembers = memberDetails
+      .filter((member): member is NonNullable<typeof member> => member !== null)
+      .filter(member => member.userId !== userId); // Exclude the admin user
+
+    console.log(
+      `✅ Found ${validMembers.length} organization members to use as drivers:`
+    );
+    validMembers.forEach(member => {
+      console.log(`   - ${member.name} (${member.email}) - ${member.userId}`);
+    });
+
+    return validMembers;
   } catch (error) {
-    console.error('❌ Error fetching organization drivers:', error);
+    console.error('❌ Error fetching organization members:', error);
     return [];
   }
 }
@@ -123,13 +156,21 @@ export async function seedDataForUser(userId: string): Promise<{
   console.log(`🌱 Starting data seeding for user: ${userId}`);
 
   try {
-    // Get organization drivers
-    const driverIds = await getOrganizationDrivers(userId);
-    const allUserIds = driverIds.length > 0 ? [userId, ...driverIds] : [userId];
+    // Get organization members to use as drivers
+    const organizationMembers = await getOrganizationDrivers(userId);
+    const allUserIds =
+      organizationMembers.length > 0
+        ? [userId, ...organizationMembers.map(m => m.userId)]
+        : [userId];
 
     console.log(
-      `👥 Will create runs for ${allUserIds.length} users (including drivers)`
+      `👥 Will create enhanced dataset for ${allUserIds.length} users:`
     );
+    console.log(`   🎯 Current user: 15-20 runs (substantial testing data)`);
+    console.log(`   👨‍💼 Other admins: 12 runs each (3x increase)`);
+    console.log(`   🚗 Drivers: 24-39 runs each (3x increase)`);
+    console.log(`   📱 Notifications: 2-5 per run (enhanced variety)`);
+    console.log(`   Total organization members: ${organizationMembers.length}`);
 
     // Clear existing data for clean seeding
     console.log('🧹 Clearing existing data for clean seeding...');
@@ -156,17 +197,55 @@ export async function seedDataForUser(userId: string): Promise<{
     const pastDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); // 90 days ago
     const futureDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days future
 
-    const allRuns = [];
+    const allRuns: Array<{
+      userId: string;
+      flightNumber: string;
+      airline: string;
+      departure: string;
+      arrival: string;
+      pickupLocation: string;
+      dropoffLocation: string;
+      scheduledTime: string;
+      estimatedDuration: number;
+      type: RunType;
+      status: RunStatus;
+      price: string;
+      notes?: string;
+      targetUserId: string;
+      userName: string;
+    }> = [];
     let totalNotificationCount = 0;
 
     // Create runs for each user (distribute across drivers)
-    for (const targetUserId of allUserIds) {
-      const isDriver = driverIds.includes(targetUserId);
-      const runsPerUser = isDriver ? 8 : 5; // Drivers get more runs
+    for (let userIndex = 0; userIndex < allUserIds.length; userIndex++) {
+      const targetUserId = allUserIds[userIndex];
+      const isAdmin = targetUserId === userId;
+      const isCurrentUser = targetUserId === userId;
+      const member = organizationMembers.find(m => m.userId === targetUserId);
+      const userName =
+        member?.name || (isCurrentUser ? 'Current User' : 'Unknown User');
 
-      console.log(
-        `🚗 Creating ${runsPerUser} runs for ${isDriver ? 'driver' : 'admin'}: ${targetUserId}`
-      );
+      // 3x the data generation:
+      // - Current user gets substantial runs regardless of role (15-20 runs)
+      // - Other admins get moderate runs (12 runs)
+      // - Drivers get lots of runs (24-39 runs)
+      let runsPerUser: number;
+      if (isCurrentUser) {
+        runsPerUser = Math.floor(Math.random() * 6) + 15; // 15-20 runs for current user
+        console.log(
+          `🚗 Creating ${runsPerUser} runs for CURRENT USER: ${userName} (${targetUserId})`
+        );
+      } else if (isAdmin) {
+        runsPerUser = 12; // 3x the original 4 runs for other admins
+        console.log(
+          `🚗 Creating ${runsPerUser} runs for admin: ${userName} (${targetUserId})`
+        );
+      } else {
+        runsPerUser = Math.floor(Math.random() * 16) + 24; // 24-39 runs for drivers (3x 8-13)
+        console.log(
+          `🚗 Creating ${runsPerUser} runs for driver: ${userName} (${targetUserId})`
+        );
+      }
 
       for (let i = 0; i < runsPerUser; i++) {
         const airline = randomItem(airlines);
@@ -176,16 +255,37 @@ export async function seedDataForUser(userId: string): Promise<{
         let scheduledTime: Date;
         let status: RunStatus;
 
-        // First 2 runs per user are current/future (realistic current runs)
-        if (i < 2) {
-          // Current/future runs - scheduled between now and 30 days from now
-          scheduledTime = randomDate(now, futureDate);
-          status = Math.random() > 0.7 ? 'active' : 'scheduled'; // Mostly scheduled, some active
-        } else {
-          // Past runs - scheduled between 90 days ago and now
-          scheduledTime = randomDate(pastDate, now);
+        // Enhanced distribution with more variety for larger datasets:
+        // - More future runs (first 15% scheduled)
+        // - More recent runs (next 20% mix of active/completed)
+        // - More current active runs (better for testing)
+        // - Rest are historical
 
-          // Past runs should be completed or cancelled
+        if (i < Math.max(2, Math.floor(runsPerUser * 0.15))) {
+          // Future runs - scheduled between tomorrow and 30 days from now
+          const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+          scheduledTime = randomDate(tomorrow, futureDate);
+          status = 'scheduled';
+        } else if (i < Math.max(4, Math.floor(runsPerUser * 0.35))) {
+          // Recent runs - last 7 days, some might be active
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          scheduledTime = randomDate(weekAgo, now);
+
+          // More active runs for better testing experience
+          if (
+            i < Math.max(3, Math.floor(runsPerUser * 0.25)) &&
+            Math.random() > 0.3
+          ) {
+            status = 'active'; // More active runs per user
+          } else {
+            status = Math.random() > 0.8 ? 'cancelled' : 'completed';
+          }
+        } else {
+          // Historical runs - older than 7 days
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          scheduledTime = randomDate(pastDate, weekAgo);
+
+          // Historical runs are mostly completed, some cancelled
           if (Math.random() > 0.85) {
             status = 'cancelled'; // 15% cancelled
           } else {
@@ -217,7 +317,9 @@ export async function seedDataForUser(userId: string): Promise<{
                 'Ski equipment transport needed',
                 'Pet-friendly vehicle required',
                 'Client has mobility assistance needs',
-              ][Math.floor(Math.random() * 8)]
+                'Extra luggage - trailer needed',
+                'Corporate client - invoice required',
+              ][Math.floor(Math.random() * 10)]
             : undefined;
 
         const runData = {
@@ -236,26 +338,33 @@ export async function seedDataForUser(userId: string): Promise<{
           notes,
         };
 
-        allRuns.push({ ...runData, targetUserId });
+        allRuns.push({ ...runData, targetUserId, userName });
       }
     }
 
     // Create runs in database
     for (const runData of allRuns) {
-      const { targetUserId, ...runCreateData } = runData;
+      const { targetUserId, userName, ...runCreateData } = runData;
       const run = await createRun(runCreateData, targetUserId);
       console.log(
-        `✅ Created run: ${run.flightNumber} (${run.status}) for user ${targetUserId}`
+        `✅ Created run: ${run.flightNumber} (${run.status}) for ${userName}`
       );
 
-      // Generate 1-3 notifications per run
-      const runNotificationCount = Math.floor(Math.random() * 3) + 1;
+      // Enhanced notification generation for richer data
+      // Generate 2-5 notifications per run (increased from 1-3)
+      const runNotificationCount = Math.floor(Math.random() * 4) + 2;
       for (let i = 0; i < runNotificationCount; i++) {
         const notificationTypes = [
           'flight_update',
           'traffic_alert',
           'run_reminder',
           'status_change',
+          'weather_alert',
+          'customer_message',
+          'route_optimization',
+          'vehicle_assigned',
+          'early_arrival',
+          'payment_processed',
         ];
         const type = randomItem(notificationTypes);
 
@@ -280,6 +389,30 @@ export async function seedDataForUser(userId: string): Promise<{
             title = 'Run Status Changed';
             message = `Your run for flight ${run.flightNumber} status has been updated to ${run.status}.`;
             break;
+          case 'weather_alert':
+            title = 'Weather Advisory';
+            message = `Weather conditions may affect your route to ${run.dropoffLocation}. Snow/rain expected. Allow extra time.`;
+            break;
+          case 'customer_message':
+            title = 'Customer Request';
+            message = `Customer for flight ${run.flightNumber} has requested ${randomItem(['early pickup', 'vehicle type change', 'additional stops', 'luggage assistance', 'child seat'])}.`;
+            break;
+          case 'route_optimization':
+            title = 'Route Update';
+            message = `Optimized route suggested for ${run.flightNumber}. New estimated time: ${run.estimatedDuration + Math.floor(Math.random() * 20) - 10} minutes.`;
+            break;
+          case 'vehicle_assigned':
+            title = 'Vehicle Assignment';
+            message = `Vehicle ${randomItem(['SUV-001', 'VAN-203', 'SED-045', 'LUX-012', 'VAN-156'])} assigned for flight ${run.flightNumber}.`;
+            break;
+          case 'early_arrival':
+            title = 'Early Arrival Notice';
+            message = `Flight ${run.flightNumber} arrived ${Math.floor(Math.random() * 30) + 5} minutes early. Customer ready for pickup.`;
+            break;
+          case 'payment_processed':
+            title = 'Payment Confirmed';
+            message = `Payment of $${run.price} processed successfully for flight ${run.flightNumber}.`;
+            break;
         }
 
         const notificationData = {
@@ -294,9 +427,6 @@ export async function seedDataForUser(userId: string): Promise<{
         };
 
         await createNotification(notificationData, targetUserId);
-        console.log(
-          `✅ Created notification: ${notificationData.title} for user ${targetUserId}`
-        );
         totalNotificationCount++;
       }
     }
@@ -314,15 +444,21 @@ export async function seedDataForUser(userId: string): Promise<{
       {
         type: 'system' as const,
         title: 'Organization Data Synced',
-        message: `Successfully created runs for ${allUserIds.length} organization members including drivers.`,
-        metadata: { category: 'organization', driverCount: driverIds.length },
+        message: `Successfully created runs for ${allUserIds.length} organization members: ${organizationMembers.map(m => m.name).join(', ')}.`,
+        metadata: {
+          category: 'organization',
+          driverCount: organizationMembers.length,
+        },
       },
       {
         type: 'system' as const,
-        title: 'Weather Alert',
+        title: 'Driver Management Active',
         message:
-          'Snow conditions expected this weekend. Plan extra time for your airport runs.',
-        metadata: { category: 'weather', severity: 'info' },
+          'Admin features enabled. You can now view driver details, request status updates, and generate reports.',
+        metadata: {
+          category: 'admin',
+          features: ['drivers', 'reports', 'sms'],
+        },
       },
     ];
 
@@ -333,18 +469,21 @@ export async function seedDataForUser(userId: string): Promise<{
     }
 
     console.log('🎉 Data seeding completed successfully!');
-    console.log('📊 Summary:');
     console.log(
-      `  • Created ${allRuns.length} runs across ${allUserIds.length} users`
+      `📊 Generated total: ${allRuns.length} runs, ${totalNotificationCount} notifications`
     );
-    console.log(`  • Created ${totalNotificationCount} notifications`);
-    console.log(`  • Organization drivers: ${driverIds.length}`);
-    console.log(`  • Admin user: ${userId}`);
+    console.log(`👥 Data distributed across ${allUserIds.length} users:`);
+    console.log(`   - Current user received substantial data for testing`);
+    if (organizationMembers.length > 0) {
+      console.log(
+        `   - ${organizationMembers.length} organization members: ${organizationMembers.map(m => m.name).join(', ')}`
+      );
+    }
 
     return {
       runs: allRuns.length,
       notifications: totalNotificationCount,
-      message: `Data seeding completed! Created runs for ${allUserIds.length} organization members (${driverIds.length} drivers).`,
+      message: `🚀 Enhanced data seeding completed! Generated ${allRuns.length} runs and ${totalNotificationCount} notifications across ${allUserIds.length} users. Current user received 15-20 runs for optimal testing experience. Organization members: ${organizationMembers.map(m => m.name).join(', ')}.`,
     };
   } catch (error) {
     console.error('❌ Error during data seeding:', error);

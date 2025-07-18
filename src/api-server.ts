@@ -150,6 +150,30 @@ const server = serve({
         }
       }
 
+      if (url.pathname === '/api/runs/organization') {
+        if (
+          request.method === 'GET' &&
+          typeof runsApi.getOrganizationRuns === 'function'
+        ) {
+          const response = await runsApi.getOrganizationRuns(request);
+          response.headers.set('Access-Control-Allow-Origin', '*');
+          response.headers.set(
+            'Access-Control-Allow-Methods',
+            'GET, POST, PUT, DELETE, OPTIONS'
+          );
+          response.headers.set(
+            'Access-Control-Allow-Headers',
+            'Content-Type, Authorization'
+          );
+          return response;
+        } else {
+          return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+            status: 405,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+
       // Check for organization sub-routes
       const orgMembersMatch = url.pathname.match(
         /^\/api\/organizations\/([^\/]+)\/members$/

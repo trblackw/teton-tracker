@@ -21,6 +21,12 @@ async function startDevServer() {
               : new Response('Method not allowed', { status: 405 });
         }
 
+        if (url.pathname === '/api/runs/organization') {
+          return request.method === 'GET'
+            ? runsApi.getOrganizationRuns(request)
+            : new Response('Method not allowed', { status: 405 });
+        }
+
         if (url.pathname === '/api/preferences') {
           return request.method === 'GET'
             ? preferencesApi.GET(request)

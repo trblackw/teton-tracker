@@ -1,3 +1,4 @@
+import { createClerkClient } from '@clerk/clerk-sdk-node';
 import {
   checkRunOwnership,
   createErrorResponse,
@@ -11,6 +12,103 @@ import {
   type RunsQuery,
 } from '../lib/db/runs';
 import { type NewRunForm, type RunStatus } from '../lib/schema';
+
+const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! });
+
+// Helper function to get all organization member user IDs for an admin
+async function getOrganizationMemberIds(
+  adminUserId: string
+): Promise<string[]> {
+  try {
+    // Get admin's organization memberships
+    const adminOrgMemberships = await clerk.users.getOrganizationMembershipList(
+      {
+        userId: adminUserId,
+      }
+    );
+
+    if (adminOrgMemberships.data.length === 0) {
+      return [];
+    }
+
+    // Get the organization (assuming single org model)
+    const orgId = adminOrgMemberships.data[0].organization.id;
+
+    // Check if admin has admin role in the organization
+    const adminRole = adminOrgMemberships.data[0].role;
+    if (adminRole !== 'org:admin') {
+      throw new Error('Access denied: Admin role required');
+    }
+
+    // Get all organization members
+    const orgMemberships =
+      await clerk.organizations.getOrganizationMembershipList({
+        organizationId: orgId,
+      });
+
+    // Return all member user IDs
+    return orgMemberships.data.map(
+      (membership: any) => membership.publicUserData.userId
+    );
+  } catch (error) {
+    console.error('Error fetching organization members:', error);
+    throw error;
+  }
+}
+
+// GET /api/runs/organization - Admin-only endpoint to get runs for all org members
+export async function getOrganizationRuns(request: Request): Promise<Response> {
+  try {
+    const url = new URL(request.url);
+    const adminUserId = url.searchParams.get('userId');
+
+    if (!adminUserId) {
+      return new Response(
+        JSON.stringify({ error: 'Admin user ID is required' }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Get all organization member user IDs (includes admin check)
+    const memberUserIds = await getOrganizationMemberIds(adminUserId);
+
+    if (memberUserIds.length === 0) {
+      return new Response(JSON.stringify([]), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Fetch runs for all organization members
+    const allRuns = await Promise.all(
+      memberUserIds.map(userId => getRuns({ userId }))
+    );
+
+    // Flatten the results
+    const flattenedRuns = allRuns.flat();
+
+    // Sort by scheduled time (most recent first)
+    flattenedRuns.sort(
+      (a, b) =>
+        new Date(b.scheduledTime).getTime() -
+        new Date(a.scheduledTime).getTime()
+    );
+
+    return new Response(JSON.stringify(flattenedRuns), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Error fetching organization runs:', error);
+    return createErrorResponse(
+      error instanceof Error
+        ? error
+        : new Error('Failed to fetch organization runs'),
+      500
+    );
+  }
+}
 
 // GET /api/runs
 export async function GET(request: Request): Promise<Response> {

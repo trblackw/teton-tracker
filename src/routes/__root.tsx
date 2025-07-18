@@ -10,6 +10,7 @@ import {
   Bell,
   Building2,
   Car,
+  FileText,
   Plane,
   Plus,
   Users,
@@ -26,6 +27,7 @@ import {
   SidebarHeader,
   SidebarNav,
   SidebarProvider,
+  useSidebar,
 } from '../components/ui/sidebar';
 import {
   TopNav,
@@ -47,6 +49,26 @@ import { queryClient } from '../lib/react-query-client';
 import { toasts } from '../lib/toast';
 
 const activeNavClass = 'bg-primary/10 text-blue-500';
+
+// Component that automatically closes sidebar on mobile when navigation items are clicked
+function MobileAwareNavLink({
+  children,
+  ...linkProps
+}: React.ComponentProps<typeof Link>) {
+  const { setIsOpen, isMobile } = useSidebar();
+
+  const handleClick = () => {
+    if (isMobile) {
+      setIsOpen(false);
+    }
+  };
+
+  return (
+    <Link {...linkProps} onClick={handleClick}>
+      {children}
+    </Link>
+  );
+}
 
 function OrganizationDisplay() {
   const { data: organization, isLoading } = useUserOrganization();
@@ -79,7 +101,7 @@ function AdminNavItems() {
         </div>
       </div>
       <Button asChild variant="ghost" className="w-full justify-start">
-        <Link
+        <MobileAwareNavLink
           to="/drivers"
           className="flex items-center gap-2"
           activeProps={{
@@ -88,10 +110,10 @@ function AdminNavItems() {
         >
           <Users className="h-4 w-4" />
           Drivers
-        </Link>
+        </MobileAwareNavLink>
       </Button>
       <Button asChild variant="ghost" className="w-full justify-start">
-        <Link
+        <MobileAwareNavLink
           to="/create-runs"
           className="flex items-center gap-2"
           activeProps={{
@@ -100,7 +122,19 @@ function AdminNavItems() {
         >
           <Plus className="h-4 w-4" />
           Create Runs
-        </Link>
+        </MobileAwareNavLink>
+      </Button>
+      <Button asChild variant="ghost" className="w-full justify-start">
+        <MobileAwareNavLink
+          to="/request-run-report"
+          className="flex items-center gap-2"
+          activeProps={{
+            className: activeNavClass,
+          }}
+        >
+          <FileText className="h-4 w-4" />
+          Request Run Report
+        </MobileAwareNavLink>
       </Button>
     </>
   );
@@ -136,7 +170,7 @@ function RootComponent() {
                           variant="ghost"
                           className="w-full justify-start"
                         >
-                          <Link
+                          <MobileAwareNavLink
                             to="/runs"
                             className="flex items-center gap-2"
                             activeProps={{
@@ -145,7 +179,7 @@ function RootComponent() {
                           >
                             <Car className="h-4 w-4" />
                             Current Runs
-                          </Link>
+                          </MobileAwareNavLink>
                         </Button>
                         {isFeatureEnabled('realTimeFlightTraffic') && (
                           <Button
@@ -153,7 +187,7 @@ function RootComponent() {
                             variant="ghost"
                             className="w-full justify-start"
                           >
-                            <Link
+                            <MobileAwareNavLink
                               to="/flights"
                               className="flex items-center gap-2"
                               activeProps={{
@@ -162,7 +196,7 @@ function RootComponent() {
                             >
                               <Plane className="h-4 w-4" />
                               Upcoming Flights
-                            </Link>
+                            </MobileAwareNavLink>
                           </Button>
                         )}
                         <Button
@@ -170,7 +204,7 @@ function RootComponent() {
                           variant="ghost"
                           className="w-full justify-start"
                         >
-                          <Link
+                          <MobileAwareNavLink
                             to="/reports"
                             className="flex items-center gap-2"
                             activeProps={{
@@ -179,7 +213,7 @@ function RootComponent() {
                           >
                             <BarChart3 className="h-4 w-4" />
                             Reports
-                          </Link>
+                          </MobileAwareNavLink>
                         </Button>
                         {isFeatureEnabled('pushNotifications') && (
                           <Button
@@ -187,7 +221,7 @@ function RootComponent() {
                             variant="ghost"
                             className="w-full justify-start"
                           >
-                            <Link
+                            <MobileAwareNavLink
                               to="/notifications"
                               className="flex items-center gap-2"
                               activeProps={{
@@ -196,7 +230,7 @@ function RootComponent() {
                             >
                               <Bell className="h-4 w-4" />
                               Notifications
-                            </Link>
+                            </MobileAwareNavLink>
                           </Button>
                         )}
                       </SidebarNav>
@@ -222,7 +256,7 @@ function RootComponent() {
                           variant="ghost"
                           className="w-full justify-start"
                         >
-                          <Link
+                          <MobileAwareNavLink
                             to="/runs"
                             className="flex items-center gap-2"
                             activeProps={{
@@ -231,7 +265,7 @@ function RootComponent() {
                           >
                             <Car className="h-4 w-4" />
                             Current Runs
-                          </Link>
+                          </MobileAwareNavLink>
                         </Button>
                         {isFeatureEnabled('realTimeFlightTraffic') && (
                           <Button
@@ -239,7 +273,7 @@ function RootComponent() {
                             variant="ghost"
                             className="w-full justify-start"
                           >
-                            <Link
+                            <MobileAwareNavLink
                               to="/flights"
                               className="flex items-center gap-2"
                               activeProps={{
@@ -248,7 +282,7 @@ function RootComponent() {
                             >
                               <Plane className="h-4 w-4" />
                               Upcoming Flights
-                            </Link>
+                            </MobileAwareNavLink>
                           </Button>
                         )}
                         <Button
@@ -256,7 +290,7 @@ function RootComponent() {
                           variant="ghost"
                           className="w-full justify-start"
                         >
-                          <Link
+                          <MobileAwareNavLink
                             to="/reports"
                             className="flex items-center gap-2"
                             activeProps={{
@@ -265,7 +299,7 @@ function RootComponent() {
                           >
                             <BarChart3 className="h-4 w-4" />
                             Reports
-                          </Link>
+                          </MobileAwareNavLink>
                         </Button>
                         {isFeatureEnabled('pushNotifications') && (
                           <Button
@@ -273,7 +307,7 @@ function RootComponent() {
                             variant="ghost"
                             className="w-full justify-start"
                           >
-                            <Link
+                            <MobileAwareNavLink
                               to="/notifications"
                               className="flex items-center gap-2"
                               activeProps={{
@@ -282,7 +316,7 @@ function RootComponent() {
                             >
                               <Bell className="h-4 w-4" />
                               Notifications
-                            </Link>
+                            </MobileAwareNavLink>
                           </Button>
                         )}
                       </SidebarNav>

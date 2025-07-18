@@ -25,8 +25,8 @@ export function UserProfilePopover() {
     }
   };
 
-  const handleSettingsClick = () => {
-    setIsOpen(false); // Close popover when navigating to settings
+  const handleNavClick = () => {
+    setIsOpen(false); // Close popover when navigating
   };
 
   return (
@@ -102,6 +102,7 @@ export function UserProfilePopover() {
                     <Link
                       to="/organization"
                       className="text-sm font-medium truncate text-blue-500"
+                      onClick={handleNavClick}
                     >
                       {organization.name}
                     </Link>
@@ -131,7 +132,7 @@ export function UserProfilePopover() {
             <Link
               to="/settings"
               className="flex items-center gap-2"
-              onClick={handleSettingsClick}
+              onClick={handleNavClick}
             >
               <Settings className="h-4 w-4 text-muted-foreground" />
               Settings

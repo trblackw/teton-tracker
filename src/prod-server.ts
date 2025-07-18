@@ -23,6 +23,9 @@ const apiRoutes = {
     GET: runsApi.GET,
     POST: runsApi.POST,
   },
+  '/api/runs/organization': {
+    GET: runsApi.getOrganizationRuns,
+  },
   '/api/runs/:id/status': {
     PUT: runsApi.PUT,
   },

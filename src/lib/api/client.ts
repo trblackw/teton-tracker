@@ -133,6 +133,28 @@ export const runsApi = {
     return response.json();
   },
 
+  // Get all runs for organization members (admin-only)
+  async getOrganizationRuns(): Promise<Run[]> {
+    const userId = getCurrentUserIdFromClerk();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
+    const response = await fetch(
+      `${API_BASE}/runs/organization?userId=${userId}`,
+      {
+        headers: createAuthHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch organization runs');
+    }
+
+    return response.json();
+  },
+
   // Create a new run
   async createRun(runData: NewRunForm): Promise<Run> {
     const userId = getCurrentUserIdFromClerk();

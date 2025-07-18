@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root';
 import { Route as SettingsRouteImport } from './routes/settings';
 import { Route as RunsRouteImport } from './routes/runs';
+import { Route as RequestRunReportRouteImport } from './routes/request-run-report';
 import { Route as ReportsRouteImport } from './routes/reports';
 import { Route as OrganizationRouteImport } from './routes/organization';
 import { Route as NotificationsRouteImport } from './routes/notifications';
@@ -20,6 +21,7 @@ import { Route as CreateRunsRouteImport } from './routes/create-runs';
 import { Route as AddRouteImport } from './routes/add';
 import { Route as ActiveRunRouteImport } from './routes/active-run';
 import { Route as IndexRouteImport } from './routes/index';
+import { Route as DriverDriverIdRouteImport } from './routes/driver.$driverId';
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -29,6 +31,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const RunsRoute = RunsRouteImport.update({
   id: '/runs',
   path: '/runs',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const RequestRunReportRoute = RequestRunReportRouteImport.update({
+  id: '/request-run-report',
+  path: '/request-run-report',
   getParentRoute: () => rootRouteImport,
 } as any);
 const ReportsRoute = ReportsRouteImport.update({
@@ -76,6 +83,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any);
+const DriverDriverIdRoute = DriverDriverIdRouteImport.update({
+  id: '/driver/$driverId',
+  path: '/driver/$driverId',
+  getParentRoute: () => rootRouteImport,
+} as any);
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute;
@@ -87,8 +99,10 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof NotificationsRoute;
   '/organization': typeof OrganizationRoute;
   '/reports': typeof ReportsRoute;
+  '/request-run-report': typeof RequestRunReportRoute;
   '/runs': typeof RunsRoute;
   '/settings': typeof SettingsRoute;
+  '/driver/$driverId': typeof DriverDriverIdRoute;
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute;
@@ -100,8 +114,10 @@ export interface FileRoutesByTo {
   '/notifications': typeof NotificationsRoute;
   '/organization': typeof OrganizationRoute;
   '/reports': typeof ReportsRoute;
+  '/request-run-report': typeof RequestRunReportRoute;
   '/runs': typeof RunsRoute;
   '/settings': typeof SettingsRoute;
+  '/driver/$driverId': typeof DriverDriverIdRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
@@ -114,8 +130,10 @@ export interface FileRoutesById {
   '/notifications': typeof NotificationsRoute;
   '/organization': typeof OrganizationRoute;
   '/reports': typeof ReportsRoute;
+  '/request-run-report': typeof RequestRunReportRoute;
   '/runs': typeof RunsRoute;
   '/settings': typeof SettingsRoute;
+  '/driver/$driverId': typeof DriverDriverIdRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -129,8 +147,10 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/organization'
     | '/reports'
+    | '/request-run-report'
     | '/runs'
-    | '/settings';
+    | '/settings'
+    | '/driver/$driverId';
   fileRoutesByTo: FileRoutesByTo;
   to:
     | '/'
@@ -142,8 +162,10 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/organization'
     | '/reports'
+    | '/request-run-report'
     | '/runs'
-    | '/settings';
+    | '/settings'
+    | '/driver/$driverId';
   id:
     | '__root__'
     | '/'
@@ -155,8 +177,10 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/organization'
     | '/reports'
+    | '/request-run-report'
     | '/runs'
-    | '/settings';
+    | '/settings'
+    | '/driver/$driverId';
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
@@ -169,8 +193,10 @@ export interface RootRouteChildren {
   NotificationsRoute: typeof NotificationsRoute;
   OrganizationRoute: typeof OrganizationRoute;
   ReportsRoute: typeof ReportsRoute;
+  RequestRunReportRoute: typeof RequestRunReportRoute;
   RunsRoute: typeof RunsRoute;
   SettingsRoute: typeof SettingsRoute;
+  DriverDriverIdRoute: typeof DriverDriverIdRoute;
 }
 
 declare module '@tanstack/react-router' {
@@ -187,6 +213,13 @@ declare module '@tanstack/react-router' {
       path: '/runs';
       fullPath: '/runs';
       preLoaderRoute: typeof RunsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/request-run-report': {
+      id: '/request-run-report';
+      path: '/request-run-report';
+      fullPath: '/request-run-report';
+      preLoaderRoute: typeof RequestRunReportRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/reports': {
@@ -252,6 +285,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/driver/$driverId': {
+      id: '/driver/$driverId';
+      path: '/driver/$driverId';
+      fullPath: '/driver/$driverId';
+      preLoaderRoute: typeof DriverDriverIdRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
   }
 }
 
@@ -265,8 +305,10 @@ const rootRouteChildren: RootRouteChildren = {
   NotificationsRoute: NotificationsRoute,
   OrganizationRoute: OrganizationRoute,
   ReportsRoute: ReportsRoute,
+  RequestRunReportRoute: RequestRunReportRoute,
   RunsRoute: RunsRoute,
   SettingsRoute: SettingsRoute,
+  DriverDriverIdRoute: DriverDriverIdRoute,
 };
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
