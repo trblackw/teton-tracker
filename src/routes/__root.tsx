@@ -12,18 +12,32 @@ import { ActiveRunBanner } from '../components/active-run-banner';
 import { PasswordProtection } from '../components/password-protection';
 import { ThemeProvider } from '../components/theme-provider';
 import { Button } from '../components/ui/button';
-import { Card, CardContent } from '../components/ui/card';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarNav,
+  SidebarProvider,
+} from '../components/ui/sidebar';
+import {
+  TopNav,
+  TopNavLeft,
+  TopNavLogo,
+  TopNavRight,
+  TopNavSidebarTrigger,
+} from '../components/ui/top-nav';
 import { UserProfilePopover } from '../components/user-profile-popover';
 import { AppContextProvider } from '../lib/AppContextProvider';
-import { queryClient } from '../lib/react-query-client';
-// import { initializeTomTomServiceWithConfig } from '../lib/services/tomtom-service';
 import { isFeatureEnabled } from '../lib/features';
+import { useMobile } from '../lib/hooks/use-mobile';
+import { queryClient } from '../lib/react-query-client';
 import { toasts } from '../lib/toast';
 
 const activeNavClass = 'bg-primary/10 text-blue-500';
 
 function RootComponent() {
   const routerState = useRouterState();
+  const isMobile = useMobile();
 
   // Auto-dismiss toasts on route change
   useEffect(() => {
@@ -35,197 +49,192 @@ function RootComponent() {
       <ThemeProvider>
         <AppContextProvider>
           <PasswordProtection>
-            <div className="min-h-screen bg-background">
-              {/* Active Run Banner */}
-              <ActiveRunBanner />
-
-              <div className="container mx-auto px-4 py-4">
-                <div className="flex flex-col lg:flex-row lg:gap-8">
-                  {/* Desktop Navigation */}
-                  <aside className="hidden lg:block w-64 shrink-0">
-                    <Card className="sticky top-4 bg-card">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-2 mb-6">
-                          <div className="p-2 bg-primary rounded-lg">
-                            <Plane className="h-5 w-5 text-primary-foreground" />
-                          </div>
-                          <h1 className="text-xl font-bold text-foreground">
-                            Teton Tracker
-                          </h1>
-                        </div>
-
-                        {/* User Profile Section */}
-                        <div className="mb-4 pb-4 border-b">
-                          <UserProfilePopover />
-                        </div>
-
-                        <nav className="space-y-2">
+            <SidebarProvider isMobile={isMobile} defaultOpen={!isMobile}>
+              <div className="min-h-screen bg-background flex">
+                <style>{`body { overflow-x: hidden; }`}</style>
+                {/* Sidebar - only affects layout on desktop */}
+                {!isMobile && (
+                  <Sidebar>
+                    <SidebarHeader>
+                      <TopNavLogo />
+                    </SidebarHeader>
+                    <SidebarContent>
+                      <SidebarNav>
+                        <Button
+                          asChild
+                          variant="ghost"
+                          className="w-full justify-start"
+                        >
+                          <Link
+                            to="/runs"
+                            className="flex items-center gap-2"
+                            activeProps={{
+                              className: activeNavClass,
+                            }}
+                          >
+                            <Car className="h-4 w-4" />
+                            Current Runs
+                          </Link>
+                        </Button>
+                        {isFeatureEnabled('realTimeFlightTraffic') && (
                           <Button
                             asChild
                             variant="ghost"
                             className="w-full justify-start"
                           >
                             <Link
-                              to="/runs"
+                              to="/flights"
                               className="flex items-center gap-2"
                               activeProps={{
                                 className: activeNavClass,
                               }}
                             >
-                              <Car className="h-4 w-4" />
-                              Current Runs
+                              <Plane className="h-4 w-4" />
+                              Upcoming Flights
                             </Link>
                           </Button>
-                          {isFeatureEnabled('realTimeFlightTraffic') && (
-                            <Button
-                              asChild
-                              variant="ghost"
-                              className="w-full justify-start"
-                            >
-                              <Link
-                                to="/flights"
-                                className="flex items-center gap-2"
-                                activeProps={{
-                                  className: activeNavClass,
-                                }}
-                              >
-                                <Plane className="h-4 w-4" />
-                                Upcoming Flights
-                              </Link>
-                            </Button>
-                          )}
+                        )}
+                        <Button
+                          asChild
+                          variant="ghost"
+                          className="w-full justify-start"
+                        >
+                          <Link
+                            to="/reports"
+                            className="flex items-center gap-2"
+                            activeProps={{
+                              className: activeNavClass,
+                            }}
+                          >
+                            <BarChart3 className="h-4 w-4" />
+                            Reports
+                          </Link>
+                        </Button>
+                        {isFeatureEnabled('pushNotifications') && (
                           <Button
                             asChild
                             variant="ghost"
                             className="w-full justify-start"
                           >
                             <Link
-                              to="/reports"
+                              to="/notifications"
                               className="flex items-center gap-2"
                               activeProps={{
                                 className: activeNavClass,
                               }}
                             >
-                              <BarChart3 className="h-4 w-4" />
-                              Reports
+                              <Bell className="h-4 w-4" />
+                              Notifications
                             </Link>
                           </Button>
-                          {isFeatureEnabled('pushNotifications') && (
-                            <Button
-                              asChild
-                              variant="ghost"
-                              className="w-full justify-start"
+                        )}
+                      </SidebarNav>
+                    </SidebarContent>
+                  </Sidebar>
+                )}
+
+                {/* Mobile Sidebar - renders separately */}
+                {isMobile && (
+                  <Sidebar>
+                    <SidebarHeader>
+                      <TopNavLogo />
+                    </SidebarHeader>
+                    <SidebarContent>
+                      <SidebarNav>
+                        <Button
+                          asChild
+                          variant="ghost"
+                          className="w-full justify-start"
+                        >
+                          <Link
+                            to="/runs"
+                            className="flex items-center gap-2"
+                            activeProps={{
+                              className: activeNavClass,
+                            }}
+                          >
+                            <Car className="h-4 w-4" />
+                            Current Runs
+                          </Link>
+                        </Button>
+                        {isFeatureEnabled('realTimeFlightTraffic') && (
+                          <Button
+                            asChild
+                            variant="ghost"
+                            className="w-full justify-start"
+                          >
+                            <Link
+                              to="/flights"
+                              className="flex items-center gap-2"
+                              activeProps={{
+                                className: activeNavClass,
+                              }}
                             >
-                              <Link
-                                to="/notifications"
-                                className="flex items-center gap-2"
-                                activeProps={{
-                                  className: activeNavClass,
-                                }}
-                              >
-                                <Bell className="h-4 w-4" />
-                                Notifications
-                              </Link>
-                            </Button>
-                          )}
-                        </nav>
-                      </CardContent>
-                    </Card>
-                  </aside>
+                              <Plane className="h-4 w-4" />
+                              Upcoming Flights
+                            </Link>
+                          </Button>
+                        )}
+                        <Button
+                          asChild
+                          variant="ghost"
+                          className="w-full justify-start"
+                        >
+                          <Link
+                            to="/reports"
+                            className="flex items-center gap-2"
+                            activeProps={{
+                              className: activeNavClass,
+                            }}
+                          >
+                            <BarChart3 className="h-4 w-4" />
+                            Reports
+                          </Link>
+                        </Button>
+                        {isFeatureEnabled('pushNotifications') && (
+                          <Button
+                            asChild
+                            variant="ghost"
+                            className="w-full justify-start"
+                          >
+                            <Link
+                              to="/notifications"
+                              className="flex items-center gap-2"
+                              activeProps={{
+                                className: activeNavClass,
+                              }}
+                            >
+                              <Bell className="h-4 w-4" />
+                              Notifications
+                            </Link>
+                          </Button>
+                        )}
+                      </SidebarNav>
+                    </SidebarContent>
+                  </Sidebar>
+                )}
+
+                {/* Main Content Area */}
+                <div className="flex-1 flex flex-col w-full">
+                  {/* Top Navigation */}
+                  <TopNav>
+                    <TopNavLeft>
+                      <TopNavSidebarTrigger />
+                    </TopNavLeft>
+                    <TopNavRight>
+                      <UserProfilePopover />
+                    </TopNavRight>
+                  </TopNav>
+
+                  {/* Active Run Banner */}
+                  <ActiveRunBanner />
 
                   {/* Main Content */}
-                  <main
-                    className="flex-1 lg:max-w-4xl pb-20 lg:pb-0"
-                    data-scrollable
-                  >
+                  <main className="flex-1 px-4 py-4 max-w-full lg:container lg:max-w-4xl lg:mx-auto">
                     <Outlet />
                   </main>
                 </div>
               </div>
-
-              {/* Mobile Navigation */}
-              <div className="lg:hidden fixed -bottom-1 left-0 right-0 z-50 border-t border-border bg-card/80 backdrop-blur-lg">
-                <div className="flex items-center justify-between p-1">
-                  <nav className="flex items-center justify-center gap-1 flex-1">
-                    <Button
-                      asChild
-                      variant="ghost"
-                      size="sm"
-                      className="flex-col h-auto p-3 min-w-[50px] touch-manipulation"
-                    >
-                      <Link
-                        to="/runs"
-                        className="flex flex-col items-center gap-1"
-                        activeProps={{
-                          className: activeNavClass,
-                        }}
-                      >
-                        <Car className="size-7" />
-                      </Link>
-                    </Button>
-                    {isFeatureEnabled('realTimeFlightTraffic') && (
-                      <Button
-                        asChild
-                        variant="ghost"
-                        size="sm"
-                        className="flex-col h-auto p-3 min-w-[50px] touch-manipulation"
-                      >
-                        <Link
-                          to="/flights"
-                          className="flex flex-col items-center gap-1"
-                          activeProps={{
-                            className: activeNavClass,
-                          }}
-                        >
-                          <Plane className="size-5" />
-                        </Link>
-                      </Button>
-                    )}
-                    <Button
-                      asChild
-                      variant="ghost"
-                      size="sm"
-                      className="flex-col h-auto p-3 min-w-[50px] touch-manipulation"
-                    >
-                      <Link
-                        to="/reports"
-                        className="flex flex-col items-center gap-1"
-                        activeProps={{
-                          className: activeNavClass,
-                        }}
-                      >
-                        <BarChart3 className="size-5" />
-                      </Link>
-                    </Button>
-                    {isFeatureEnabled('pushNotifications') && (
-                      <Button
-                        asChild
-                        variant="ghost"
-                        size="sm"
-                        className="flex-col h-auto p-2 min-w-[50px] touch-manipulation"
-                      >
-                        <Link
-                          to="/notifications"
-                          className="flex flex-col items-center gap-1"
-                          activeProps={{
-                            className: activeNavClass,
-                          }}
-                        >
-                          <Bell className="size-5" />
-                        </Link>
-                      </Button>
-                    )}
-                  </nav>
-
-                  {/* User Profile for Mobile */}
-                  <div className="fixed bottom-3 right-3">
-                    <UserProfilePopover />
-                  </div>
-                </div>
-              </div>
-
-              {/* Add bottom padding for mobile navigation */}
-              <div className="lg:hidden h-16" />
 
               {/* Toast Notifications */}
               <Toaster
@@ -244,7 +253,7 @@ function RootComponent() {
                 expand={false}
                 visibleToasts={3}
               />
-            </div>
+            </SidebarProvider>
           </PasswordProtection>
         </AppContextProvider>
       </ThemeProvider>

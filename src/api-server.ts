@@ -3,6 +3,7 @@ import { serve } from 'bun';
 import * as authApi from './api/auth';
 import * as configApi from './api/config';
 import * as notificationsApi from './api/notifications';
+import * as organizationsApi from './api/organizations';
 import * as preferencesApi from './api/preferences';
 import * as runsApi from './api/runs';
 import * as seedApi from './api/seed';
@@ -25,6 +26,7 @@ const apiRoutes = {
   '/api/runs': runsApi,
   '/api/preferences': preferencesApi,
   '/api/notifications': notificationsApi,
+  '/api/organizations': organizationsApi,
   '/api/seed': seedApi,
 };
 
@@ -146,6 +148,60 @@ const server = serve({
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
+      }
+
+      // Check for organization sub-routes
+      const orgMembersMatch = url.pathname.match(
+        /^\/api\/organizations\/([^\/]+)\/members$/
+      );
+      if (orgMembersMatch && request.method === 'GET') {
+        (request as any).params = { orgId: orgMembersMatch[1] };
+        const response = await organizationsApi.getOrganizationMembers(request);
+        response.headers.set('Access-Control-Allow-Origin', '*');
+        response.headers.set(
+          'Access-Control-Allow-Methods',
+          'GET, POST, PUT, DELETE, OPTIONS'
+        );
+        response.headers.set(
+          'Access-Control-Allow-Headers',
+          'Content-Type, Authorization'
+        );
+        return response;
+      }
+
+      const orgUserRoleMatch = url.pathname.match(
+        /^\/api\/organizations\/([^\/]+)\/user-role$/
+      );
+      if (orgUserRoleMatch && request.method === 'GET') {
+        (request as any).params = { orgId: orgUserRoleMatch[1] };
+        const response = await organizationsApi.getUserRole(request);
+        response.headers.set('Access-Control-Allow-Origin', '*');
+        response.headers.set(
+          'Access-Control-Allow-Methods',
+          'GET, POST, PUT, DELETE, OPTIONS'
+        );
+        response.headers.set(
+          'Access-Control-Allow-Headers',
+          'Content-Type, Authorization'
+        );
+        return response;
+      }
+
+      if (
+        url.pathname === '/api/organizations/check-permissions' &&
+        request.method === 'GET'
+      ) {
+        const response = await organizationsApi.checkPermissions(request);
+        response.headers.set('Access-Control-Allow-Origin', '*');
+        response.headers.set(
+          'Access-Control-Allow-Methods',
+          'GET, POST, PUT, DELETE, OPTIONS'
+        );
+        response.headers.set(
+          'Access-Control-Allow-Headers',
+          'Content-Type, Authorization'
+        );
+        return response;
       }
 
       // Check for standard API routes

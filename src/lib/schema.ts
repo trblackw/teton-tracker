@@ -108,6 +108,8 @@ export const ClerkUserSchema = z.object({
   imageUrl: z.string().optional(),
 });
 
+export type ClerkUserRole = 'admin' | 'driver';
+
 export enum ReportType {
   flight = 'flight',
   traffic = 'traffic',

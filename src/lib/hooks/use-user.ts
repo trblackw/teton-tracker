@@ -11,6 +11,11 @@ import type { ClerkUser } from '../schema';
  */
 export function useCurrentUserData() {
   const { user: clerkUser, isLoaded, isSignedIn } = useUser();
+  console.log('🚀 ~ useCurrentUserData ~ clerkUser:', clerkUser);
+
+  clerkUser?.getOrganizationMemberships().then(orgs => {
+    console.log('🚀 ~ useCurrentUserData ~ orgs:', orgs);
+  });
 
   const transformClerkUserToUser = useCallback(
     (user: typeof clerkUser): ClerkUser | null => {

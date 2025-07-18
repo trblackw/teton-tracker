@@ -506,3 +506,75 @@ export const smsApi = {
     return response.json();
   },
 };
+
+// API client for organizations
+export const organizationsApi = {
+  // Get all organizations for the current user
+  async getUserOrganizations(userId: string): Promise<any[]> {
+    const response = await fetch(`${API_BASE}/organizations?userId=${userId}`, {
+      method: 'GET',
+      headers: createAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to get user organizations');
+    }
+
+    return response.json();
+  },
+
+  // Get all members of an organization
+  async getOrganizationMembers(orgId: string, userId: string): Promise<any> {
+    const response = await fetch(
+      `${API_BASE}/organizations/${orgId}/members?userId=${userId}`,
+      {
+        method: 'GET',
+        headers: createAuthHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to get organization members');
+    }
+
+    return response.json();
+  },
+
+  // Get user's role in a specific organization
+  async getUserRole(orgId: string, userId: string): Promise<any> {
+    const response = await fetch(
+      `${API_BASE}/organizations/${orgId}/user-role?userId=${userId}`,
+      {
+        method: 'GET',
+        headers: createAuthHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to get user role');
+    }
+
+    return response.json();
+  },
+
+  // Check if user has specific permissions
+  async checkPermissions(
+    orgId: string,
+    userId: string,
+    permission: string
+  ): Promise<any> {
+    const response = await fetch(
+      `${API_BASE}/organizations/check-permissions?orgId=${orgId}&userId=${userId}&permission=${permission}`,
+      {
+        method: 'GET',
+        headers: createAuthHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to check permissions');
+    }
+
+    return response.json();
+  },
+};

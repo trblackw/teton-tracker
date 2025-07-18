@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.34.0",
+    "@clerk/clerk-sdk-node": "^5.1.6",
     "@hookform/resolvers": "^4.1.0",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-label": "^2.1.7",
