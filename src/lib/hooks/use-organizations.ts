@@ -7,15 +7,19 @@ import {
 } from '@tanstack/react-query';
 import { organizationsApi } from '../api/client';
 
-// Hook to get all organizations for the current user
-export function useUserOrganizations(): UseQueryResult<Organization[], Error> {
+// Hook to get single organization for the current user (new single-org model)
+export function useUserOrganization(): UseQueryResult<Organization, Error> {
   const { user } = useUser();
 
   return useQuery({
     queryKey: ['organizations', 'user', user?.id],
-    queryFn: () => {
+    queryFn: async () => {
       if (!user?.id) throw new Error('User ID not available');
-      return organizationsApi.getUserOrganizations(user.id);
+
+      const organizations = await organizationsApi.getUserOrganizations(
+        user.id
+      );
+      return organizations[0] || null;
     },
     enabled: !!user?.id,
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -69,8 +73,7 @@ export function useUserPermissions(orgId: string, permission: string) {
 
 // Hook to check if user is an admin in any organization
 export function useIsUserAdmin(orgId?: string) {
-  const { user } = useUser();
-  const { data: userOrgs } = useUserOrganizations();
+  const { data: userOrg } = useUserOrganization();
   const { data: userRole } = useUserRole(orgId || '');
 
   if (orgId) {
@@ -82,29 +85,25 @@ export function useIsUserAdmin(orgId?: string) {
   }
 
   // Check if admin in any organization
-  const isAdminInAnyOrg =
-    userOrgs?.some((org: any) => org.role === 'org:admin') || false;
+  const isAdminInAnyOrg = (userOrg as any)?.role === 'org:admin' || false;
 
   return {
     isAdmin: isAdminInAnyOrg,
-    isLoading: !userOrgs,
+    isLoading: !userOrg,
   };
 }
 
-// Hook to get the current active organization (you can extend this based on your app's logic)
+// Hook to get the current active organization (simplified for single-org model)
 export function useActiveOrganization() {
-  const { data: userOrgs, isLoading } = useUserOrganizations();
+  const { data: userOrg, isLoading } = useUserOrganization();
 
-  // For now, return the first organization, but you could implement logic to:
-  // - Store active org in localStorage
-  // - Use URL params
-  // - Use a context provider
-  const activeOrg = userOrgs?.[0] || null;
+  // Since users only belong to one organization, return the first (and only) one
+  const activeOrganization = userOrg || null;
 
   return {
-    activeOrganization: activeOrg,
+    activeOrganization,
     isLoading,
-    hasOrganizations: (userOrgs?.length || 0) > 0,
+    hasOrganization: !!activeOrganization,
   };
 }
 

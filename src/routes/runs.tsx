@@ -639,14 +639,6 @@ function Runs() {
           <h2 className="text-2xl font-bold text-foreground">{title}</h2>
           <p className="text-muted-foreground mt-1">{subtitle}</p>
         </div>
-        <div className="flex gap-2">
-          <RefreshButton onRefresh={refreshAllData} />
-          <Link to="/add">
-            <Button className="bg-green-600 hover:bg-green-700 text-white">
-              Add Run
-            </Button>
-          </Link>
-        </div>
       </div>
 
       {/* API Loading Indicator */}

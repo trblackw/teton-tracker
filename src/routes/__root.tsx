@@ -5,7 +5,7 @@ import {
   Outlet,
   useRouterState,
 } from '@tanstack/react-router';
-import { BarChart3, Bell, Car, Plane } from 'lucide-react';
+import { BarChart3, Bell, Building2, Car, Plane } from 'lucide-react';
 import { useEffect } from 'react';
 import { Toaster } from 'sonner';
 import { ActiveRunBanner } from '../components/active-run-banner';
@@ -21,6 +21,7 @@ import {
 } from '../components/ui/sidebar';
 import {
   TopNav,
+  TopNavCenter,
   TopNavLeft,
   TopNavLogo,
   TopNavRight,
@@ -30,10 +31,26 @@ import { UserProfilePopover } from '../components/user-profile-popover';
 import { AppContextProvider } from '../lib/AppContextProvider';
 import { isFeatureEnabled } from '../lib/features';
 import { useMobile } from '../lib/hooks/use-mobile';
+import { useUserOrganization } from '../lib/hooks/use-organizations';
 import { queryClient } from '../lib/react-query-client';
 import { toasts } from '../lib/toast';
 
 const activeNavClass = 'bg-primary/10 text-blue-500';
+
+function OrganizationDisplay() {
+  const { data: organization, isLoading } = useUserOrganization();
+
+  if (isLoading || !organization) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-center gap-2 text-sm font-medium text-foreground/80">
+      <Building2 className="h-4 w-4 shrink-0" />
+      <span className="truncate max-w-[200px]">{organization.name}</span>
+    </div>
+  );
+}
 
 function RootComponent() {
   const routerState = useRouterState();
@@ -221,6 +238,9 @@ function RootComponent() {
                     <TopNavLeft>
                       <TopNavSidebarTrigger />
                     </TopNavLeft>
+                    <TopNavCenter>
+                      <OrganizationDisplay />
+                    </TopNavCenter>
                     <TopNavRight>
                       <UserProfilePopover />
                     </TopNavRight>

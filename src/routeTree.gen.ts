@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root';
 import { Route as SettingsRouteImport } from './routes/settings';
 import { Route as RunsRouteImport } from './routes/runs';
 import { Route as ReportsRouteImport } from './routes/reports';
+import { Route as OrganizationRouteImport } from './routes/organization';
 import { Route as NotificationsRouteImport } from './routes/notifications';
 import { Route as FlightsRouteImport } from './routes/flights';
 import { Route as AddRouteImport } from './routes/add';
@@ -31,6 +32,11 @@ const RunsRoute = RunsRouteImport.update({
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const OrganizationRoute = OrganizationRouteImport.update({
+  id: '/organization',
+  path: '/organization',
   getParentRoute: () => rootRouteImport,
 } as any);
 const NotificationsRoute = NotificationsRouteImport.update({
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/add': typeof AddRoute;
   '/flights': typeof FlightsRoute;
   '/notifications': typeof NotificationsRoute;
+  '/organization': typeof OrganizationRoute;
   '/reports': typeof ReportsRoute;
   '/runs': typeof RunsRoute;
   '/settings': typeof SettingsRoute;
@@ -75,6 +82,7 @@ export interface FileRoutesByTo {
   '/add': typeof AddRoute;
   '/flights': typeof FlightsRoute;
   '/notifications': typeof NotificationsRoute;
+  '/organization': typeof OrganizationRoute;
   '/reports': typeof ReportsRoute;
   '/runs': typeof RunsRoute;
   '/settings': typeof SettingsRoute;
@@ -86,6 +94,7 @@ export interface FileRoutesById {
   '/add': typeof AddRoute;
   '/flights': typeof FlightsRoute;
   '/notifications': typeof NotificationsRoute;
+  '/organization': typeof OrganizationRoute;
   '/reports': typeof ReportsRoute;
   '/runs': typeof RunsRoute;
   '/settings': typeof SettingsRoute;
@@ -98,6 +107,7 @@ export interface FileRouteTypes {
     | '/add'
     | '/flights'
     | '/notifications'
+    | '/organization'
     | '/reports'
     | '/runs'
     | '/settings';
@@ -108,6 +118,7 @@ export interface FileRouteTypes {
     | '/add'
     | '/flights'
     | '/notifications'
+    | '/organization'
     | '/reports'
     | '/runs'
     | '/settings';
@@ -118,6 +129,7 @@ export interface FileRouteTypes {
     | '/add'
     | '/flights'
     | '/notifications'
+    | '/organization'
     | '/reports'
     | '/runs'
     | '/settings';
@@ -129,6 +141,7 @@ export interface RootRouteChildren {
   AddRoute: typeof AddRoute;
   FlightsRoute: typeof FlightsRoute;
   NotificationsRoute: typeof NotificationsRoute;
+  OrganizationRoute: typeof OrganizationRoute;
   ReportsRoute: typeof ReportsRoute;
   RunsRoute: typeof RunsRoute;
   SettingsRoute: typeof SettingsRoute;
@@ -155,6 +168,13 @@ declare module '@tanstack/react-router' {
       path: '/reports';
       fullPath: '/reports';
       preLoaderRoute: typeof ReportsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/organization': {
+      id: '/organization';
+      path: '/organization';
+      fullPath: '/organization';
+      preLoaderRoute: typeof OrganizationRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/notifications': {
@@ -201,6 +221,7 @@ const rootRouteChildren: RootRouteChildren = {
   AddRoute: AddRoute,
   FlightsRoute: FlightsRoute,
   NotificationsRoute: NotificationsRoute,
+  OrganizationRoute: OrganizationRoute,
   ReportsRoute: ReportsRoute,
   RunsRoute: RunsRoute,
   SettingsRoute: SettingsRoute,

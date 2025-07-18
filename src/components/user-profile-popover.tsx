@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { Building2, LogOut, Settings, User } from 'lucide-react';
 import { useState } from 'react';
 import { useAppContext } from '../lib/AppContextProvider';
-import { useUserOrganizations } from '../lib/hooks/use-organizations';
+import { useUserOrganization } from '../lib/hooks/use-organizations';
 import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 
@@ -11,8 +11,7 @@ export function UserProfilePopover() {
   const [isOpen, setIsOpen] = useState(false);
   const { signOut } = useAuth();
   const { currentUser } = useAppContext();
-  const { data: organizations, isLoading: orgsLoading } =
-    useUserOrganizations();
+  const { data: organization, isLoading: orgsLoading } = useUserOrganization();
   if (!currentUser) {
     return null;
   }
@@ -81,45 +80,47 @@ export function UserProfilePopover() {
           </div>
         </div>
 
-        {/* Organizations Section */}
-        <div className="p-3 border-b">
-          <div className="flex items-center gap-2 mb-2">
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Organization
-            </span>
-          </div>
-
-          {orgsLoading ? (
-            <div className="text-xs text-muted-foreground">
-              Loading organization...
+        {/* Organizations Section - Only show if user has an organization */}
+        {organization && (
+          <div className="p-3 border-b">
+            <div className="flex items-center gap-2 mb-2">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Organization
+              </span>
             </div>
-          ) : organizations && organizations.length > 0 ? (
-            <div className="space-y-1">
-              {organizations.map((org: any) => (
-                <div key={org.id} className="flex items-center justify-between">
+
+            {orgsLoading ? (
+              <div className="text-xs text-muted-foreground">
+                Loading organization...
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {/* Show the single organization */}
+                <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{org.name}</p>
+                    <Link
+                      to="/organization"
+                      className="text-sm font-medium truncate text-blue-500"
+                    >
+                      {organization.name}
+                    </Link>
                     <p className="text-xs text-muted-foreground capitalize">
-                      {org.role.replace('org:', '')}
+                      {(organization as any).role.replace('org:', '')}
                     </p>
                   </div>
-                  {org.imageUrl && (
+                  {organization.imageUrl && (
                     <img
-                      src={org.imageUrl}
-                      alt={org.name}
+                      src={organization.imageUrl}
+                      alt={organization.name}
                       className="h-6 w-6 rounded"
                     />
                   )}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-xs text-muted-foreground">
-              No organizations found
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="p-1">
           <Button
