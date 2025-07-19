@@ -7,6 +7,7 @@ import {
   Calendar,
   Car,
   Clock,
+  DollarSign,
   Filter,
   MapPin,
   MessageCircle,
@@ -169,7 +170,6 @@ function DriverDetailPage() {
       id: 'search',
       icon: <Search className="h-4 w-4" />,
       label: 'Search Runs',
-      badge: searchTerm ? '●' : undefined,
       showHeader: false,
       content: (
         <div className="space-y-3">
@@ -333,8 +333,10 @@ function DriverDetailPage() {
     );
   }
 
+  const filteredApplied = searchTerm || selectedLocations.length > 0;
+
   return (
-    <div className="container mx-auto py-2 max-w-full overflow-hidden">
+    <div className="container mx-auto py-1 max-w-full overflow-hidden">
       {/* Header */}
       <div className="mb-6">
         <Link
@@ -344,7 +346,7 @@ function DriverDetailPage() {
           <ArrowLeft className="h-4 w-4" />
           Drivers
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center gap-2">
           <Users className="h-6 w-6" />
           <h1 className="text-3xl font-bold">{driverName}</h1>
         </div>
@@ -481,24 +483,7 @@ function DriverDetailPage() {
             <ExpandableActionsDrawer
               actions={drawerActions}
               className="mb-4"
-              // rightContent={
-              //   <div className="flex items-center justify-start">
-              //     <span className="flex items-center gap-2">
-              //       <Car className="h-5 w-5" />
-              //       Driver Runs
-              //     </span>
-              //     {(searchTerm || selectedLocations.length > 0) && (
-              //       <Button
-              //         variant="ghost"
-              //         size="sm"
-              //         onClick={clearFilters}
-              //         className="ml-auto"
-              //       >
-              //         <CircleX className="h-4 w-4 text-destructive" />
-              //       </Button>
-              //     )}
-              //   </div>
-              // }
+              onClearAll={filteredApplied ? clearFilters : undefined}
             />
           </div>
 
@@ -508,9 +493,6 @@ function DriverDetailPage() {
               {searchTerm || selectedLocations.length > 0 ? (
                 <div>
                   <p className="mb-2">No runs match your current filters</p>
-                  <Button variant="outline" size="sm" onClick={clearFilters}>
-                    Clear filters to see all runs
-                  </Button>
                 </div>
               ) : (
                 <p>No runs found for this driver</p>
@@ -554,19 +536,22 @@ function DriverDetailPage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
-                      <MapPin className="h-3 w-3" />
+                      <MapPin className="size-4 min-w-4" />
                       <span>
                         {run.pickupLocation} → {run.dropoffLocation}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Clock className="h-3 w-3" />
+                      <Clock className="size-4 min-w-4" />
                       <span>
                         {new Date(run.scheduledTime).toLocaleString()}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">${run.price}</span>
+                      <span className="font-medium flex items-center gap-2">
+                        <DollarSign className="size-4 min-w-4" />
+                        {run.price}
+                      </span>
                     </div>
                   </div>
                   {run.notes && (

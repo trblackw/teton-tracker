@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { CircleX, X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { Button } from './button';
 
@@ -17,6 +17,7 @@ interface ExpandableActionsDrawerProps {
   className?: string;
   disabled?: boolean;
   rightContent?: React.ReactNode; // Optional content to render to the right of actions
+  onClearAll?: () => void;
 }
 
 export function ExpandableActionsDrawer({
@@ -24,6 +25,7 @@ export function ExpandableActionsDrawer({
   className = '',
   disabled = false,
   rightContent,
+  onClearAll,
 }: ExpandableActionsDrawerProps) {
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
   const activeAction = actions.find(action => action.id === activeActionId);
@@ -161,6 +163,16 @@ export function ExpandableActionsDrawer({
             </Button>
           ))}
         </div>
+        {onClearAll && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClearAll}
+            style={{ padding: 0, margin: 0, minWidth: 0 }}
+          >
+            <CircleX className="size-5 text-destructive" />
+          </Button>
+        )}
 
         {/* Right content area */}
         {rightContent && <div className="flex-shrink-0">{rightContent}</div>}
