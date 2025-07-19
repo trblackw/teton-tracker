@@ -41,7 +41,7 @@ const generateMockRuns = (reportTemplateId: string) => {
   return [
     {
       reportTemplateId,
-      reservation_id: generateReservationId(),
+      reservationId: generateReservationId(),
       billTo: 'VIP',
       flightNumber: 'UA2729',
       airline: 'United Airlines',
@@ -57,7 +57,7 @@ const generateMockRuns = (reportTemplateId: string) => {
     },
     {
       reportTemplateId,
-      reservation_id: generateReservationId(),
+      reservationId: generateReservationId(),
       billTo: 'AA',
       flightNumber: 'AA1558',
       airline: 'American Airlines',
@@ -73,7 +73,7 @@ const generateMockRuns = (reportTemplateId: string) => {
     },
     {
       reportTemplateId,
-      reservation_id: generateReservationId(),
+      reservationId: generateReservationId(),
       billTo: null,
       flightNumber: 'DL1234',
       airline: 'Delta Air Lines',
@@ -90,7 +90,7 @@ const generateMockRuns = (reportTemplateId: string) => {
     },
     {
       reportTemplateId,
-      reservation_id: generateReservationId(),
+      reservationId: generateReservationId(),
       billTo: 'BB',
       flightNumber: 'WN1847',
       airline: 'Southwest Airlines',
@@ -109,7 +109,7 @@ const generateMockRuns = (reportTemplateId: string) => {
     },
     {
       reportTemplateId,
-      reservation_id: generateReservationId(),
+      reservationId: generateReservationId(),
       billTo: 'CC',
       flightNumber: 'F9321',
       airline: 'Frontier Airlines',
@@ -129,7 +129,7 @@ const generateMockRuns = (reportTemplateId: string) => {
     // Completed runs (in the past)
     {
       reportTemplateId,
-      reservation_id: generateReservationId(),
+      reservationId: generateReservationId(),
       billTo: null,
       flightNumber: 'AS987',
       airline: 'Alaska Airlines',
@@ -146,7 +146,7 @@ const generateMockRuns = (reportTemplateId: string) => {
     },
     {
       reportTemplateId,
-      reservation_id: generateReservationId(),
+      reservationId: generateReservationId(),
       billTo: 'DD',
       flightNumber: 'NK654',
       airline: 'Spirit Airlines',

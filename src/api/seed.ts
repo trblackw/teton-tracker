@@ -511,7 +511,7 @@ export async function seedDataForUser(userId: string): Promise<{
     const allRuns: Array<{
       userId: string;
       reportTemplateId: string;
-      reservation_id: string;
+      reservationId: string;
       billTo: string | null;
       flightNumber: string;
       airline: string;
@@ -639,7 +639,7 @@ export async function seedDataForUser(userId: string): Promise<{
         const runData = {
           userId: targetUserId,
           reportTemplateId: defaultReportTemplateId,
-          reservation_id: generateReservationId(),
+          reservationId: generateReservationId(),
           billTo: generateBillTo(),
           flightNumber,
           airline: airline.name,

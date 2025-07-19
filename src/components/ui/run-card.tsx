@@ -118,7 +118,7 @@ export function RunCard({
               <div className="flex items-center gap-2">
                 <Hash className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <span className="text-sm text-muted-foreground">
-                  {run.reservation_id}
+                  {run.reservationId}
                 </span>
               </div>
               {run.billTo && (

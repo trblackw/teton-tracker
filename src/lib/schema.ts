@@ -292,7 +292,7 @@ export const RunSchema = z.object({
   id: z.string().uuid('Invalid run ID format'),
   userId: z.string().min(1, 'User ID is required'),
   reportTemplateId: z.string().uuid('Invalid report template ID format'),
-  reservation_id: z
+  reservationId: z
     .string()
     .regex(/^\d{7}$/, 'Reservation ID must be exactly 7 digits')
     .transform(val => val.trim()),
@@ -384,7 +384,7 @@ export const TrafficDataSchema = z.object({
 export const NewRunFormSchema = z.object({
   userId: z.string().min(1, 'User ID is required').optional(), // Optional for forms, will be auto-generated
   reportTemplateId: z.string().uuid('Invalid report template ID format'),
-  reservation_id: z
+  reservationId: z
     .string()
     .regex(/^\d{7}$/, 'Reservation ID must be exactly 7 digits')
     .transform(val => val.trim()),

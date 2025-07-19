@@ -80,7 +80,7 @@ async function seedDatabase() {
     const sampleRuns: NewRunForm[] = [
       {
         reportTemplateId: reportTemplate.id,
-        reservation_id: generateReservationId(),
+        reservationId: generateReservationId(),
         billTo: generateBillTo(),
         flightNumber: 'UA1234',
         airline: 'United Airlines',
@@ -96,7 +96,7 @@ async function seedDatabase() {
       },
       {
         reportTemplateId: reportTemplate.id,
-        reservation_id: generateReservationId(),
+        reservationId: generateReservationId(),
         billTo: null, // Testing nullable field
         flightNumber: 'DL5678',
         airline: 'Delta Air Lines',

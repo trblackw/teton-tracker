@@ -206,7 +206,7 @@ function DefaultAddRun() {
     price: '',
     notes: '',
     reportTemplateId: '',
-    reservation_id: '',
+    reservationId: '',
     billTo: '',
   };
 

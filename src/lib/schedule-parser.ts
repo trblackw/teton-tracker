@@ -500,7 +500,7 @@ export function convertParsedRunToForm(
     price: cleanPrice,
     notes: cleanNotes,
     reportTemplateId: '',
-    reservation_id: '',
+    reservationId: '',
     billTo: '',
   };
 }
