@@ -149,19 +149,6 @@ const result = await build({
   minify: true,
   target: 'browser',
   sourcemap: 'linked',
-  define: {
-    'process.env.NODE_ENV': JSON.stringify('production'),
-    // Define feature flags for production
-    'process.env.FEATURE_REAL_TIME_FLIGHT_TRAFFIC': JSON.stringify(
-      process.env.FEATURE_REAL_TIME_FLIGHT_TRAFFIC || 'false'
-    ),
-    'process.env.FEATURE_PUSH_NOTIFICATIONS': JSON.stringify(
-      process.env.FEATURE_PUSH_NOTIFICATIONS || 'false'
-    ),
-    'process.env.SIMULATE_PRODUCTION_IN_DEV': JSON.stringify(
-      process.env.SIMULATE_PRODUCTION_IN_DEV || 'false'
-    ),
-  },
   ...cliConfig, // Merge in any CLI-provided options
 });
 

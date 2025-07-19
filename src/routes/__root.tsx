@@ -41,7 +41,6 @@ import {
 } from '../components/ui/top-nav';
 import { UserProfilePopover } from '../components/user-profile-popover';
 import { AppContextProvider } from '../lib/AppContextProvider';
-import { isFeatureEnabled } from '../lib/features';
 import { useCurrentRunsCount } from '../lib/hooks/use-current-runs-count';
 import { useMobile } from '../lib/hooks/use-mobile';
 import {
@@ -219,24 +218,22 @@ function RootComponent() {
                     <SidebarContent className="flex flex-col">
                       <SidebarNav className="flex-1">
                         <CurrentRunsNavItem />
-                        {isFeatureEnabled('realTimeFlightTraffic') && (
-                          <Button
-                            asChild
-                            variant="ghost"
-                            className="w-full justify-start"
+                        <Button
+                          asChild
+                          variant="ghost"
+                          className="w-full justify-start"
+                        >
+                          <MobileAwareNavLink
+                            to="/flights"
+                            className="flex items-center gap-2"
+                            activeProps={{
+                              className: activeNavClass,
+                            }}
                           >
-                            <MobileAwareNavLink
-                              to="/flights"
-                              className="flex items-center gap-2"
-                              activeProps={{
-                                className: activeNavClass,
-                              }}
-                            >
-                              <Plane className="h-4 w-4" />
-                              Upcoming Flights
-                            </MobileAwareNavLink>
-                          </Button>
-                        )}
+                            <Plane className="h-4 w-4" />
+                            Upcoming Flights
+                          </MobileAwareNavLink>
+                        </Button>
                         <Button
                           asChild
                           variant="ghost"
@@ -253,24 +250,22 @@ function RootComponent() {
                             Reports
                           </MobileAwareNavLink>
                         </Button>
-                        {isFeatureEnabled('pushNotifications') && (
-                          <Button
-                            asChild
-                            variant="ghost"
-                            className="w-full justify-start"
+                        <Button
+                          asChild
+                          variant="ghost"
+                          className="w-full justify-start"
+                        >
+                          <MobileAwareNavLink
+                            to="/notifications"
+                            className="flex items-center gap-2"
+                            activeProps={{
+                              className: activeNavClass,
+                            }}
                           >
-                            <MobileAwareNavLink
-                              to="/notifications"
-                              className="flex items-center gap-2"
-                              activeProps={{
-                                className: activeNavClass,
-                              }}
-                            >
-                              <Bell className="h-4 w-4" />
-                              Notifications
-                            </MobileAwareNavLink>
-                          </Button>
-                        )}
+                            <Bell className="h-4 w-4" />
+                            Notifications
+                          </MobileAwareNavLink>
+                        </Button>
                       </SidebarNav>
 
                       {/* Admin section at bottom */}
@@ -290,24 +285,22 @@ function RootComponent() {
                     <SidebarContent className="flex flex-col">
                       <SidebarNav className="flex-1">
                         <CurrentRunsNavItem />
-                        {isFeatureEnabled('realTimeFlightTraffic') && (
-                          <Button
-                            asChild
-                            variant="ghost"
-                            className="w-full justify-start"
+                        <Button
+                          asChild
+                          variant="ghost"
+                          className="w-full justify-start"
+                        >
+                          <MobileAwareNavLink
+                            to="/flights"
+                            className="flex items-center gap-2"
+                            activeProps={{
+                              className: activeNavClass,
+                            }}
                           >
-                            <MobileAwareNavLink
-                              to="/flights"
-                              className="flex items-center gap-2"
-                              activeProps={{
-                                className: activeNavClass,
-                              }}
-                            >
-                              <Plane className="h-4 w-4" />
-                              Upcoming Flights
-                            </MobileAwareNavLink>
-                          </Button>
-                        )}
+                            <Plane className="h-4 w-4" />
+                            Upcoming Flights
+                          </MobileAwareNavLink>
+                        </Button>
                         <Button
                           asChild
                           variant="ghost"
@@ -324,24 +317,22 @@ function RootComponent() {
                             Reports
                           </MobileAwareNavLink>
                         </Button>
-                        {isFeatureEnabled('pushNotifications') && (
-                          <Button
-                            asChild
-                            variant="ghost"
-                            className="w-full justify-start"
+                        <Button
+                          asChild
+                          variant="ghost"
+                          className="w-full justify-start"
+                        >
+                          <MobileAwareNavLink
+                            to="/notifications"
+                            className="flex items-center gap-2"
+                            activeProps={{
+                              className: activeNavClass,
+                            }}
                           >
-                            <MobileAwareNavLink
-                              to="/notifications"
-                              className="flex items-center gap-2"
-                              activeProps={{
-                                className: activeNavClass,
-                              }}
-                            >
-                              <Bell className="h-4 w-4" />
-                              Notifications
-                            </MobileAwareNavLink>
-                          </Button>
-                        )}
+                            <Bell className="h-4 w-4" />
+                            Notifications
+                          </MobileAwareNavLink>
+                        </Button>
                       </SidebarNav>
 
                       {/* Admin section at bottom */}
