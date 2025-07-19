@@ -85,6 +85,22 @@ export const Route = createFileRoute('/report-templates')({
   component: ReportTemplatesPage,
 });
 
+// const runTypeToBadgeColor = (runType: ReportType) => {
+//   switch (runType) {
+//     case ReportType.run:
+//       return 'bg-blue-400/10 text-blue-400';
+//     case ReportType.flight:
+//       return 'bg-green-400/10 text-green-400';
+//     default:
+//   }
+// };
+
+const runTypeToBadgeColor: { [key in ReportType]: string } = {
+  [ReportType.run]: 'bg-cyan-300/10 text-cyan-300 border-cyan-300',
+  [ReportType.flight]: 'bg-green-300/10 text-green-300 border-green-300',
+  [ReportType.traffic]: 'bg-yellow-300/10 text-yellow-300 border-yellow-300',
+};
+
 function ReportTemplatesPage() {
   const { isAdmin, organization } = useNonAdminRedirect('/runs');
   const [selectedTemplate, setSelectedTemplate] =
@@ -266,12 +282,6 @@ function ReportTemplatesPage() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <CardTitle className="text-lg">{template.name}</CardTitle>
-                  <Badge
-                    className="ml-auto bg-transparent text-gray-200 border-gray-200"
-                    variant={template.isDefault ? 'default' : 'secondary'}
-                  >
-                    {template.isDefault ? 'Default' : template.reportType}
-                  </Badge>
                 </div>
                 <CardDescription>{template.description}</CardDescription>
               </div>
@@ -294,79 +304,83 @@ function ReportTemplatesPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <div className="flex items-center gap-2 justify-between w-full">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button
-                      size="sm"
-                      className="bg-accent text-accent-foreground hover:bg-accent/90 flex items-center gap-2"
-                    >
-                      <Eye className="h-4 w-4" />
-                      Preview
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-3xl">
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2">
-                        <Eye className="h-4 w-4" /> Preview: {template.name}
-                      </DialogTitle>
-                    </DialogHeader>
-                    <TemplatePreview template={template} />
-                  </DialogContent>
-                </Dialog>
-
-                <Dialog
-                  open={
-                    isEditDialogOpen && selectedTemplate?.id === template.id
-                  }
-                  onOpenChange={open => {
-                    setIsEditDialogOpen(open);
-                    if (!open) setSelectedTemplate(null);
-                  }}
+              <div className="flex items-center justify-between gap-1 w-full">
+                <Badge
+                  className={runTypeToBadgeColor[template.reportType]}
+                  variant={template.isDefault ? 'default' : 'secondary'}
                 >
-                  <DialogTrigger asChild>
-                    <Button
-                      size="sm"
-                      className="bg-slate-600 text-white flex items-center hover:bg-slate-600/90 gap-2"
-                      onClick={() => setSelectedTemplate(template)}
-                    >
-                      <Edit3 className="h-4 w-4" />
-                      Edit
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <TemplateFormDialog
-                      mode="edit"
-                      template={template}
-                      onSave={handleUpdateTemplate}
-                      organizationId={organization?.id || ''}
-                      onCancel={() => setIsEditDialogOpen(false)}
-                      existingColumns={existingColumnConfigs || []}
-                      isLoading={updateTemplateMutation.isPending}
-                    />
-                  </DialogContent>
-                </Dialog>
-
-                {!template.isDefault && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteTemplate(template.id)}
-                    disabled={deleteTemplateMutation.isPending}
+                  {template.isDefault ? 'Default' : template.reportType}
+                </Badge>
+                <div>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 hover:bg-accent"
+                        aria-label="Preview template"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-3xl">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                          <Eye className="h-4 w-4" /> Preview: {template.name}
+                        </DialogTitle>
+                      </DialogHeader>
+                      <TemplatePreview template={template} />
+                    </DialogContent>
+                  </Dialog>
+                  <Dialog
+                    open={
+                      isEditDialogOpen && selectedTemplate?.id === template.id
+                    }
+                    onOpenChange={open => {
+                      setIsEditDialogOpen(open);
+                      if (!open) setSelectedTemplate(null);
+                    }}
                   >
-                    {deleteTemplateMutation.isPending ? (
-                      <>
-                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current mr-2"></div>
-                        Deleting...
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </>
-                    )}
-                  </Button>
-                )}
+                    <DialogTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 hover:bg-slate-100"
+                        onClick={() => setSelectedTemplate(template)}
+                        aria-label="Edit template"
+                      >
+                        <Edit3 className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                      <TemplateFormDialog
+                        mode="edit"
+                        template={template}
+                        onSave={handleUpdateTemplate}
+                        organizationId={organization?.id || ''}
+                        onCancel={() => setIsEditDialogOpen(false)}
+                        existingColumns={existingColumnConfigs || []}
+                        isLoading={updateTemplateMutation.isPending}
+                      />
+                    </DialogContent>
+                  </Dialog>
+                  {!template.isDefault && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 hover:bg-red-50 text-red-600 hover:text-red-700"
+                      onClick={() => handleDeleteTemplate(template.id)}
+                      disabled={deleteTemplateMutation.isPending}
+                      aria-label="Delete template"
+                    >
+                      {deleteTemplateMutation.isPending ? (
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardFooter>
           </Card>
@@ -821,9 +835,6 @@ function TemplatePreview({ template }: { template: ReportTemplate }) {
   return (
     <div className="space-y-4">
       <div className="border rounded-lg overflow-hidden">
-        {/* <div className="bg-muted/50 p-3 border-b font-medium flex items-center gap-2">
-          <File className="h-4 w-4" /> Report Preview
-        </div> */}
         <div className="p-4 bg-muted/50 border-b font-medium">
           <div className="overflow-x-auto">
             <table className="w-full text-xs border-collapse">
