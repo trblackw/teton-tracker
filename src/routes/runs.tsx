@@ -4,7 +4,6 @@ import {
   AlertCircle,
   ArrowDown,
   ArrowUp,
-  Car,
   Clock,
   FileText,
   Filter,
@@ -622,9 +621,21 @@ function Runs() {
 
   const { title, subtitle } = getTabHeader();
 
+  if (runsApiData.isLoading) {
+    <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+      <div className="flex items-center gap-2">
+        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+        <p className="text-primary text-sm">
+          Fetching latest flight and traffic data...
+        </p>
+      </div>
+    </div>;
+  }
+
   return (
     <>
-      <StickyHeader title={title} subtitle={subtitle} icon={Car}>
+      <StickyHeader title={title} subtitle={subtitle} />
+      <div className="space-y-3 px-4 sm:px-6 lg:px-8">
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="current">
@@ -665,143 +676,134 @@ function Runs() {
               },
             ]}
           />
+          <TabsContent value="current" className="space-y-4">
+            {currentRuns.length === 0 ? (
+              // Check if it's due to filtering
+              (searchTerm ||
+                selectedAirline ||
+                selectedStatus ||
+                selectedType) &&
+              baseCurrentRuns.length > 0 ? (
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <div className="flex flex-col items-center justify-center space-y-4">
+                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+                        <Search className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="text-xl font-medium text-foreground">
+                          No matching runs found
+                        </h3>
+                        <p className="text-muted-foreground max-w-md">
+                          No current runs match your search criteria. Try
+                          adjusting your filters.
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          setSearchTerm('');
+                          setSelectedAirline('');
+                          setSelectedStatus('');
+                          setSelectedType('');
+                        }}
+                        variant="outline"
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Clear Filters
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                renderEmptyState()
+              )
+            ) : (
+              <div className="grid gap-4">
+                {runsApiData.data
+                  .filter(({ run }) =>
+                    currentRuns.some(currentRun => currentRun.id === run.id)
+                  )
+                  .map(({ run, flightStatus, trafficData }) => (
+                    <RunCard
+                      key={run.id}
+                      run={run}
+                      runsLoading={runsApiData.isLoading}
+                      runsError={runsApiData.isError}
+                      trafficData={trafficData}
+                      handleStopRun={handleStopRun}
+                      handleEditRun={handleEditRun}
+                      refreshRunData={refreshRunData}
+                      flightStatus={flightStatus}
+                    />
+                  ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="past" className="space-y-4">
+            {pastRuns.length === 0 ? (
+              // Check if it's due to filtering
+              (searchTerm ||
+                selectedAirline ||
+                selectedStatus ||
+                selectedType) &&
+              basePastRuns.length > 0 ? (
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <div className="flex flex-col items-center justify-center space-y-4">
+                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+                        <Search className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="text-xl font-medium text-foreground">
+                          No matching runs found
+                        </h3>
+                        <p className="text-muted-foreground max-w-md">
+                          No past runs match your search criteria. Try adjusting
+                          your filters.
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          setSearchTerm('');
+                          setSelectedAirline('');
+                          setSelectedStatus('');
+                          setSelectedType('');
+                        }}
+                        variant="outline"
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Clear Filters
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                renderEmptyState()
+              )
+            ) : (
+              <div className="grid gap-4">
+                {runsApiData.data
+                  .filter(({ run }) =>
+                    pastRuns.some(pastRun => pastRun.id === run.id)
+                  )
+                  .map(({ run, flightStatus, trafficData }) => (
+                    <RunCard
+                      key={run.id}
+                      run={run}
+                      runsLoading={runsApiData.isLoading}
+                      runsError={runsApiData.isError}
+                      trafficData={trafficData}
+                      handleStopRun={handleStopRun}
+                      handleEditRun={handleEditRun}
+                      refreshRunData={refreshRunData}
+                      flightStatus={flightStatus}
+                    />
+                  ))}
+              </div>
+            )}
+          </TabsContent>
         </Tabs>
-      </StickyHeader>
-
-      <div className="space-y-3 px-4 sm:px-6 lg:px-8">
-        {/* API Loading Indicator */}
-        {runsApiData.isLoading && (
-          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-            <div className="flex items-center gap-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-              <p className="text-primary text-sm">
-                Fetching latest flight and traffic data...
-              </p>
-            </div>
-          </div>
-        )}
-
-        <TabsContent value="current" className="space-y-4">
-          {currentRuns.length === 0 ? (
-            // Check if it's due to filtering
-            (searchTerm || selectedAirline || selectedStatus || selectedType) &&
-            baseCurrentRuns.length > 0 ? (
-              <Card className="text-center py-12">
-                <CardContent>
-                  <div className="flex flex-col items-center justify-center space-y-4">
-                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
-                      <Search className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-xl font-medium text-foreground">
-                        No matching runs found
-                      </h3>
-                      <p className="text-muted-foreground max-w-md">
-                        No current runs match your search criteria. Try
-                        adjusting your filters.
-                      </p>
-                    </div>
-                    <Button
-                      onClick={() => {
-                        setSearchTerm('');
-                        setSelectedAirline('');
-                        setSelectedStatus('');
-                        setSelectedType('');
-                      }}
-                      variant="outline"
-                    >
-                      <X className="h-4 w-4 mr-2" />
-                      Clear Filters
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              renderEmptyState()
-            )
-          ) : (
-            <div className="grid gap-4">
-              {runsApiData.data
-                .filter(({ run }) =>
-                  currentRuns.some(currentRun => currentRun.id === run.id)
-                )
-                .map(({ run, flightStatus, trafficData }) => (
-                  <RunCard
-                    key={run.id}
-                    run={run}
-                    runsLoading={runsApiData.isLoading}
-                    runsError={runsApiData.isError}
-                    trafficData={trafficData}
-                    handleStopRun={handleStopRun}
-                    handleEditRun={handleEditRun}
-                    refreshRunData={refreshRunData}
-                    flightStatus={flightStatus}
-                  />
-                ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="past" className="space-y-4">
-          {pastRuns.length === 0 ? (
-            // Check if it's due to filtering
-            (searchTerm || selectedAirline || selectedStatus || selectedType) &&
-            basePastRuns.length > 0 ? (
-              <Card className="text-center py-12">
-                <CardContent>
-                  <div className="flex flex-col items-center justify-center space-y-4">
-                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
-                      <Search className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-xl font-medium text-foreground">
-                        No matching runs found
-                      </h3>
-                      <p className="text-muted-foreground max-w-md">
-                        No past runs match your search criteria. Try adjusting
-                        your filters.
-                      </p>
-                    </div>
-                    <Button
-                      onClick={() => {
-                        setSearchTerm('');
-                        setSelectedAirline('');
-                        setSelectedStatus('');
-                        setSelectedType('');
-                      }}
-                      variant="outline"
-                    >
-                      <X className="h-4 w-4 mr-2" />
-                      Clear Filters
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              renderEmptyState()
-            )
-          ) : (
-            <div className="grid gap-4">
-              {runsApiData.data
-                .filter(({ run }) =>
-                  pastRuns.some(pastRun => pastRun.id === run.id)
-                )
-                .map(({ run, flightStatus, trafficData }) => (
-                  <RunCard
-                    key={run.id}
-                    run={run}
-                    runsLoading={runsApiData.isLoading}
-                    runsError={runsApiData.isError}
-                    trafficData={trafficData}
-                    handleStopRun={handleStopRun}
-                    handleEditRun={handleEditRun}
-                    refreshRunData={refreshRunData}
-                    flightStatus={flightStatus}
-                  />
-                ))}
-            </div>
-          )}
-        </TabsContent>
 
         {/* Delete Confirmation Dialog */}
         <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

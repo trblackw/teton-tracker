@@ -255,7 +255,6 @@ function Notifications() {
       <StickyHeader
         title="Notifications"
         subtitle="Manage your notifications and alerts"
-        icon={Bell}
         actions={
           <>
             {stats && stats.unread > 0 && (

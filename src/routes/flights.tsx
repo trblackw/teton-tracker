@@ -784,13 +784,13 @@ function UpcomingFlights() {
     <>
       <StickyHeader
         title="Upcoming Flights"
-        subtitle="View upcoming departures from your home base airport"
-        icon={Plane}
+        subtitle="View upcoming departures"
         actions={
           <RefreshButton
             onRefresh={handleManualUpdate}
             disabled={!homeAirport}
             className="flex items-center gap-2"
+            iconOnly
             variant={isDebugModeEnabled ? 'secondary' : 'default'}
           />
         }

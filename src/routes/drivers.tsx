@@ -333,11 +333,7 @@ function DriversPage() {
 
   return (
     <>
-      <StickyHeader
-        title="Drivers"
-        subtitle="View & manage active runs"
-        icon={Users}
-      >
+      <StickyHeader title="Drivers" subtitle="View & manage active runs">
         <ExpandableActionsDrawer
           actions={drawerActions}
           onClearAll={filtersApplied ? clearFilters : undefined}
