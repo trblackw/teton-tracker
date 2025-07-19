@@ -88,7 +88,7 @@ export function Sidebar({
     return (
       <div
         className={cn(
-          'relative z-30 flex h-screen w-64 flex-col border-r bg-background',
+          'fixed left-0 top-0 z-30 flex h-screen w-64 flex-col border-r bg-background',
           className
         )}
       >
@@ -157,7 +157,9 @@ export function SidebarContent({
   children?: React.ReactNode;
 }) {
   return (
-    <div className={cn('flex-1 overflow-auto py-2', className)}>{children}</div>
+    <div className={cn('flex-1 overflow-hidden py-2', className)}>
+      {children}
+    </div>
   );
 }
 

@@ -207,8 +207,8 @@ function RootComponent() {
         <ThemeProvider>
           <PasswordProtection>
             <SidebarProvider isMobile={isMobile} defaultOpen={!isMobile}>
-              <div className="min-h-screen bg-background flex">
-                <style>{`body { overflow-x: hidden; }`}</style>
+              <div className="h-screen bg-background overflow-hidden">
+                <style>{`body { overflow: hidden; }`}</style>
 
                 {/* Sidebar - only affects layout on desktop */}
                 {!isMobile && (
@@ -353,7 +353,13 @@ function RootComponent() {
                 )}
 
                 {/* Main Content Area */}
-                <div className="flex-1 flex flex-col w-full">
+                <div
+                  className={
+                    !isMobile
+                      ? 'flex flex-col h-screen overflow-hidden ml-64'
+                      : 'flex flex-col h-screen overflow-hidden'
+                  }
+                >
                   {/* Top Navigation */}
                   <TopNav>
                     <TopNavLeft>
@@ -371,7 +377,7 @@ function RootComponent() {
                   <ActiveRunBanner />
 
                   {/* Main Content */}
-                  <main className="flex-1 px-4 py-4 max-w-full lg:container lg:max-w-4xl lg:mx-auto">
+                  <main className="flex-1 px-4 py-4 max-w-full lg:container lg:max-w-4xl lg:mx-auto overflow-y-auto">
                     <Outlet />
                   </main>
                 </div>
