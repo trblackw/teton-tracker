@@ -7,7 +7,6 @@ import {
   CommandEmpty,
   CommandGroup,
   CommandInput,
-  CommandItem,
   CommandList,
 } from './command';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
@@ -32,6 +31,7 @@ export function MultiSelect({
   className = '',
 }: MultiSelectProps) {
   const [open, setOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
 
   const handleSelect = (value: string) => {
     const newSelected = selected.includes(value)
@@ -47,6 +47,11 @@ export function MultiSelect({
 
   const displayItems = selected.slice(0, maxDisplay);
   const remainingCount = selected.length - maxDisplay;
+
+  // Filter options based on search
+  const filteredOptions = options.filter(option =>
+    option.toLowerCase().includes(searchValue.toLowerCase())
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -87,28 +92,34 @@ export function MultiSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Search..." />
-          <CommandEmpty>{emptyMessage}</CommandEmpty>
-          <CommandGroup>
-            <CommandList className="max-h-64">
-              {options.map(option => (
-                <CommandItem
-                  key={option}
-                  value={option}
-                  onSelect={() => handleSelect(option)}
-                  className="cursor-pointer"
-                >
-                  <Check
-                    className={`mr-2 h-4 w-4 ${
-                      selected.includes(option) ? 'opacity-100' : 'opacity-0'
-                    }`}
-                  />
-                  {option}
-                </CommandItem>
-              ))}
-            </CommandList>
-          </CommandGroup>
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Search..."
+            value={searchValue}
+            onValueChange={setSearchValue}
+          />
+          <CommandList className="max-h-64">
+            <CommandGroup>
+              {filteredOptions.length === 0 ? (
+                <CommandEmpty>{emptyMessage}</CommandEmpty>
+              ) : (
+                filteredOptions.map(option => (
+                  <div
+                    key={option}
+                    className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                    onClick={() => handleSelect(option)}
+                  >
+                    <Check
+                      className={`mr-2 h-4 w-4 ${
+                        selected.includes(option) ? 'opacity-100' : 'opacity-0'
+                      }`}
+                    />
+                    {option}
+                  </div>
+                ))
+              )}
+            </CommandGroup>
+          </CommandList>
         </Command>
       </PopoverContent>
     </Popover>

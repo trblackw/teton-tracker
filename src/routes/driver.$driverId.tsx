@@ -475,28 +475,31 @@ function DriverDetailPage() {
 
       {/* Driver Runs List */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Car className="h-5 w-5" />
-                Driver Runs
-              </CardTitle>
-              <CardDescription>
-                All runs assigned to this driver
-              </CardDescription>
-            </div>
-            {(searchTerm || selectedLocations.length > 0) && (
-              <Button variant="outline" size="sm" onClick={clearFilters}>
-                Clear All Filters
-              </Button>
-            )}
-          </div>
-        </CardHeader>
         <CardContent>
           {/* Search and Filter Actions */}
           <div className="mb-6">
-            <ExpandableActionsDrawer actions={drawerActions} className="mb-4" />
+            <ExpandableActionsDrawer
+              actions={drawerActions}
+              className="mb-4"
+              // rightContent={
+              //   <div className="flex items-center justify-start">
+              //     <span className="flex items-center gap-2">
+              //       <Car className="h-5 w-5" />
+              //       Driver Runs
+              //     </span>
+              //     {(searchTerm || selectedLocations.length > 0) && (
+              //       <Button
+              //         variant="ghost"
+              //         size="sm"
+              //         onClick={clearFilters}
+              //         className="ml-auto"
+              //       >
+              //         <CircleX className="h-4 w-4 text-destructive" />
+              //       </Button>
+              //     )}
+              //   </div>
+              // }
+            />
           </div>
 
           {filteredDriverRuns.length === 0 ? (
@@ -515,17 +518,6 @@ function DriverDetailPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Results summary */}
-              {(searchTerm || selectedLocations.length > 0) && (
-                <div className="text-sm text-muted-foreground border-b pb-2">
-                  Showing {filteredDriverRuns.length} of {driverRuns.length}{' '}
-                  runs
-                  {searchTerm && ` matching "${searchTerm}"`}
-                  {selectedLocations.length > 0 &&
-                    ` in ${selectedLocations.length} location${selectedLocations.length !== 1 ? 's' : ''}`}
-                </div>
-              )}
-
               {filteredDriverRuns.map((run: Run) => (
                 <div key={run.id} className="border rounded-lg p-4 bg-muted/50">
                   <div className="flex items-center justify-between mb-2">

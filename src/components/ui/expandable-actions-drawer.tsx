@@ -16,12 +16,14 @@ interface ExpandableActionsDrawerProps {
   actions: DrawerAction[];
   className?: string;
   disabled?: boolean;
+  rightContent?: React.ReactNode; // Optional content to render to the right of actions
 }
 
 export function ExpandableActionsDrawer({
   actions,
   className = '',
   disabled = false,
+  rightContent,
 }: ExpandableActionsDrawerProps) {
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
   const activeAction = actions.find(action => action.id === activeActionId);
@@ -49,12 +51,25 @@ export function ExpandableActionsDrawer({
   useEffect(() => {
     if (disabled) return;
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+
       if (
         activeActionId &&
         drawerRef.current &&
-        !drawerRef.current.contains(event.target as Node)
+        !drawerRef.current.contains(target)
       ) {
-        setActiveActionId(null);
+        // Check if the click is inside a popover content (which could be a portal)
+        const isInsidePopover =
+          target instanceof Element &&
+          (target.closest('[data-radix-popper-content-wrapper]') ||
+            target.closest('[role="dialog"]') ||
+            target.closest('.popover-content') ||
+            target.closest('[data-state="open"]'));
+
+        // Don't close if clicking inside a popover
+        if (!isInsidePopover) {
+          setActiveActionId(null);
+        }
       }
     };
 
@@ -123,27 +138,32 @@ export function ExpandableActionsDrawer({
       className={`space-y-3 ${className} ${disabled ? 'pointer-events-none opacity-50' : ''}`}
       ref={drawerRef}
     >
-      {/* Action buttons */}
-      <div className="flex items-center gap-2">
-        {actions.map(action => (
-          <Button
-            key={action.id}
-            variant={activeActionId === action.id ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => handleActionClick(action.id)}
-            disabled={disabled}
-            className="relative h-9 w-9 p-0 shrink-0"
-            aria-label={action.label}
-            title={action.label}
-          >
-            {action.icon}
-            {action.badge && (
-              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-300 text-primary-foreground text-xs flex items-center justify-center font-medium min-w-[1rem]">
-                {action.badge}
-              </span>
-            )}
-          </Button>
-        ))}
+      {/* Action buttons and right content */}
+      <div className="flex items-center justify-start gap-4">
+        <div className="flex items-center gap-2">
+          {actions.map(action => (
+            <Button
+              key={action.id}
+              variant={activeActionId === action.id ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleActionClick(action.id)}
+              disabled={disabled}
+              className="relative h-9 w-9 p-0 shrink-0"
+              aria-label={action.label}
+              title={action.label}
+            >
+              {action.icon}
+              {action.badge && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-300 text-primary-foreground text-xs flex items-center justify-center font-medium min-w-[1rem]">
+                  {action.badge}
+                </span>
+              )}
+            </Button>
+          ))}
+        </div>
+
+        {/* Right content area */}
+        {rightContent && <div className="flex-shrink-0">{rightContent}</div>}
       </div>
 
       {/* Inline expanded content */}
