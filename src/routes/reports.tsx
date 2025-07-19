@@ -18,6 +18,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '../components/ui/card';
@@ -155,10 +156,11 @@ function Reports() {
     return filteredRuns.filter(run => selectedRunIds.has(run.id));
   }, [filteredRuns, selectedRunIds]);
 
-  // Calculate stats
-  const totalRuns = pastRuns.length;
+  // Calculate stats - use filtered runs when date range is selected, otherwise all past runs
+  const statsRuns = selectedRange?.from ? filteredRuns : pastRuns;
+  const totalRuns = statsRuns.length;
 
-  const completedRuns = pastRuns.filter(run => run.status === 'completed');
+  const completedRuns = statsRuns.filter(run => run.status === 'completed');
   const averageDuration =
     completedRuns.length > 0
       ? Math.round(
@@ -169,7 +171,7 @@ function Reports() {
         )
       : 0;
 
-  const totalPrice = pastRuns.reduce(
+  const totalPrice = statsRuns.reduce(
     (sum, run) => sum + parseInt(run.price),
     0
   );
@@ -313,21 +315,15 @@ function Reports() {
       {/* Header */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
-        <p className="text-muted-foreground">
-          Select a date range to generate and export detailed reports of your
-          past airport runs
+        <p className="text-sm text-muted-foreground">
+          Select a date range to generate & export detailed reports of your past
+          airport runs
         </p>
       </div>
 
       {/* Quick Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-1">
+      <div className="grid gap-3 md:grid-cols-1">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Overview</CardTitle>
-            <CardDescription>
-              Key metrics for all your past runs
-            </CardDescription>
-          </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center">
@@ -348,6 +344,26 @@ function Reports() {
               </div>
             </div>
           </CardContent>
+          <CardFooter className="text-sm text-blue-400 flex justify-center items-center">
+            {selectedRange?.from
+              ? `Selected: ${format(selectedRange.from, 'MMM d, yyyy')}${
+                  selectedRange.to
+                    ? ` - ${format(selectedRange.to, 'MMM d, yyyy')}`
+                    : ''
+                }`
+              : pastRuns.length > 0
+                ? `${format(
+                    parseISO(
+                      pastRuns.sort(
+                        (a, b) =>
+                          parseISO(a.scheduledTime).getTime() -
+                          parseISO(b.scheduledTime).getTime()
+                      )[0].scheduledTime
+                    ),
+                    'MMM d, yyyy'
+                  )} - ${format(new Date(), 'MMM d, yyyy')}`
+                : 'No runs available'}
+          </CardFooter>
         </Card>
       </div>
 
@@ -439,21 +455,6 @@ function Reports() {
                 </PopoverContent>
               </Popover>
             </div>
-
-            {selectedRange?.from && (
-              <div className="mt-4 p-3 bg-muted rounded-lg">
-                <p className="text-sm font-medium">Selected Range:</p>
-                <p className="text-sm text-muted-foreground">
-                  {format(selectedRange.from, 'PPP')}
-                  {selectedRange.to && ` - ${format(selectedRange.to, 'PPP')}`}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {filteredRuns.length} run
-                  {filteredRuns.length !== 1 ? 's' : ''} found,{' '}
-                  {selectedRuns.length} selected
-                </p>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -498,9 +499,9 @@ function Reports() {
               <Button
                 onClick={handleExportCSV}
                 disabled={exportDisabled}
-                className="w-full bg-primary"
+                className="w-full bg-emerald-400 hover:bg-emerald-400/90 text-white"
               >
-                <Download className="h-4 w-4 mr-2" />
+                <Download className="size-4" strokeWidth={2} />
                 Export CSV Report
               </Button>
 
