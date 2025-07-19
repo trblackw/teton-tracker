@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
+import { StickyHeader } from '../components/ui/sticky-header';
 import { organizationsApi, runsApi } from '../lib/api/client';
 import { useAppContext } from '../lib/AppContextProvider';
 import { useNonAdminRedirect } from '../lib/hooks/use-non-admin-redirect';
@@ -331,17 +332,12 @@ function DriversPage() {
   const filtersApplied = searchTerm || availabilityFilter !== 'all';
 
   return (
-    <div className="container mx-auto py-2 max-w-full overflow-hidden">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-2">
-          <Users className="h-6 w-6" />
-          <h1 className="text-3xl font-bold">Drivers</h1>
-        </div>
-      </div>
-
-      {/* Search and Filter Actions */}
-      <div className="mb-3">
+    <>
+      <StickyHeader
+        title="Drivers"
+        subtitle="View & manage active runs"
+        icon={Users}
+      >
         <ExpandableActionsDrawer
           actions={drawerActions}
           onClearAll={filtersApplied ? clearFilters : undefined}
@@ -350,254 +346,255 @@ function DriversPage() {
               <div className="text-sm text-muted-foreground">
                 Showing {filteredDrivers.length} of {allDrivers.length} drivers
               </div>
-            ) : (
-              <p className="text-muted-foreground text-sm">
-                View & manage active runs
-              </p>
-            )
+            ) : undefined
           }
         />
-      </div>
+        {!filtersApplied && (
+          <div className="text-xs text-muted-foreground/50 flex justify-center">
+            Showing {filteredDrivers.length} of {allDrivers.length} drivers
+          </div>
+        )}
+      </StickyHeader>
 
-      {!filtersApplied && (
-        <div className="text-xs text-muted-foreground/50 mb-3 flex justify-center">
-          Showing {filteredDrivers.length} of {allDrivers.length} drivers
-        </div>
-      )}
+      <div className="container mx-auto py-2 max-w-full overflow-hidden px-4 sm:px-6 lg:px-8">
+        {/* Driver Cards */}
+        <div className="grid gap-6">
+          {filteredDrivers.map(
+            (driver: {
+              userId: string;
+              firstName: string;
+              lastName: string;
+              imageUrl?: string;
+            }) => {
+              // Calculate stats for this driver
+              const driverRuns = allRuns.filter(
+                run => run.userId === driver.userId
+              );
+              const activeRuns = driverRuns.filter(
+                run => run.status === 'active'
+              );
+              const scheduledRuns = driverRuns.filter(
+                run => run.status === 'scheduled'
+              );
+              const completedRuns = driverRuns.filter(
+                run => run.status === 'completed'
+              );
 
-      {/* Driver Cards */}
-      <div className="grid gap-6">
-        {filteredDrivers.map(
-          (driver: {
-            userId: string;
-            firstName: string;
-            lastName: string;
-            imageUrl?: string;
-          }) => {
-            // Calculate stats for this driver
-            const driverRuns = allRuns.filter(
-              run => run.userId === driver.userId
-            );
-            const activeRuns = driverRuns.filter(
-              run => run.status === 'active'
-            );
-            const scheduledRuns = driverRuns.filter(
-              run => run.status === 'scheduled'
-            );
-            const completedRuns = driverRuns.filter(
-              run => run.status === 'completed'
-            );
+              const availabilityStatus = getAvailabilityText(driver);
 
-            const availabilityStatus = getAvailabilityText(driver);
-
-            return (
-              <Link
-                key={driver.userId}
-                to="/driver/$driverId"
-                params={{ driverId: driver.userId }}
-                className="block hover:scale-[1.02] transition-transform duration-200"
-              >
-                <Card className="cursor-pointer hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        {driver.imageUrl ? (
-                          <img
-                            src={driver.imageUrl}
-                            alt={`${driver.firstName} ${driver.lastName}`}
-                            className="h-10 w-10 rounded-full border"
-                          />
-                        ) : (
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Users className="h-5 w-5 text-primary" />
+              return (
+                <Link
+                  key={driver.userId}
+                  to="/driver/$driverId"
+                  params={{ driverId: driver.userId }}
+                  className="block hover:scale-[1.02] transition-transform duration-200"
+                >
+                  <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {driver.imageUrl ? (
+                            <img
+                              src={driver.imageUrl}
+                              alt={`${driver.firstName} ${driver.lastName}`}
+                              className="h-10 w-10 rounded-full border"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              <Users className="h-5 w-5 text-primary" />
+                            </div>
+                          )}
+                          <div>
+                            <CardTitle className="text-lg">
+                              {driver.firstName} {driver.lastName}
+                            </CardTitle>
+                            <CardDescription>
+                              Driver • {availabilityStatus.text}
+                            </CardDescription>
                           </div>
-                        )}
-                        <div>
-                          <CardTitle className="text-lg">
-                            {driver.firstName} {driver.lastName}
-                          </CardTitle>
-                          <CardDescription>
-                            Driver • {availabilityStatus.text}
-                          </CardDescription>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge
+                            variant={
+                              activeRuns.length > 0
+                                ? 'default'
+                                : scheduledRuns.length > 0
+                                  ? 'secondary'
+                                  : 'outline'
+                            }
+                            className={
+                              activeRuns.length > 0
+                                ? 'bg-green-100 text-green-800'
+                                : scheduledRuns.length > 0
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-gray-100 text-gray-800'
+                            }
+                          >
+                            {activeRuns.length > 0
+                              ? `${activeRuns.length} Active Run${activeRuns.length !== 1 ? 's' : ''}`
+                              : scheduledRuns.length > 0
+                                ? `${scheduledRuns.length} Scheduled`
+                                : 'No Active Runs'}
+                          </Badge>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <Badge
-                          variant={
-                            activeRuns.length > 0
-                              ? 'default'
-                              : scheduledRuns.length > 0
-                                ? 'secondary'
-                                : 'outline'
-                          }
-                          className={
-                            activeRuns.length > 0
-                              ? 'bg-green-100 text-green-800'
-                              : scheduledRuns.length > 0
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-gray-100 text-gray-800'
-                          }
-                        >
-                          {activeRuns.length > 0
-                            ? `${activeRuns.length} Active Run${activeRuns.length !== 1 ? 's' : ''}`
-                            : scheduledRuns.length > 0
-                              ? `${scheduledRuns.length} Scheduled`
-                              : 'No Active Runs'}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {activeRuns.length > 0 ? (
-                      <div className="space-y-4">
-                        {activeRuns.slice(0, 2).map(run => (
-                          <div
-                            key={run.id}
-                            className="border rounded-lg p-4 bg-muted/50"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <Car className="h-4 w-4 text-green-600" />
-                                <span className="font-medium">
-                                  {run.flightNumber}{' '}
-                                  {run.type === 'pickup' ? 'Pickup' : 'Dropoff'}
-                                </span>
+                    </CardHeader>
+                    <CardContent>
+                      {activeRuns.length > 0 ? (
+                        <div className="space-y-4">
+                          {activeRuns.slice(0, 2).map(run => (
+                            <div
+                              key={run.id}
+                              className="border rounded-lg p-4 bg-muted/50"
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <Car className="h-4 w-4 text-green-600" />
+                                  <span className="font-medium">
+                                    {run.flightNumber}{' '}
+                                    {run.type === 'pickup'
+                                      ? 'Pickup'
+                                      : 'Dropoff'}
+                                  </span>
+                                </div>
+                                <Badge className="bg-green-100 text-green-800">
+                                  Active
+                                </Badge>
                               </div>
-                              <Badge className="bg-green-100 text-green-800">
-                                Active
-                              </Badge>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-muted-foreground">
-                              <div className="flex items-center gap-2">
-                                <MapPin className="h-3 w-3" />
-                                <span>
-                                  {run.pickupLocation} → {run.dropoffLocation}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Clock className="h-3 w-3" />
-                                <span>
-                                  {new Date(
-                                    run.scheduledTime
-                                  ).toLocaleDateString()}{' '}
-                                  at{' '}
-                                  {new Date(
-                                    run.scheduledTime
-                                  ).toLocaleTimeString([], {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })}
-                                </span>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-muted-foreground">
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="h-3 w-3" />
+                                  <span>
+                                    {run.pickupLocation} → {run.dropoffLocation}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-3 w-3" />
+                                  <span>
+                                    {new Date(
+                                      run.scheduledTime
+                                    ).toLocaleDateString()}{' '}
+                                    at{' '}
+                                    {new Date(
+                                      run.scheduledTime
+                                    ).toLocaleTimeString([], {
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    })}
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
-                        {activeRuns.length > 2 && (
-                          <p className="text-sm text-muted-foreground text-center">
-                            +{activeRuns.length - 2} more active runs
+                          ))}
+                          {activeRuns.length > 2 && (
+                            <p className="text-sm text-muted-foreground text-center">
+                              +{activeRuns.length - 2} more active runs
+                            </p>
+                          )}
+                        </div>
+                      ) : scheduledRuns.length > 0 ? (
+                        <div className="space-y-4">
+                          {scheduledRuns.slice(0, 2).map(run => (
+                            <div
+                              key={run.id}
+                              className="border rounded-lg p-4 bg-muted/50"
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <Car className="h-4 w-4 text-blue-600" />
+                                  <span className="font-medium">
+                                    {run.flightNumber}{' '}
+                                    {run.type === 'pickup'
+                                      ? 'Pickup'
+                                      : 'Dropoff'}
+                                  </span>
+                                </div>
+                                <Badge className="bg-blue-100 text-blue-800">
+                                  Scheduled
+                                </Badge>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-muted-foreground">
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="h-3 w-3" />
+                                  <span>
+                                    {run.pickupLocation} → {run.dropoffLocation}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-3 w-3" />
+                                  <span>
+                                    {new Date(
+                                      run.scheduledTime
+                                    ).toLocaleDateString()}{' '}
+                                    at{' '}
+                                    {new Date(
+                                      run.scheduledTime
+                                    ).toLocaleTimeString([], {
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    })}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          {scheduledRuns.length > 2 && (
+                            <p className="text-sm text-muted-foreground text-center">
+                              +{scheduledRuns.length - 2} more scheduled runs
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <Car className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <p>No active runs assigned</p>
+                          <p className="text-xs mt-1">
+                            {completedRuns.length} completed runs total
                           </p>
-                        )}
-                      </div>
-                    ) : scheduledRuns.length > 0 ? (
-                      <div className="space-y-4">
-                        {scheduledRuns.slice(0, 2).map(run => (
-                          <div
-                            key={run.id}
-                            className="border rounded-lg p-4 bg-muted/50"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <Car className="h-4 w-4 text-blue-600" />
-                                <span className="font-medium">
-                                  {run.flightNumber}{' '}
-                                  {run.type === 'pickup' ? 'Pickup' : 'Dropoff'}
-                                </span>
-                              </div>
-                              <Badge className="bg-blue-100 text-blue-800">
-                                Scheduled
-                              </Badge>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-muted-foreground">
-                              <div className="flex items-center gap-2">
-                                <MapPin className="h-3 w-3" />
-                                <span>
-                                  {run.pickupLocation} → {run.dropoffLocation}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Clock className="h-3 w-3" />
-                                <span>
-                                  {new Date(
-                                    run.scheduledTime
-                                  ).toLocaleDateString()}{' '}
-                                  at{' '}
-                                  {new Date(
-                                    run.scheduledTime
-                                  ).toLocaleTimeString([], {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                        {scheduledRuns.length > 2 && (
-                          <p className="text-sm text-muted-foreground text-center">
-                            +{scheduledRuns.length - 2} more scheduled runs
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Car className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p>No active runs assigned</p>
-                        <p className="text-xs mt-1">
-                          {completedRuns.length} completed runs total
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          }
-        )}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            }
+          )}
 
-        {filteredDrivers.length === 0 && allDrivers.length > 0 && (
-          <Card className="border-dashed">
-            <CardContent className="text-center py-12">
-              <Filter className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">
-                No Drivers Match Criteria
-              </h3>
-              <p className="text-muted-foreground text-sm mb-4">
-                No drivers found matching the search and filter criteria
-              </p>
-              <Button variant="outline" onClick={clearFilters}>
-                Clear All Filters
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+          {filteredDrivers.length === 0 && allDrivers.length > 0 && (
+            <Card className="border-dashed">
+              <CardContent className="text-center py-12">
+                <Filter className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-medium mb-2">
+                  No Drivers Match Criteria
+                </h3>
+                <p className="text-muted-foreground text-sm mb-4">
+                  No drivers found matching the search and filter criteria
+                </p>
+                <Button variant="outline" onClick={clearFilters}>
+                  Clear All Filters
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
-        {allDrivers.length === 0 && (
-          <Card className="border-dashed">
-            <CardContent className="text-center py-12">
-              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">No Drivers Found</h3>
-              <p className="text-muted-foreground text-sm mb-4">
-                No other organization members found to display as drivers
-              </p>
-              <p className="text-muted-foreground text-xs">
-                Add more members to your organization in the Clerk dashboard,
-                then use the seed data generator in Settings → Debug Tools to
-                create sample runs
-              </p>
-            </CardContent>
-          </Card>
-        )}
+          {allDrivers.length === 0 && (
+            <Card className="border-dashed">
+              <CardContent className="text-center py-12">
+                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-medium mb-2">No Drivers Found</h3>
+                <p className="text-muted-foreground text-sm mb-4">
+                  No other organization members found to display as drivers
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  Add more members to your organization in the Clerk dashboard,
+                  then use the seed data generator in Settings → Debug Tools to
+                  create sample runs
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

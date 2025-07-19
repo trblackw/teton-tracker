@@ -4,6 +4,7 @@ import {
   AlertCircle,
   ArrowDown,
   ArrowUp,
+  Car,
   Clock,
   FileText,
   Filter,
@@ -33,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
+import { StickyHeader } from '../components/ui/sticky-header';
 import {
   Tabs,
   TabsContent,
@@ -621,65 +623,63 @@ function Runs() {
   const { title, subtitle } = getTabHeader();
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">{title}</h2>
-          <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
-        </div>
-      </div>
+    <>
+      <StickyHeader title={title} subtitle={subtitle} icon={Car}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="current">
+              Current{' '}
+              <span className="text-sm text-muted-foreground ml-1">
+                ({currentRuns.length})
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="past">
+              Past{' '}
+              <span className="text-sm text-muted-foreground ml-1">
+                ({pastRuns.length})
+              </span>
+            </TabsTrigger>
+          </TabsList>
 
-      {/* API Loading Indicator */}
-      {runsApiData.isLoading && (
-        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-          <div className="flex items-center gap-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-            <p className="text-primary text-sm">
-              Fetching latest flight and traffic data...
-            </p>
+          {/* Search & Filter Actions */}
+          <ExpandableActionsDrawer
+            actions={[
+              {
+                id: 'search',
+                icon: <Search className="h-4 w-4" />,
+                label: 'Search Runs',
+                content: <SearchContent />,
+                badge: searchTerm ? '1' : undefined,
+                showHeader: false, // Minimal search with no header
+              },
+              {
+                id: 'filter',
+                icon: <Filter className="h-4 w-4" />,
+                label: 'Filter & Sort',
+                content: <FilterContent />,
+                badge:
+                  [selectedAirline, selectedStatus, selectedType].filter(
+                    Boolean
+                  ).length || undefined,
+                showHeader: false, // Minimal filter with no header
+              },
+            ]}
+          />
+        </Tabs>
+      </StickyHeader>
+
+      <div className="space-y-3 px-4 sm:px-6 lg:px-8">
+        {/* API Loading Indicator */}
+        {runsApiData.isLoading && (
+          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+              <p className="text-primary text-sm">
+                Fetching latest flight and traffic data...
+              </p>
+            </div>
           </div>
-        </div>
-      )}
-
-      <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="current">
-            Current{' '}
-            <span className="text-sm text-muted-foreground ml-1">
-              ({currentRuns.length})
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="past">
-            Past{' '}
-            <span className="text-sm text-muted-foreground ml-1">
-              ({pastRuns.length})
-            </span>
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Search & Filter Actions */}
-        <ExpandableActionsDrawer
-          actions={[
-            {
-              id: 'search',
-              icon: <Search className="h-4 w-4" />,
-              label: 'Search Runs',
-              content: <SearchContent />,
-              badge: searchTerm ? '1' : undefined,
-              showHeader: false, // Minimal search with no header
-            },
-            {
-              id: 'filter',
-              icon: <Filter className="h-4 w-4" />,
-              label: 'Filter & Sort',
-              content: <FilterContent />,
-              badge:
-                [selectedAirline, selectedStatus, selectedType].filter(Boolean)
-                  .length || undefined,
-              showHeader: false, // Minimal filter with no header
-            },
-          ]}
-        />
+        )}
 
         <TabsContent value="current" className="space-y-4">
           {currentRuns.length === 0 ? (
@@ -802,36 +802,36 @@ function Runs() {
             </div>
           )}
         </TabsContent>
-      </Tabs>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Run</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this run? This action cannot be
-              undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmDelete}
-              disabled={deleteRunMutation.isPending}
-            >
-              {deleteRunMutation.isPending ? 'Deleting...' : 'Delete'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Run</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this run? This action cannot be
+                undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDelete}
+                disabled={deleteRunMutation.isPending}
+              >
+                {deleteRunMutation.isPending ? 'Deleting...' : 'Delete'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </>
   );
 }
 

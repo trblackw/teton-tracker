@@ -377,7 +377,7 @@ function RootComponent() {
                   <ActiveRunBanner />
 
                   {/* Main Content */}
-                  <main className="flex-1 px-4 py-4 max-w-full lg:container lg:max-w-4xl lg:mx-auto overflow-y-auto">
+                  <main className="flex-1 max-w-full lg:container lg:max-w-4xl lg:mx-auto overflow-y-auto">
                     <Outlet />
                   </main>
                 </div>

@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
+import { StickyHeader } from '../components/ui/sticky-header';
 import { TimePicker } from '../components/ui/time-picker';
 import airlinesData from '../data/airlines.json';
 import airportsData from '../data/airports-comprehensive.json';
@@ -780,327 +781,284 @@ function UpcomingFlights() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">
-            Upcoming Flights
-          </h2>
-          <div className="mt-1 min-h-[2.5rem]">
-            <p className="text-muted-foreground text-sm">
-              Next{' '}
-              <Select
-                value={flightLimit.toString()}
-                onValueChange={value => setFlightLimit(parseInt(value))}
-              >
-                <SelectTrigger className="inline-flex min-w-fit w-1 border-0 bg-transparent p-0 pr-1 pl-2 font-bold text-foreground underline hover:text-blue-500">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5</SelectItem>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                </SelectContent>
-              </Select>{' '}
-              departures from
-              <Button
-                variant="link"
-                className="font-bold text-foreground px-0 underline hover:text-blue-500"
-              >
-                <a href="/settings">{homeAirport}</a>
-              </Button>
-            </p>
-            {selectedAirline && (
-              <span className="text-foreground/90 block text-sm">
-                {getAirlineName(selectedAirline)}
-              </span>
-            )}
-            {selectedStatus && (
-              <span className="text-foreground/90 block text-sm">
-                Status: {selectedStatus}
-              </span>
-            )}
-            {searchTerm && (
-              <span className="text-foreground/90 block text-sm">
-                Searching{' '}
-                {searchMode === 'selected' ? 'selected flights' : 'all flights'}{' '}
-                for: {searchTerm}
-              </span>
-            )}
-            {formatTimeFilter() && (
-              <span className="text-foreground/90 block text-sm">
-                Time frame: {formatTimeFilter()}
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="flex flex-col items-end gap-2">
+    <>
+      <StickyHeader
+        title="Upcoming Flights"
+        subtitle="View upcoming departures from your home base airport"
+        icon={Plane}
+        actions={
           <RefreshButton
             onRefresh={handleManualUpdate}
             disabled={!homeAirport}
             className="flex items-center gap-2"
             variant={isDebugModeEnabled ? 'secondary' : 'default'}
           />
-        </div>
-      </div>
-      {lastUpdateTime && (
-        <div className="text-xs text-muted-foreground text-center">
-          Last updated: {formatDateTime(lastUpdateTime.toISOString())}
-        </div>
-      )}
-      {/* Temporal Status Alert */}
-      {temporalStatus?.hasStaleData &&
-        shouldShowTemporalAlert(temporalStatus) && (
-          <Card className="border-orange-500 bg-orange-50 dark:bg-orange-950/20 relative">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0">
-                  <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                </div>
-                <div className="flex-1">
-                  <div className="font-medium text-orange-800 dark:text-orange-200">
-                    Note:
-                  </div>
-                  <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
-                    {temporalStatus.message}
-                  </p>
-                  {temporalStatus.staleFlights > 0 && (
-                    <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">
-                      Filtered out {temporalStatus.staleFlights} outdated
-                      flights from {temporalStatus.staleDates.join(', ')}
-                    </p>
-                  )}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex-shrink-0 h-8 w-8 p-0 hover:bg-orange-200 dark:hover:bg-orange-900/50"
-                  onClick={() => dismissTemporalAlert(temporalStatus)}
-                  title="Dismiss this alert"
-                >
-                  <X className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-      {/* Search & Filter Actions */}
-      <ExpandableActionsDrawer
-        actions={[
-          {
-            id: 'search',
-            icon: <Search className="h-4 w-4" />,
-            label: 'Search Flights',
-            content: <SearchContent />,
-            badge: searchTerm ? '1' : undefined,
-            showHeader: false, // Minimal search with no header
-          },
-          {
-            id: 'filter',
-            icon: <Filter className="h-4 w-4" />,
-            label: 'Filter & Sort',
-            content: <FilterContent />,
-            badge:
-              [selectedAirline, selectedStatus, filterTime].filter(Boolean)
-                .length || undefined,
-            showHeader: false, // Minimal filter with no header
-          },
-        ]}
-        disabled={noFlightData}
+        }
       />
 
-      {/* No data loaded yet state */}
-      {noFlightData && (
-        <Card>
-          <CardContent className="p-6 text-center">
-            <Plane className="h-16 w-16 text-muted-foreground mx-auto mb-6" />
-            <p className="text-muted-foreground text-lg mb-4">
-              No flight data loaded yet
-            </p>
-            <p className="text-sm text-muted-foreground/70 mb-6">
-              Refresh to get latest flight information
-            </p>
-            {homeAirport && (
-              <RefreshButton onRefresh={handleManualUpdate} className="mr-2" />
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Loading State */}
-      {isLoading && (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <div className="flex items-center justify-center gap-2">
-              <RefreshCw className="h-5 w-5 animate-spin" />
-              <span>
-                {isDebugModeEnabled
-                  ? 'Simulating flight data refresh...'
-                  : 'Loading upcoming flights...'}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Error State */}
-      {isError && (
-        <Card className="border-destructive">
-          <CardContent className="p-8 text-center">
-            <p className="text-destructive mb-4">
-              Failed to load upcoming flights. Please try again.
-            </p>
-            <Button onClick={handleManualUpdate}>Retry</Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Flights Grid */}
-      {!isLoading && !isError && filteredFlights.length > 0 && (
-        <div className="grid gap-4">
-          {filteredFlights.map((flight, index) => (
-            <Card key={`${flight.flightNumber}-${index}`} className="w-full">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    {getAirlineLogo(flight.airline) && (
-                      <img
-                        src={getAirlineLogo(flight.airline)}
-                        alt={getAirlineName(flight.airline)}
-                        className="h-8 w-8 rounded"
-                        onError={e => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                        loading="lazy"
-                      />
+      <div className="space-y-6 px-4 sm:px-6 lg:px-8">
+        {lastUpdateTime && (
+          <div className="text-xs text-muted-foreground text-center">
+            Last updated: {formatDateTime(lastUpdateTime.toISOString())}
+          </div>
+        )}
+        {/* Temporal Status Alert */}
+        {temporalStatus?.hasStaleData &&
+          shouldShowTemporalAlert(temporalStatus) && (
+            <Card className="border-orange-500 bg-orange-50 dark:bg-orange-950/20 relative">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0">
+                    <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-orange-800 dark:text-orange-200">
+                      Note:
+                    </div>
+                    <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
+                      {temporalStatus.message}
+                    </p>
+                    {temporalStatus.staleFlights > 0 && (
+                      <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">
+                        Filtered out {temporalStatus.staleFlights} outdated
+                        flights from {temporalStatus.staleDates.join(', ')}
+                      </p>
                     )}
-                    <div>
-                      <CardTitle className="text-lg">
-                        {flight.flightNumber}
-                      </CardTitle>
-                      <CardDescription>
-                        {getAirlineName(flight.airline)}
-                      </CardDescription>
-                    </div>
                   </div>
-                  <Badge className={getStatusColor(flight.status)}>
-                    {flight.status}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <div className="text-sm">
-                      <div className="font-medium">
-                        Departure: {formatDateTime(flight.scheduledDeparture)}
-                      </div>
-                      {flight.estimatedDeparture &&
-                        flight.estimatedDeparture !==
-                          flight.scheduledDeparture && (
-                          <div className="text-muted-foreground">
-                            Estimated:{' '}
-                            {formatDateTime(flight.estimatedDeparture)}
-                          </div>
-                        )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <div className="text-sm">
-                      <div className="font-medium">
-                        To: {getAirportName(flight.destination)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Plane className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <div className="text-sm">
-                      <div className="font-medium">
-                        Gate: {flight.gate || 'Indeterminate'}
-                      </div>
-                      {flight.aircraft && (
-                        <div className="text-muted-foreground text-xs">
-                          Aircraft: {flight.aircraft}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-shrink-0 h-8 w-8 p-0 hover:bg-orange-200 dark:hover:bg-orange-900/50"
+                    onClick={() => dismissTemporalAlert(temporalStatus)}
+                    title="Dismiss this alert"
+                  >
+                    <X className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                  </Button>
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
+          )}
 
-      {/* No flights found state */}
-      {!isLoading &&
-        !isError &&
-        flightResponse &&
-        filteredFlights.length === 0 &&
-        upcomingFlights.length > 0 &&
-        (searchTerm || selectedStatus) && (
+        {/* Search & Filter Actions */}
+        <ExpandableActionsDrawer
+          actions={[
+            {
+              id: 'search',
+              icon: <Search className="h-4 w-4" />,
+              label: 'Search Flights',
+              content: <SearchContent />,
+              badge: searchTerm ? '1' : undefined,
+              showHeader: false, // Minimal search with no header
+            },
+            {
+              id: 'filter',
+              icon: <Filter className="h-4 w-4" />,
+              label: 'Filter & Sort',
+              content: <FilterContent />,
+              badge:
+                [selectedAirline, selectedStatus, filterTime].filter(Boolean)
+                  .length || undefined,
+              showHeader: false, // Minimal filter with no header
+            },
+          ]}
+          disabled={noFlightData}
+        />
+
+        {/* No data loaded yet state */}
+        {noFlightData && (
+          <Card>
+            <CardContent className="p-6 text-center">
+              <Plane className="h-16 w-16 text-muted-foreground mx-auto mb-6" />
+              <p className="text-muted-foreground text-lg mb-4">
+                No flight data loaded yet
+              </p>
+              <p className="text-sm text-muted-foreground/70 mb-6">
+                Refresh to get latest flight information
+              </p>
+              {homeAirport && (
+                <RefreshButton
+                  onRefresh={handleManualUpdate}
+                  className="mr-2"
+                />
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Loading State */}
+        {isLoading && (
           <Card>
             <CardContent className="p-8 text-center">
-              <Search className="h-16 w-16 text-muted-foreground mx-auto mb-6" />
-              <p className="text-muted-foreground text-lg mb-4">
-                No flights found matching your filters
-              </p>
-              <p className="text-sm text-muted-foreground mb-4">
-                {searchTerm && `Search: "${searchTerm}"`}
-                {searchTerm && (selectedStatus || formatTimeFilter()) && ', '}
-                {selectedStatus && `Status: ${selectedStatus}`}
-                {selectedStatus && formatTimeFilter() && ', '}
-                {formatTimeFilter() && `Time frame: ${formatTimeFilter()}`}
-              </p>
-              <div className="flex gap-2 justify-center flex-wrap">
-                {searchTerm && (
-                  <Button variant="outline" onClick={() => setSearchTerm('')}>
-                    Clear search
-                  </Button>
-                )}
-                {selectedStatus && (
-                  <Button
-                    variant="outline"
-                    onClick={() => setSelectedStatus('')}
-                  >
-                    Clear status filter
-                  </Button>
-                )}
-                {filterTime && (
-                  <Button variant="outline" onClick={clearTimeFrame}>
-                    Clear time frame
-                  </Button>
-                )}
+              <div className="flex items-center justify-center gap-2">
+                <RefreshCw className="h-5 w-5 animate-spin" />
+                <span>
+                  {isDebugModeEnabled
+                    ? 'Simulating flight data refresh...'
+                    : 'Loading upcoming flights...'}
+                </span>
               </div>
             </CardContent>
           </Card>
         )}
 
-      {/* Original no flights state */}
-      {!isLoading &&
-        !isError &&
-        flightResponse &&
-        upcomingFlights.length === 0 && (
-          <Card>
+        {/* Error State */}
+        {isError && (
+          <Card className="border-destructive">
             <CardContent className="p-8 text-center">
-              <Plane className="h-16 w-16 text-muted-foreground mx-auto mb-6" />
-              <p className="text-muted-foreground text-lg mb-4">
-                No upcoming flights found
-                {selectedAirline && ` for ${getAirlineName(selectedAirline)}`}
-                {formatTimeFilter() && ` in ${formatTimeFilter()}`}
+              <p className="text-destructive mb-4">
+                Failed to load upcoming flights. Please try again.
               </p>
-              <p className="text-sm text-muted-foreground">
-                Try refreshing or adjusting your filters
-              </p>
+              <Button onClick={handleManualUpdate}>Retry</Button>
             </CardContent>
           </Card>
         )}
-    </div>
+
+        {/* Flights Grid */}
+        {!isLoading && !isError && filteredFlights.length > 0 && (
+          <div className="grid gap-4">
+            {filteredFlights.map((flight, index) => (
+              <Card key={`${flight.flightNumber}-${index}`} className="w-full">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      {getAirlineLogo(flight.airline) && (
+                        <img
+                          src={getAirlineLogo(flight.airline)}
+                          alt={getAirlineName(flight.airline)}
+                          className="h-8 w-8 rounded"
+                          onError={e => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                          loading="lazy"
+                        />
+                      )}
+                      <div>
+                        <CardTitle className="text-lg">
+                          {flight.flightNumber}
+                        </CardTitle>
+                        <CardDescription>
+                          {getAirlineName(flight.airline)}
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <Badge className={getStatusColor(flight.status)}>
+                      {flight.status}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <div className="text-sm">
+                        <div className="font-medium">
+                          Departure: {formatDateTime(flight.scheduledDeparture)}
+                        </div>
+                        {flight.estimatedDeparture &&
+                          flight.estimatedDeparture !==
+                            flight.scheduledDeparture && (
+                            <div className="text-muted-foreground">
+                              Estimated:{' '}
+                              {formatDateTime(flight.estimatedDeparture)}
+                            </div>
+                          )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <div className="text-sm">
+                        <div className="font-medium">
+                          To: {getAirportName(flight.destination)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Plane className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <div className="text-sm">
+                        <div className="font-medium">
+                          Gate: {flight.gate || 'Indeterminate'}
+                        </div>
+                        {flight.aircraft && (
+                          <div className="text-muted-foreground text-xs">
+                            Aircraft: {flight.aircraft}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* No flights found state */}
+        {!isLoading &&
+          !isError &&
+          flightResponse &&
+          filteredFlights.length === 0 &&
+          upcomingFlights.length > 0 &&
+          (searchTerm || selectedStatus) && (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Search className="h-16 w-16 text-muted-foreground mx-auto mb-6" />
+                <p className="text-muted-foreground text-lg mb-4">
+                  No flights found matching your filters
+                </p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {searchTerm && `Search: "${searchTerm}"`}
+                  {searchTerm && (selectedStatus || formatTimeFilter()) && ', '}
+                  {selectedStatus && `Status: ${selectedStatus}`}
+                  {selectedStatus && formatTimeFilter() && ', '}
+                  {formatTimeFilter() && `Time frame: ${formatTimeFilter()}`}
+                </p>
+                <div className="flex gap-2 justify-center flex-wrap">
+                  {searchTerm && (
+                    <Button variant="outline" onClick={() => setSearchTerm('')}>
+                      Clear search
+                    </Button>
+                  )}
+                  {selectedStatus && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setSelectedStatus('')}
+                    >
+                      Clear status filter
+                    </Button>
+                  )}
+                  {filterTime && (
+                    <Button variant="outline" onClick={clearTimeFrame}>
+                      Clear time frame
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+        {/* Original no flights state */}
+        {!isLoading &&
+          !isError &&
+          flightResponse &&
+          upcomingFlights.length === 0 && (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Plane className="h-16 w-16 text-muted-foreground mx-auto mb-6" />
+                <p className="text-muted-foreground text-lg mb-4">
+                  No upcoming flights found
+                  {selectedAirline && ` for ${getAirlineName(selectedAirline)}`}
+                  {formatTimeFilter() && ` in ${formatTimeFilter()}`}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Try refreshing or adjusting your filters
+                </p>
+              </CardContent>
+            </Card>
+          )}
+      </div>
+    </>
   );
 }
 

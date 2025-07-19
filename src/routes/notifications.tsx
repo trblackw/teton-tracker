@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
+import { StickyHeader } from '../components/ui/sticky-header';
 import { notificationsApi } from '../lib/api/client';
 import { useTimezoneFormatters } from '../lib/hooks/use-timezone';
 import { type Notification, type NotificationType } from '../lib/schema';
@@ -250,350 +251,354 @@ function Notifications() {
   }
 
   return (
-    <div className="space-y-6 px-4 sm:px-0">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Notifications</h2>
-          <p className="text-muted-foreground mt-1">
-            Manage your notifications and alerts
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {stats && stats.unread > 0 && (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleMarkAllAsRead}
-              disabled={markAllAsReadMutation.isPending}
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Mark All Read
-            </Button>
+    <>
+      <StickyHeader
+        title="Notifications"
+        subtitle="Manage your notifications and alerts"
+        icon={Bell}
+        actions={
+          <>
+            {stats && stats.unread > 0 && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleMarkAllAsRead}
+                disabled={markAllAsReadMutation.isPending}
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Mark All Read
+              </Button>
+            )}
+          </>
+        }
+      >
+        <Link to="/settings" className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-blue-600 text-blue-600 hover:bg-blue-700 hover:text-white"
+          >
+            <BackButton size="sm" />
+            <Settings className="h-4 w-4" />
+            Notification Settings
+          </Button>
+        </Link>
+      </StickyHeader>
+
+      <div className="space-y-6 px-4 sm:px-6 lg:px-8">
+        {/* Stats - Combined into single card */}
+        {stats && (
+          <Card>
+            <CardContent className="px-2">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col items-center justify-start gap-1">
+                  <div className="flex items-center gap-2">
+                    <Bell className="size-4 text-primary" />
+                    <p className="text-sm font-medium">Total</p>
+                  </div>
+                  <p className="text-2xl font-bold block">{stats.total}</p>
+                </div>
+                <div className="flex flex-col items-center justify-start gap-1">
+                  <div className="flex items-center gap-2">
+                    <Circle className="size-4 text-amber-500" />
+                    <p className="text-sm font-medium">Unread</p>
+                  </div>
+                  <p className="text-2xl font-bold block">{stats.unread}</p>
+                </div>
+                <div className="flex flex-col items-center justify-start gap-1">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="size-4 text-green-500" />
+                    <p className="text-sm font-medium">Read</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">
+                      {stats.total - stats.unread}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Collapsible Search and Filters */}
+        <Card className="pb-2 pt-3">
+          <CardHeader
+            className="cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2 mb-1">
+                  <Filter className="h-5 w-5" />
+                  Search & Filter
+                  {(searchTerm ||
+                    filterType !== 'all' ||
+                    filterRead !== 'all') && (
+                    <span className="text-sm font-normal text-muted-foreground">
+                      (
+                      {[
+                        searchTerm && `"${searchTerm}"`,
+                        filterType !== 'all' &&
+                          NOTIFICATION_TYPES.find(t => t.value === filterType)
+                            ?.label,
+                        filterRead !== 'all' && filterRead,
+                      ]
+                        .filter(Boolean)
+                        .join(', ')}
+                      )
+                    </span>
+                  )}
+                </CardTitle>
+                <CardDescription>
+                  Search and filter notifications by type, status, or content
+                </CardDescription>
+              </div>
+              {isFilterExpanded ? (
+                <ChevronUp className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+          </CardHeader>
+          {isFilterExpanded && (
+            <div className="animate-in slide-in-from-top-2 duration-300">
+              <CardContent className="pt-0 space-y-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search notifications..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
+                  <Select
+                    value={filterType}
+                    onValueChange={value =>
+                      setFilterType(value as NotificationType | 'all')
+                    }
+                  >
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="Filter by type" />
+                    </SelectTrigger>
+                    <SelectContent
+                      position="popper"
+                      side="bottom"
+                      align="start"
+                      className="min-w-0 w-auto max-w-[200px]"
+                      sideOffset={4}
+                    >
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="flight_update">
+                        Flight Updates
+                      </SelectItem>
+                      <SelectItem value="traffic_alert">
+                        Traffic Alerts
+                      </SelectItem>
+                      <SelectItem value="run_reminder">
+                        Run Reminders
+                      </SelectItem>
+                      <SelectItem value="status_change">
+                        Status Changes
+                      </SelectItem>
+                      <SelectItem value="system">System</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={filterRead}
+                    onValueChange={value =>
+                      setFilterRead(value as 'all' | 'read' | 'unread')
+                    }
+                  >
+                    <SelectTrigger className="w-full sm:w-[140px]">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent
+                      position="popper"
+                      side="bottom"
+                      align="start"
+                      className="min-w-0 w-auto max-w-[150px]"
+                      sideOffset={4}
+                    >
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="unread">Unread</SelectItem>
+                      <SelectItem value="read">Read</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setSortBy(
+                        sortBy === 'created_at' ? 'updated_at' : 'created_at'
+                      )
+                    }
+                    className="w-full sm:w-auto"
+                  >
+                    <Clock className="h-4 w-4 mr-2" />
+                    <span className="sm:hidden">Sort</span>
+                    <span className="hidden sm:inline">
+                      Sort by {sortBy === 'created_at' ? 'Created' : 'Updated'}
+                    </span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearFilters}
+                    className="w-full sm:w-auto text-muted-foreground"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Clear Filters
+                  </Button>
+                </div>
+              </CardContent>
+            </div>
+          )}
+        </Card>
+
+        {/* Notifications List */}
+        <div className="space-y-3">
+          {notifications.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Bell className="h-16 w-16 text-muted-foreground mx-auto mb-6" />
+                <p className="text-muted-foreground text-lg mb-4">
+                  {searchTerm || filterType !== 'all' || filterRead !== 'all'
+                    ? 'No notifications match your search criteria'
+                    : 'No notifications yet'}
+                </p>
+                {searchTerm || filterType !== 'all' || filterRead !== 'all' ? (
+                  <Button onClick={clearFilters} variant="outline">
+                    Clear Filters
+                  </Button>
+                ) : null}
+              </CardContent>
+            </Card>
+          ) : (
+            notifications.map(notification => (
+              <Card
+                key={notification.id}
+                className={`transition-colors ${!notification.isRead ? 'border-primary/30 bg-primary/5' : 'hover:bg-muted/30'}`}
+              >
+                <CardContent className="p-3">
+                  <div className="flex items-start gap-3">
+                    {/* Icon */}
+                    <div className="flex-shrink-0 mt-0.5">
+                      <div
+                        className={`p-1.5 rounded-full ${getNotificationTypeColor(notification.type)}`}
+                      >
+                        {getNotificationIcon(notification)}
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0 space-y-1">
+                      {/* Header with title, badges, and actions */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <h3 className="font-medium text-foreground text-sm leading-tight truncate">
+                            {notification.title}
+                          </h3>
+                          {!notification.isRead && (
+                            <div className="flex-shrink-0 w-2 h-2 bg-primary rounded-full"></div>
+                          )}
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              handleMarkAsRead(
+                                notification.id,
+                                !notification.isRead
+                              )
+                            }
+                            disabled={markAsReadMutation.isPending}
+                            className="h-7 w-7 p-0 hover:bg-muted"
+                            title={
+                              notification.isRead
+                                ? 'Mark as unread'
+                                : 'Mark as read'
+                            }
+                          >
+                            {notification.isRead ? (
+                              <Circle className="h-3.5 w-3.5 text-muted-foreground" />
+                            ) : (
+                              <CheckCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              handleDeleteNotification(notification.id)
+                            }
+                            disabled={deleteNotificationMutation.isPending}
+                            className="h-7 w-7 p-0 hover:bg-destructive/10"
+                            title="Delete notification"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Message */}
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {notification.message}
+                      </p>
+
+                      {/* Footer with metadata */}
+                      <div className="flex items-center justify-between gap-2 pt-1 w-full">
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {formatScheduleTime(
+                              notification.createdAt?.toString() || ''
+                            )}
+                          </span>
+                          {notification.flightNumber && (
+                            <span className="flex items-center gap-1">
+                              <Plane className="h-3 w-3" />
+                              {notification.flightNumber}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Type badge */}
+                        <Badge
+                          variant="secondary"
+                          className={`text-xs px-2 py-0.5 ${getNotificationTypeColor(notification.type)}`}
+                        >
+                          {getNotificationTypeInfo(notification.type).label}
+                        </Badge>
+                      </div>
+
+                      {/* Location if available */}
+                      {notification.pickupLocation && (
+                        <div className="text-xs text-muted-foreground flex items-center gap-1 pt-0.5">
+                          <span>📍</span>
+                          <span className="truncate">
+                            {notification.pickupLocation}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
           )}
         </div>
       </div>
-      <Link to="/settings" className="flex items-center gap-1">
-        <Button
-          variant="outline"
-          size="sm"
-          className="border-blue-600 text-blue-600 hover:bg-blue-700 hover:text-white"
-        >
-          <BackButton size="sm" />
-          <Settings className="h-4 w-4" />
-          Notification Settings
-        </Button>
-      </Link>
-      {/* Stats - Combined into single card */}
-      {stats && (
-        <Card>
-          <CardContent className="px-2">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex flex-col items-center justify-start gap-1">
-                <div className="flex items-center gap-2">
-                  <Bell className="size-4 text-primary" />
-                  <p className="text-sm font-medium">Total</p>
-                </div>
-                <p className="text-2xl font-bold block">{stats.total}</p>
-              </div>
-              <div className="flex flex-col items-center justify-start gap-1">
-                <div className="flex items-center gap-2">
-                  <Circle className="size-4 text-amber-500" />
-                  <p className="text-sm font-medium">Unread</p>
-                </div>
-                <p className="text-2xl font-bold block">{stats.unread}</p>
-              </div>
-              <div className="flex flex-col items-center justify-start gap-1">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="size-4 text-green-500" />
-                  <p className="text-sm font-medium">Read</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">
-                    {stats.total - stats.unread}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Collapsible Search and Filters */}
-      <Card className="pb-2 pt-3">
-        <CardHeader
-          className="cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => setIsFilterExpanded(!isFilterExpanded)}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 mb-1">
-                <Filter className="h-5 w-5" />
-                Search & Filter
-                {(searchTerm ||
-                  filterType !== 'all' ||
-                  filterRead !== 'all') && (
-                  <span className="text-sm font-normal text-muted-foreground">
-                    (
-                    {[
-                      searchTerm && `"${searchTerm}"`,
-                      filterType !== 'all' &&
-                        NOTIFICATION_TYPES.find(t => t.value === filterType)
-                          ?.label,
-                      filterRead !== 'all' && filterRead,
-                    ]
-                      .filter(Boolean)
-                      .join(', ')}
-                    )
-                  </span>
-                )}
-              </CardTitle>
-              <CardDescription>
-                Search and filter notifications by type, status, or content
-              </CardDescription>
-            </div>
-            {isFilterExpanded ? (
-              <ChevronUp className="h-5 w-5 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
-            )}
-          </div>
-        </CardHeader>
-        {isFilterExpanded && (
-          <div className="animate-in slide-in-from-top-2 duration-300">
-            <CardContent className="pt-0 space-y-4">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search notifications..."
-                      value={searchTerm}
-                      onChange={e => setSearchTerm(e.target.value)}
-                      className="pl-9"
-                    />
-                  </div>
-                </div>
-                <Select
-                  value={filterType}
-                  onValueChange={value =>
-                    setFilterType(value as NotificationType | 'all')
-                  }
-                >
-                  <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Filter by type" />
-                  </SelectTrigger>
-                  <SelectContent
-                    position="popper"
-                    side="bottom"
-                    align="start"
-                    className="min-w-0 w-auto max-w-[200px]"
-                    sideOffset={4}
-                  >
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="flight_update">
-                      Flight Updates
-                    </SelectItem>
-                    <SelectItem value="traffic_alert">
-                      Traffic Alerts
-                    </SelectItem>
-                    <SelectItem value="run_reminder">Run Reminders</SelectItem>
-                    <SelectItem value="status_change">
-                      Status Changes
-                    </SelectItem>
-                    <SelectItem value="system">System</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={filterRead}
-                  onValueChange={value =>
-                    setFilterRead(value as 'all' | 'read' | 'unread')
-                  }
-                >
-                  <SelectTrigger className="w-full sm:w-[140px]">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent
-                    position="popper"
-                    side="bottom"
-                    align="start"
-                    className="min-w-0 w-auto max-w-[150px]"
-                    sideOffset={4}
-                  >
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="unread">Unread</SelectItem>
-                    <SelectItem value="read">Read</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setSortBy(
-                      sortBy === 'created_at' ? 'updated_at' : 'created_at'
-                    )
-                  }
-                  className="w-full sm:w-auto"
-                >
-                  <Clock className="h-4 w-4 mr-2" />
-                  <span className="sm:hidden">Sort</span>
-                  <span className="hidden sm:inline">
-                    Sort by {sortBy === 'created_at' ? 'Created' : 'Updated'}
-                  </span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="w-full sm:w-auto text-muted-foreground"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Clear Filters
-                </Button>
-              </div>
-            </CardContent>
-          </div>
-        )}
-      </Card>
-
-      {/* Notifications List */}
-      <div className="space-y-3">
-        {notifications.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Bell className="h-16 w-16 text-muted-foreground mx-auto mb-6" />
-              <p className="text-muted-foreground text-lg mb-4">
-                {searchTerm || filterType !== 'all' || filterRead !== 'all'
-                  ? 'No notifications match your search criteria'
-                  : 'No notifications yet'}
-              </p>
-              {searchTerm || filterType !== 'all' || filterRead !== 'all' ? (
-                <Button onClick={clearFilters} variant="outline">
-                  Clear Filters
-                </Button>
-              ) : null}
-            </CardContent>
-          </Card>
-        ) : (
-          notifications.map(notification => (
-            <Card
-              key={notification.id}
-              className={`transition-colors ${!notification.isRead ? 'border-primary/30 bg-primary/5' : 'hover:bg-muted/30'}`}
-            >
-              <CardContent className="p-3">
-                <div className="flex items-start gap-3">
-                  {/* Icon */}
-                  <div className="flex-shrink-0 mt-0.5">
-                    <div
-                      className={`p-1.5 rounded-full ${getNotificationTypeColor(notification.type)}`}
-                    >
-                      {getNotificationIcon(notification)}
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0 space-y-1">
-                    {/* Header with title, badges, and actions */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <h3 className="font-medium text-foreground text-sm leading-tight truncate">
-                          {notification.title}
-                        </h3>
-                        {!notification.isRead && (
-                          <div className="flex-shrink-0 w-2 h-2 bg-primary rounded-full"></div>
-                        )}
-                      </div>
-
-                      {/* Action buttons */}
-                      <div className="flex items-center gap-0.5 flex-shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            handleMarkAsRead(
-                              notification.id,
-                              !notification.isRead
-                            )
-                          }
-                          disabled={markAsReadMutation.isPending}
-                          className="h-7 w-7 p-0 hover:bg-muted"
-                          title={
-                            notification.isRead
-                              ? 'Mark as unread'
-                              : 'Mark as read'
-                          }
-                        >
-                          {notification.isRead ? (
-                            <Circle className="h-3.5 w-3.5 text-muted-foreground" />
-                          ) : (
-                            <CheckCircle className="h-3.5 w-3.5 text-muted-foreground" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            handleDeleteNotification(notification.id)
-                          }
-                          disabled={deleteNotificationMutation.isPending}
-                          className="h-7 w-7 p-0 hover:bg-destructive/10"
-                          title="Delete notification"
-                        >
-                          <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Message */}
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {notification.message}
-                    </p>
-
-                    {/* Footer with metadata */}
-                    <div className="flex items-center justify-between gap-2 pt-1 w-full">
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {formatScheduleTime(
-                            notification.createdAt?.toString() || ''
-                          )}
-                        </span>
-                        {notification.flightNumber && (
-                          <span className="flex items-center gap-1">
-                            <Plane className="h-3 w-3" />
-                            {notification.flightNumber}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Type badge */}
-                      <Badge
-                        variant="secondary"
-                        className={`text-xs px-2 py-0.5 ${getNotificationTypeColor(notification.type)}`}
-                      >
-                        {getNotificationTypeInfo(notification.type).label}
-                      </Badge>
-                    </div>
-
-                    {/* Location if available */}
-                    {notification.pickupLocation && (
-                      <div className="text-xs text-muted-foreground flex items-center gap-1 pt-0.5">
-                        <span>📍</span>
-                        <span className="truncate">
-                          {notification.pickupLocation}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
-    </div>
+    </>
   );
 }
 
