@@ -4,31 +4,17 @@ import {
   AlertCircle,
   ArrowDown,
   ArrowUp,
-  CheckCircle,
   Clock,
-  Clock10,
-  DollarSignIcon,
-  Edit,
   FileText,
   Filter,
-  MapPin,
-  Navigation,
-  Plane,
   Plus,
   Search,
-  Trash2,
   X,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '../components/ui/card';
+import { Card, CardContent, CardHeader } from '../components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -39,7 +25,7 @@ import {
 } from '../components/ui/dialog';
 import { ExpandableActionsDrawer } from '../components/ui/expandable-actions-drawer';
 import { Input } from '../components/ui/input';
-import { RefreshButton } from '../components/ui/refresh-button';
+import { RunCard } from '../components/ui/run-card';
 import {
   Select,
   SelectContent,
@@ -738,186 +724,17 @@ function Runs() {
                   currentRuns.some(currentRun => currentRun.id === run.id)
                 )
                 .map(({ run, flightStatus, trafficData }) => (
-                  <Card
+                  <RunCard
                     key={run.id}
-                    className="w-full hover:shadow-md transition-shadow"
-                  >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="text-lg">
-                            {run.flightNumber}
-                            {runsApiData.isLoading && (
-                              <span className="ml-2 inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></span>
-                            )}
-                            {runsApiData.isError && (
-                              <span className="ml-2 text-destructive text-sm">
-                                ⚠️
-                              </span>
-                            )}
-                          </CardTitle>
-                          <CardDescription>{run.airline}</CardDescription>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Badge
-                            className={`${getStatusColor(run.status)} mr-2`}
-                          >
-                            {run.status}
-                          </Badge>
-
-                          {/* Start/Stop Controls */}
-                          {/* {run.status === 'scheduled' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={e => {
-                                e.stopPropagation();
-                                handleStartRun(run);
-                              }}
-                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                              title="Start run"
-                            >
-                              <Play className="size-4" />
-                            </Button>
-                          )} */}
-
-                          {run.status === 'active' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={e => {
-                                e.stopPropagation();
-                                handleStopRun(run);
-                              }}
-                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                              title="Complete run"
-                            >
-                              <CheckCircle className="size-4" />
-                            </Button>
-                          )}
-
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={e => {
-                              e.stopPropagation();
-                              handleEditRun(run);
-                            }}
-                            className="text-muted-foreground"
-                            title="Edit run"
-                          >
-                            <Edit className="size-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={e => {
-                              e.stopPropagation();
-                              handleDeleteRun(run.id);
-                            }}
-                            disabled={deleteRunMutation.isPending}
-                            title="Delete run"
-                          >
-                            <Trash2 className="size-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <span className="text-sm font-medium">
-                              {formatScheduleTime(run.scheduledTime)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Clock10 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <span className="text-sm text-muted-foreground">
-                              Est. {run.estimatedDuration} min
-                            </span>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                            <span className="text-sm">
-                              {run.type === 'pickup' ? 'Pickup' : 'Dropoff'} •{' '}
-                              {run.pickupLocation} → {run.dropoffLocation}
-                            </span>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <DollarSignIcon className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                            <span className="text-sm">{run.price}</span>
-                          </div>
-                          {run.notes && (
-                            <div className="flex items-start gap-2">
-                              <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                              <span className="text-sm text-muted-foreground">
-                                {run.notes}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="space-y-3">
-                          {flightStatus && (
-                            <div className="flex items-center gap-2">
-                              <Plane className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                              <span className="text-sm">
-                                Flight: {flightStatus.status}
-                                {flightStatus.delay &&
-                                  flightStatus.delay > 0 && (
-                                    <span className="text-red-600 ml-1">
-                                      (+{flightStatus.delay} min)
-                                    </span>
-                                  )}
-                              </span>
-                            </div>
-                          )}
-                          {trafficData && (
-                            <div className="flex items-start gap-2">
-                              <Navigation className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                              <span className="text-sm">
-                                Traffic: {trafficData.duration} min •{' '}
-                                {trafficData.distance} •{' '}
-                                <span
-                                  className={
-                                    trafficData.status === 'good'
-                                      ? 'text-green-600'
-                                      : trafficData.status === 'moderate'
-                                        ? 'text-yellow-600'
-                                        : 'text-red-600'
-                                  }
-                                >
-                                  {trafficData.status}
-                                </span>
-                              </span>
-                            </div>
-                          )}
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs text-muted-foreground">
-                              Last updated: <br />
-                              {new Date().toLocaleString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </span>
-                            <RefreshButton
-                              onRefresh={() => refreshRunData(run)}
-                              // variant="outline"
-                              size="sm"
-                              onClick={e => e.stopPropagation()}
-                              className="text-muted-foreground"
-                              title="Refresh data"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    run={run}
+                    runsLoading={runsApiData.isLoading}
+                    runsError={runsApiData.isError}
+                    trafficData={trafficData}
+                    handleStopRun={handleStopRun}
+                    handleEditRun={handleEditRun}
+                    refreshRunData={refreshRunData}
+                    flightStatus={flightStatus}
+                  />
                 ))}
             </div>
           )}
@@ -968,94 +785,17 @@ function Runs() {
                   pastRuns.some(pastRun => pastRun.id === run.id)
                 )
                 .map(({ run, flightStatus, trafficData }) => (
-                  <Card key={run.id} className="w-full opacity-75">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="text-lg">
-                            {run.flightNumber}
-                          </CardTitle>
-                          <CardDescription>{run.airline}</CardDescription>
-                        </div>
-                        <div className="flex items-center">
-                          <Badge
-                            className={`${getStatusColor(run.status)} mr-2`}
-                          >
-                            {run.status}
-                          </Badge>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={e => {
-                              e.stopPropagation();
-                              handleDeleteRun(run.id);
-                            }}
-                            disabled={deleteRunMutation.isPending}
-                            title="Delete run"
-                          >
-                            <Trash2 className="size-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <span className="text-sm font-medium">
-                              {formatScheduleTime(run.scheduledTime)}
-                            </span>
-                          </div>
-                          {run.completedAt instanceof Date && (
-                            <div className="flex items-center gap-2">
-                              <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
-                              <span className="text-sm text-green-600">
-                                Completed:{' '}
-                                {formatScheduleTime(
-                                  run.completedAt.toISOString()
-                                )}
-                              </span>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2">
-                            <Clock10 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <span className="text-sm text-muted-foreground">
-                              Est. {run.estimatedDuration} min
-                              {run.actualDuration && (
-                                <span className="ml-1">
-                                  • Actual: {run.actualDuration} min
-                                </span>
-                              )}
-                            </span>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                            <span className="text-sm">
-                              {run.type === 'pickup' ? 'Pickup' : 'Dropoff'} •{' '}
-                              {run.pickupLocation} → {run.dropoffLocation}
-                            </span>
-                          </div>
-                          {run.notes && (
-                            <div className="flex items-start gap-2">
-                              <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                              <span className="text-sm text-muted-foreground">
-                                {run.notes}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold">
-                              ${run.price}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <RunCard
+                    key={run.id}
+                    run={run}
+                    runsLoading={runsApiData.isLoading}
+                    runsError={runsApiData.isError}
+                    trafficData={trafficData}
+                    handleStopRun={handleStopRun}
+                    handleEditRun={handleEditRun}
+                    refreshRunData={refreshRunData}
+                    flightStatus={flightStatus}
+                  />
                 ))}
             </div>
           )}
