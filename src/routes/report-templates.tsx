@@ -245,7 +245,7 @@ function ReportTemplatesPage() {
           <DialogTrigger asChild>
             <Button
               size="sm"
-              className="flex items-center gap-2 font-bold bg-green-400 text-white hover:bg-green-400/90"
+              className="flex items-center gap-2 font-bold bg-emerald-400 text-white hover:bg-emerald-400/90"
             >
               <Plus className="h-4 w-4" strokeWidth={3} />
               Create Template

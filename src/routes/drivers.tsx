@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { Car, Clock, Filter, MapPin, Users } from 'lucide-react';
+import { Car, Clock, Filter, MapPin, Search, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -11,6 +11,12 @@ import {
   CardHeader,
   CardTitle,
 } from '../components/ui/card';
+import {
+  ExpandableActionsDrawer,
+  type DrawerAction,
+} from '../components/ui/expandable-actions-drawer';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import {
   Select,
   SelectContent,
@@ -42,6 +48,7 @@ function DriversPage() {
   const { currentUser } = useAppContext();
   const { isAdmin, organization } = useNonAdminRedirect();
   const [availabilityFilter, setAvailabilityFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Fetch organization members
   const {
@@ -135,12 +142,124 @@ function DriversPage() {
     }
   };
 
-  // Filter drivers based on availability
+  // Filter drivers based on search and availability
   const filteredDrivers = useMemo(() => {
-    return allDrivers.filter((driver: { userId: string }) =>
+    let filtered = allDrivers;
+
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter((driver: any) =>
+        `${driver.firstName} ${driver.lastName}`.toLowerCase().includes(search)
+      );
+    }
+
+    // Apply availability filter
+    filtered = filtered.filter((driver: { userId: string }) =>
       getDriverAvailability(driver, availabilityFilter)
     );
-  }, [allDrivers, availabilityFilter, allRuns]);
+
+    return filtered;
+  }, [allDrivers, searchTerm, availabilityFilter, allRuns]);
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchTerm('');
+    setAvailabilityFilter('all');
+  };
+
+  // Create drawer actions
+  const drawerActions: DrawerAction[] = [
+    {
+      id: 'search',
+      icon: <Search className="h-4 w-4" />,
+      label: 'Search Drivers',
+      showHeader: false,
+      content: (
+        <div className="space-y-3">
+          <div>
+            <Label
+              htmlFor="driver-search-input"
+              className="text-sm font-medium"
+            >
+              Search by driver name
+            </Label>
+            <Input
+              id="driver-search-input"
+              type="text"
+              placeholder="Type to search drivers..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          {searchTerm && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                {filteredDrivers.length} driver
+                {filteredDrivers.length !== 1 ? 's' : ''} found
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSearchTerm('')}
+              >
+                Clear
+              </Button>
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'filter-availability',
+      icon: <Filter className="h-4 w-4" />,
+      label: 'Filter by Availability',
+      badge: availabilityFilter !== 'all' ? '●' : undefined,
+      showHeader: false,
+      content: (
+        <div className="space-y-3">
+          <div>
+            <Label className="text-sm font-medium mb-2 block">
+              Filter by driver availability
+            </Label>
+            <Select
+              value={availabilityFilter}
+              onValueChange={setAvailabilityFilter}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {AVAILABILITY_FILTERS.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {availabilityFilter !== 'all' && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                Filtering by{' '}
+                {AVAILABILITY_FILTERS.find(
+                  f => f.value === availabilityFilter
+                )?.label.toLowerCase()}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAvailabilityFilter('all')}
+              >
+                Clear
+              </Button>
+            </div>
+          )}
+        </div>
+      ),
+    },
+  ];
 
   // Helper function to get availability status text
   const getAvailabilityText = (driver: { userId: string }) => {
@@ -209,6 +328,8 @@ function DriversPage() {
     );
   }
 
+  const filtersApplied = searchTerm || availabilityFilter !== 'all';
+
   return (
     <div className="container mx-auto py-2 max-w-full overflow-hidden">
       {/* Header */}
@@ -217,38 +338,32 @@ function DriversPage() {
           <Users className="h-6 w-6" />
           <h1 className="text-3xl font-bold">Drivers</h1>
         </div>
-        <p className="text-muted-foreground">
-          View & manage active runs for all organization drivers
-        </p>
       </div>
 
-      {/* Filters */}
-      <div className="mb-6">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <label className="text-sm font-medium">Availability:</label>
-          </div>
-          <Select
-            value={availabilityFilter}
-            onValueChange={setAvailabilityFilter}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {AVAILABILITY_FILTERS.map(option => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* Search and Filter Actions */}
+      <div className="mb-3">
+        <ExpandableActionsDrawer
+          actions={drawerActions}
+          onClearAll={filtersApplied ? clearFilters : undefined}
+          rightContent={
+            filtersApplied ? (
+              <div className="text-sm text-muted-foreground">
+                Showing {filteredDrivers.length} of {allDrivers.length} drivers
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                View & manage active runs
+              </p>
+            )
+          }
+        />
+      </div>
+
+      {!filtersApplied && (
+        <div className="text-xs text-muted-foreground/50 mb-3 flex justify-center">
+          Showing {filteredDrivers.length} of {allDrivers.length} drivers
         </div>
-      </div>
-      <div className="text-sm text-muted-foreground mb-2 flex justify-center">
-        Showing {filteredDrivers.length} of {allDrivers.length} drivers
-      </div>
+      )}
 
       {/* Driver Cards */}
       <div className="grid gap-6">
@@ -454,16 +569,13 @@ function DriversPage() {
             <CardContent className="text-center py-12">
               <Filter className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
               <h3 className="text-lg font-medium mb-2">
-                No Drivers Match Filter
+                No Drivers Match Criteria
               </h3>
               <p className="text-muted-foreground text-sm mb-4">
-                No drivers found matching the selected availability criteria
+                No drivers found matching the search and filter criteria
               </p>
-              <Button
-                variant="outline"
-                onClick={() => setAvailabilityFilter('all')}
-              >
-                Show All Drivers
+              <Button variant="outline" onClick={clearFilters}>
+                Clear All Filters
               </Button>
             </CardContent>
           </Card>

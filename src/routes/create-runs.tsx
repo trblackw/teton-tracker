@@ -235,7 +235,7 @@ function CreateRunsPage() {
           <Button
             onClick={handleCreateRun}
             disabled={!selectedTemplate}
-            className="flex-1 bg-green-400 text-white hover:bg-green-400/90 font-bold"
+            className="flex-1 bg-emerald-400 text-white hover:bg-emerald-400/90 font-bold"
           >
             <Plus className="h-4 w-4" strokeWidth={3} />
             Create Run
@@ -246,7 +246,7 @@ function CreateRunsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="pickup">
-                <MapPin className="h-4 w-4 text-green-500" /> Pickup
+                <MapPin className="h-4 w-4 text-emerald-500" /> Pickup
               </SelectItem>
               <SelectItem value="dropoff">
                 <MapPin className="h-4 w-4 text-blue-500" /> Dropoff
