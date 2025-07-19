@@ -81,8 +81,20 @@ function OrganizationDisplay() {
 
   return (
     <div className="flex items-center gap-2 text-sm font-medium text-foreground/80">
-      <Building2 className="h-4 w-4 shrink-0" />
-      <span className="truncate max-w-[200px]">{organization.name}</span>
+      {organization.imageUrl ? (
+        <img
+          src={organization.imageUrl}
+          alt={organization.name}
+          className="object-contain max-h-8 max-w-32 w-auto h-auto"
+        />
+      ) : (
+        <div className="flex items-center gap-2">
+          <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="truncate max-w-[200px] text-sm">
+            {organization.name}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

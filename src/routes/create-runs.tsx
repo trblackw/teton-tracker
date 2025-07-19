@@ -1,8 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
-import { Check, ChevronDown, MapPin, Plus, Search } from 'lucide-react';
+import { format } from 'date-fns';
+import {
+  Calendar as CalendarIcon,
+  Check,
+  ChevronDown,
+  MapPin,
+  Plus,
+  Search,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '../components/ui/button';
+import { Calendar } from '../components/ui/calendar';
 import {
   Command,
   CommandEmpty,
@@ -23,21 +32,18 @@ import {
   SelectValue,
 } from '../components/ui/select';
 import { reportTemplatesApi } from '../lib/api/client';
-import {
-  useIsUserAdmin,
-  useUserOrganization,
-} from '../lib/hooks/use-organizations';
+import { useNonAdminRedirect } from '../lib/hooks/use-non-admin-redirect';
+import { cn } from '../lib/utils';
 
 export const Route = createFileRoute('/create-runs')({
   component: CreateRunsPage,
 });
 
 function CreateRunsPage() {
-  const { data: organization } = useUserOrganization();
-  const { isAdmin } = useIsUserAdmin(organization?.id);
+  const { isAdmin, organization } = useNonAdminRedirect('/runs');
 
   // Fetch templates using the same API client as report-templates.tsx
-  const { data: templates = [], isLoading } = useQuery({
+  const { data: templates = [], isLoading: templatesLoading } = useQuery({
     queryKey: ['report-templates'],
     queryFn: () => reportTemplatesApi.getReportTemplates(),
     enabled: !!isAdmin,
@@ -45,7 +51,9 @@ function CreateRunsPage() {
 
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [runType, setRunType] = useState<string>('pickup');
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [templateOpen, setTemplateOpen] = useState(false);
+  const [dateOpen, setDateOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
 
   // Set default template when templates load
@@ -57,21 +65,6 @@ function CreateRunsPage() {
       }
     }
   }, [templates, selectedTemplate]);
-
-  // Redirect non-admins
-  if (!isAdmin) {
-    return (
-      <div className="container mx-auto py-2 max-w-full overflow-hidden">
-        <div className="text-center py-12">
-          <Plus className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-          <p className="text-muted-foreground">
-            You must be an administrator to create runs for drivers.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   const selectedTemplateObj = templates.find(t => t.id === selectedTemplate);
 
@@ -87,8 +80,19 @@ function CreateRunsPage() {
     if (!selectedTemplate) return;
 
     // TODO: Implement run creation logic
-    console.log('Creating run:', { templateId: selectedTemplate, runType });
+    console.log('Creating run:', {
+      templateId: selectedTemplate,
+      runType,
+      date: selectedDate.toISOString(),
+    });
   };
+
+  console.log(organization);
+
+  // Show loading or nothing while redirecting non-admin users
+  if (!isAdmin) {
+    return null;
+  }
 
   return (
     <div className="container mx-auto py-2 max-w-full overflow-hidden">
@@ -116,7 +120,7 @@ function CreateRunsPage() {
                 role="combobox"
                 aria-expanded={templateOpen}
                 className="w-full justify-between h-10"
-                disabled={isLoading}
+                disabled={templatesLoading}
               >
                 {selectedTemplateObj ? (
                   <div className="flex flex-col items-start text-left">
@@ -131,7 +135,9 @@ function CreateRunsPage() {
                   </div>
                 ) : (
                   <span className="text-muted-foreground">
-                    {isLoading ? 'Loading templates...' : 'Select template...'}
+                    {templatesLoading
+                      ? 'Loading templates...'
+                      : 'Select template...'}
                   </span>
                 )}
                 <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
@@ -191,6 +197,37 @@ function CreateRunsPage() {
                   </CommandGroup>
                 </CommandList>
               </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {/* Date Selector */}
+        <div className="space-y-2">
+          <Popover open={dateOpen} onOpenChange={setDateOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  'w-full justify-start text-left font-normal h-10',
+                  !selectedDate && 'text-muted-foreground'
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate ? format(selectedDate, 'PPP') : 'Select date'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={date => {
+                  if (date) {
+                    setSelectedDate(date);
+                    setDateOpen(false);
+                  }
+                }}
+                initialFocus
+              />
             </PopoverContent>
           </Popover>
         </div>

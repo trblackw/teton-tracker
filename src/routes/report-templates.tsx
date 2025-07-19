@@ -71,10 +71,7 @@ import {
 import { Textarea } from '../components/ui/textarea';
 import { reportTemplatesApi } from '../lib/api/client';
 import { useAppContext } from '../lib/AppContextProvider';
-import {
-  useIsUserAdmin,
-  useUserOrganization,
-} from '../lib/hooks/use-organizations';
+import { useNonAdminRedirect } from '../lib/hooks/use-non-admin-redirect';
 import {
   type ReportColumnConfig,
   type ReportTemplate,
@@ -89,8 +86,7 @@ export const Route = createFileRoute('/report-templates')({
 });
 
 function ReportTemplatesPage() {
-  const { data: organization } = useUserOrganization();
-  const { isAdmin } = useIsUserAdmin(organization?.id);
+  const { isAdmin, organization } = useNonAdminRedirect('/runs');
   const [selectedTemplate, setSelectedTemplate] =
     useState<ReportTemplate | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -224,20 +220,6 @@ function ReportTemplatesPage() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground">Loading templates...</p>
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Redirect if not admin
-  if (!isAdmin) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-          <p className="text-muted-foreground">
-            You must be an administrator to access this page.
-          </p>
         </div>
       </div>
     );
@@ -555,7 +537,7 @@ function TemplateFormDialog({
     resolver: undefined, // We'll use manual validation with the schema
   });
 
-  const { fields, append, remove, move } = useFieldArray({
+  const { append, remove, move } = useFieldArray({
     control,
     name: 'columnConfig',
     rules: {
@@ -565,8 +547,6 @@ function TemplateFormDialog({
       },
     },
   });
-
-  console.log(fields);
 
   const columnConfig = watch('columnConfig');
 
