@@ -195,26 +195,6 @@ export class FlightService {
     this.timeout = timeout || 15000;
     this.forceMockData = forceMockData || false;
     this.cacheTimeout = cacheTimeout || 2 * 60 * 1000; // Default 2 minutes
-
-    // Determine if we should use mock data
-    const useMockData = this.forceMockData || shouldUseMockData();
-
-    if (DEV_MODE.DEBUG_LOGGING) {
-      console.log('🛫 FlightService initialized', {
-        hasApiKey: !!this.apiKey,
-        timeout: this.timeout,
-        isDevelopmentMode: isDevelopmentMode(),
-        isRealApiEnabled: isRealApiEnabled(),
-        useMockData,
-        cacheTimeout: this.cacheTimeout / 1000 + 's',
-      });
-
-      if (useMockData) {
-        console.log(
-          '🎭 Using mock data in development mode. To use real API, add ?realapi=true to URL or set ENABLE_REAL_API=true'
-        );
-      }
-    }
   }
 
   setApiKey(apiKey: string): void {
@@ -287,10 +267,6 @@ export class FlightService {
     request: UpcomingFlightsRequest
   ): Promise<UpcomingFlightsResponse> {
     try {
-      console.log(
-        `🛫 Fetching upcoming departures from ${request.airport}${request.airline ? ` for airline ${request.airline}` : ''}${request.flightNumber ? ` with flight number ${request.flightNumber}` : ''}`
-      );
-
       // Check cache first
       const cacheKey = this.generateCacheKey(request);
       const cachedResponse = this.getCachedResponse(cacheKey);
@@ -303,9 +279,6 @@ export class FlightService {
 
       // Check if we should use mock data
       if (useMockData) {
-        console.log(
-          '🎭 Development mode: Using mock data. To use real API, add ?realapi=true to URL or set ENABLE_REAL_API=true'
-        );
         const mockFlights = this.getMockUpcomingFlights(request);
         const mockResponse = {
           flights: mockFlights,
@@ -951,9 +924,6 @@ export class FlightService {
       const useMockData = this.forceMockData || shouldUseMockData();
 
       if (useMockData) {
-        console.log(
-          '🎭 Development mode: Using mock flight status data. To use real API, add ?realapi=true to URL or set ENABLE_REAL_API=true'
-        );
         return this.getMockFlightStatus(request.flightNumber);
       }
 
@@ -1089,11 +1059,6 @@ export class FlightService {
       ).toISOString();
     }
 
-    const mockDataLabel = this.forceMockData ? '🎭 [DEV MODE]' : '🎭';
-    console.log(
-      `${mockDataLabel} Generated mock flight status for ${flightNumber}: ${status}`
-    );
-
     return {
       flightNumber,
       status,
@@ -1153,17 +1118,8 @@ async function fetchConfig(): Promise<{
   environment: string;
 }> {
   try {
-    if (DEV_MODE.DEBUG_LOGGING) {
-      console.log('🔧 Fetching config from server...');
-    }
-
     const configUrl = buildApiUrl('/config');
     const response = await fetch(configUrl);
-
-    if (DEV_MODE.DEBUG_LOGGING) {
-      console.log('🔧 Config response status:', response.status);
-      console.log('🔧 Config URL:', configUrl);
-    }
 
     if (!response.ok) {
       throw new Error(
@@ -1172,15 +1128,6 @@ async function fetchConfig(): Promise<{
     }
 
     const config = await response.json();
-
-    if (DEV_MODE.DEBUG_LOGGING) {
-      console.log('🔧 Config fetched from server:', {
-        hasApiKey: config.hasApiKey,
-        environment: config.environment,
-        apiKeyLength: config.apiKey?.length || 0,
-        first4: config.apiKey?.substring(0, 4) || 'none',
-      });
-    }
 
     return config;
   } catch (error) {
@@ -1193,19 +1140,6 @@ async function fetchConfig(): Promise<{
 }
 
 export function getFlightService(apiKey?: string): FlightService {
-  // Use intelligent development mode detection
-  const useMockData = shouldUseMockData();
-
-  if (DEV_MODE.DEBUG_LOGGING) {
-    console.log('🔧 Creating FlightService instance:', {
-      hasApiKey: !!apiKey,
-      isDevelopmentMode: isDevelopmentMode(),
-      isRealApiEnabled: isRealApiEnabled(),
-      useMockData,
-    });
-  }
-
-  // Create service instance - it will automatically handle mock data based on environment
   return new FlightService(apiKey);
 }
 
@@ -1222,19 +1156,6 @@ export async function getFlightServiceWithConfig(
 
     // Use intelligent development mode detection
     const useMockData = shouldUseMockData();
-
-    if (DEV_MODE.DEBUG_LOGGING) {
-      console.log('🔧 Creating FlightService with config:', {
-        hasProvidedApiKey: !!apiKey,
-        hasConfigApiKey: !!config.apiKey,
-        hasFinalApiKey: !!finalApiKey,
-        isDevelopmentMode: isDevelopmentMode(),
-        isRealApiEnabled: isRealApiEnabled(),
-        useMockData,
-        environment: config.environment,
-      });
-    }
-
     // Create service instance
     const service = new FlightService(finalApiKey);
 
