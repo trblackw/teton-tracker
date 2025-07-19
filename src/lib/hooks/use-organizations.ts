@@ -1,14 +1,13 @@
 import { useUser } from '@clerk/clerk-react';
-import type { Organization } from '@clerk/clerk-sdk-node';
-import {
-  useQuery,
-  useQueryClient,
-  type UseQueryResult,
-} from '@tanstack/react-query';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { organizationsApi } from '../api/client';
+import type { ClerkOrganization } from '../schema';
 
 // Hook to get single organization for the current user (new single-org model)
-export function useUserOrganization(): UseQueryResult<Organization, Error> {
+export function useUserOrganization(): UseQueryResult<
+  ClerkOrganization,
+  Error
+> {
   const { user } = useUser();
 
   return useQuery({
@@ -104,29 +103,5 @@ export function useActiveOrganization() {
     activeOrganization,
     isLoading,
     hasOrganization: !!activeOrganization,
-  };
-}
-
-// Utility hook to invalidate organization queries (useful after mutations)
-export function useInvalidateOrganizationQueries() {
-  const queryClient = useQueryClient();
-
-  return {
-    invalidateUserOrganizations: () => {
-      queryClient.invalidateQueries({ queryKey: ['organizations', 'user'] });
-    },
-    invalidateOrganizationMembers: (orgId: string) => {
-      queryClient.invalidateQueries({
-        queryKey: ['organizations', orgId, 'members'],
-      });
-    },
-    invalidateUserRole: (orgId: string, userId: string) => {
-      queryClient.invalidateQueries({
-        queryKey: ['organizations', orgId, 'user-role', userId],
-      });
-    },
-    invalidateAllOrganizationQueries: () => {
-      queryClient.invalidateQueries({ queryKey: ['organizations'] });
-    },
   };
 }

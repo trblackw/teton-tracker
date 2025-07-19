@@ -1,11 +1,17 @@
 #!/usr/bin/env bun
+import { generateBillTo, generateReservationId } from '../src/api/seed';
 import { initializeDatabase } from '../src/lib/db';
 import {
   createNotification,
   type NotificationForm,
 } from '../src/lib/db/notifications';
+import { createReportTemplate } from '../src/lib/db/report-templates';
 import { createRunsBatch } from '../src/lib/db/runs';
-import { type NewRunForm } from '../src/lib/schema';
+import {
+  type NewRunForm,
+  type ReportTemplateForm,
+  ReportType,
+} from '../src/lib/schema';
 
 // Get user ID from command line arguments
 const userId = process.argv[2];
@@ -32,10 +38,50 @@ async function seedDatabase() {
     console.log('🌱 Starting database seeding...');
     initializeDatabase();
 
+    // Create a sample report template first (required for runs)
+    console.log('📋 Creating sample report template...');
+    const sampleTemplate: ReportTemplateForm = {
+      name: 'Basic Run Report',
+      description: 'Simple report template for basic run tracking',
+      organizationId: 'sample_org', // You may need to replace this with a real org ID
+      reportType: ReportType.run,
+      isDefault: true,
+      columnConfig: [
+        {
+          field: 'flightNumber',
+          label: 'Flight Number',
+          order: 0,
+          required: true,
+        },
+        { field: 'airline', label: 'Airline', order: 1, required: true },
+        {
+          field: 'pickupLocation',
+          label: 'Pickup Location',
+          order: 2,
+          required: true,
+        },
+        {
+          field: 'dropoffLocation',
+          label: 'Dropoff Location',
+          order: 3,
+          required: true,
+        },
+        { field: 'type', label: 'Type', order: 4, required: true },
+        { field: 'price', label: 'Price', order: 5, required: false },
+      ],
+      createdBy: userId,
+    };
+
+    const reportTemplate = await createReportTemplate(sampleTemplate);
+    console.log(`✅ Created report template: ${reportTemplate.id}`);
+
     // Create sample runs
     console.log('🏃 Creating sample runs...');
     const sampleRuns: NewRunForm[] = [
       {
+        reportTemplateId: reportTemplate.id,
+        reservation_id: generateReservationId(),
+        billTo: generateBillTo(),
         flightNumber: 'UA1234',
         airline: 'United Airlines',
         departure: 'JAC',
@@ -49,6 +95,9 @@ async function seedDatabase() {
         notes: 'Sample pickup run',
       },
       {
+        reportTemplateId: reportTemplate.id,
+        reservation_id: generateReservationId(),
+        billTo: null, // Testing nullable field
         flightNumber: 'DL5678',
         airline: 'Delta Air Lines',
         departure: 'DEN',
@@ -97,7 +146,8 @@ async function seedDatabase() {
 
     console.log('✅ Database seeding completed successfully!');
     console.log(`👤 User ID: ${userId}`);
-    console.log(`📋 Created ${runs.length} runs`);
+    console.log(`📋 Created 1 report template`);
+    console.log(`🏃 Created ${runs.length} runs`);
     console.log(`📢 Created ${sampleNotifications.length} notifications`);
     console.log('✅ User preferences configured');
   } catch (error) {

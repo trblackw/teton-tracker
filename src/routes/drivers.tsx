@@ -20,10 +20,7 @@ import {
 } from '../components/ui/select';
 import { organizationsApi, runsApi } from '../lib/api/client';
 import { useAppContext } from '../lib/AppContextProvider';
-import {
-  useIsUserAdmin,
-  useUserOrganization,
-} from '../lib/hooks/use-organizations';
+import { useNonAdminRedirect } from '../lib/hooks/use-non-admin-redirect';
 
 export const Route = createFileRoute('/drivers')({
   component: DriversPage,
@@ -43,8 +40,7 @@ const AVAILABILITY_FILTERS = [
 
 function DriversPage() {
   const { currentUser } = useAppContext();
-  const { data: organization } = useUserOrganization();
-  const { isAdmin } = useIsUserAdmin(organization?.id);
+  const { isAdmin, organization } = useNonAdminRedirect();
   const [availabilityFilter, setAvailabilityFilter] = useState('all');
 
   // Fetch organization members
@@ -185,21 +181,6 @@ function DriversPage() {
 
     return { text: 'Available', variant: 'outline' as const };
   };
-
-  // Redirect non-admins
-  if (!isAdmin) {
-    return (
-      <div className="container mx-auto py-2 max-w-full overflow-hidden">
-        <div className="text-center py-12">
-          <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-          <p className="text-muted-foreground">
-            You must be an administrator to view driver information.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   if (membersLoading || runsLoading) {
     return (

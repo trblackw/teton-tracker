@@ -2,7 +2,9 @@
 
 import { getDatabase } from '../src/lib/db/index';
 import { createNotification as createNotificationDb } from '../src/lib/db/notifications';
+import { createReportTemplate } from '../src/lib/db/report-templates';
 import { createRun } from '../src/lib/db/runs';
+import { type ReportTemplateForm, ReportType } from '../src/lib/schema';
 
 // Get user ID from command line arguments
 const userId = process.argv[2];
@@ -27,12 +29,20 @@ console.log(`🎭 Starting mock data generation for user: ${userId}...`);
 
 const db = getDatabase();
 
+// Helper function to generate a 7-digit reservation ID
+function generateReservationId(): string {
+  return Math.floor(1000000 + Math.random() * 9000000).toString();
+}
+
 // Generate mock runs data with realistic current dates
-const generateMockRuns = () => {
+const generateMockRuns = (reportTemplateId: string) => {
   const now = new Date();
 
   return [
     {
+      reportTemplateId,
+      reservation_id: generateReservationId(),
+      billTo: 'VIP',
       flightNumber: 'UA2729',
       airline: 'United Airlines',
       departure: 'SFO',
@@ -46,6 +56,9 @@ const generateMockRuns = () => {
       notes: 'Guest has ski equipment - extra time needed for loading',
     },
     {
+      reportTemplateId,
+      reservation_id: generateReservationId(),
+      billTo: 'AA',
       flightNumber: 'AA1558',
       airline: 'American Airlines',
       departure: 'DFW',
@@ -59,6 +72,9 @@ const generateMockRuns = () => {
       notes: 'Early morning flight - confirm pickup time with guest',
     },
     {
+      reportTemplateId,
+      reservation_id: generateReservationId(),
+      billTo: null,
       flightNumber: 'DL1234',
       airline: 'Delta Air Lines',
       departure: 'ATL',
@@ -73,6 +89,9 @@ const generateMockRuns = () => {
       notes: 'VIP guest - luxury vehicle requested',
     },
     {
+      reportTemplateId,
+      reservation_id: generateReservationId(),
+      billTo: 'BB',
       flightNumber: 'WN1847',
       airline: 'Southwest Airlines',
       departure: 'LAS',
@@ -89,6 +108,9 @@ const generateMockRuns = () => {
       notes: 'Family with 2 children - car seats available on request',
     },
     {
+      reportTemplateId,
+      reservation_id: generateReservationId(),
+      billTo: 'CC',
       flightNumber: 'F9321',
       airline: 'Frontier Airlines',
       departure: 'DEN',
@@ -106,6 +128,9 @@ const generateMockRuns = () => {
     },
     // Completed runs (in the past)
     {
+      reportTemplateId,
+      reservation_id: generateReservationId(),
+      billTo: null,
       flightNumber: 'AS987',
       airline: 'Alaska Airlines',
       departure: 'SEA',
@@ -120,6 +145,9 @@ const generateMockRuns = () => {
       notes: 'Completed successfully - guest very satisfied',
     },
     {
+      reportTemplateId,
+      reservation_id: generateReservationId(),
+      billTo: 'DD',
       flightNumber: 'NK654',
       airline: 'Spirit Airlines',
       departure: 'LAX',
@@ -157,10 +185,47 @@ async function generateMockData() {
       return existingRunsResult.rows.map(row => row.id as string);
     }
 
+    // Create a sample report template first (required for runs)
+    console.log('📋 Creating mock report template...');
+    const sampleTemplate: ReportTemplateForm = {
+      name: 'Mock Data Report Template',
+      description: 'Generated report template for mock data runs',
+      organizationId: 'mock_org', // You may need to replace this with a real org ID
+      reportType: ReportType.run,
+      isDefault: true,
+      columnConfig: [
+        {
+          field: 'flightNumber',
+          label: 'Flight Number',
+          order: 0,
+          required: true,
+        },
+        { field: 'airline', label: 'Airline', order: 1, required: true },
+        {
+          field: 'pickupLocation',
+          label: 'Pickup Location',
+          order: 2,
+          required: true,
+        },
+        {
+          field: 'dropoffLocation',
+          label: 'Dropoff Location',
+          order: 3,
+          required: true,
+        },
+        { field: 'type', label: 'Type', order: 4, required: true },
+        { field: 'price', label: 'Price', order: 5, required: false },
+      ],
+      createdBy: userId,
+    };
+
+    const reportTemplate = await createReportTemplate(sampleTemplate);
+    console.log(`✅ Created report template: ${reportTemplate.id}`);
+
     console.log('🏃 Creating mock runs...');
 
     const createdRunIds: string[] = [];
-    const mockRuns = generateMockRuns();
+    const mockRuns = generateMockRuns(reportTemplate.id);
 
     for (const runData of mockRuns) {
       try {
@@ -300,6 +365,7 @@ async function main() {
 
     console.log('\n🎉 Mock data generation completed successfully!');
     console.log('📊 Summary:');
+    console.log(`   - 1 report template created for user ${userId}`);
     console.log(`   - ${runIds.length} runs created/found for user ${userId}`);
     console.log(`   - Mock notifications generated for user ${userId}`);
     console.log('\n💡 You can now view the mock data in the application');

@@ -205,6 +205,9 @@ function DefaultAddRun() {
     type: 'pickup',
     price: '',
     notes: '',
+    reportTemplateId: '',
+    reservation_id: '',
+    billTo: '',
   };
 
   // Enhanced flight status checking function

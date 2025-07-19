@@ -40,13 +40,17 @@ export async function createRun(
 
     await db.query(
       `INSERT INTO runs (
-        id, user_id, flight_number, airline, departure_airport, arrival_airport,
+        id, user_id, report_template_id, reservation_id, bill_to,
+        flight_number, airline, departure_airport, arrival_airport,
         pickup_location, dropoff_location, scheduled_time, estimated_duration, status, type,
         price, notes, created_at, updated_at, activated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
       [
         run.id,
         run.userId,
+        run.reportTemplateId,
+        run.reservation_id,
+        run.billTo || null,
         run.flightNumber,
         run.airline,
         run.departure,
@@ -96,7 +100,8 @@ export async function getRuns(query: RunsQuery = {}): Promise<Run[]> {
     // Start with base query
     let sql = `
       SELECT 
-        id, flight_number, airline, departure_airport, arrival_airport,
+        id, report_template_id, reservation_id, bill_to,
+        flight_number, airline, departure_airport, arrival_airport,
         pickup_location, dropoff_location, scheduled_time, estimated_duration, actual_duration, status, type,
         price, notes, user_id, created_at, updated_at, completed_at, activated_at
       FROM runs
@@ -135,6 +140,9 @@ export async function getRuns(query: RunsQuery = {}): Promise<Run[]> {
     const runs: Run[] = result.rows.map((row: any) => ({
       id: row.id,
       userId: row.user_id,
+      reportTemplateId: row.report_template_id,
+      reservation_id: row.reservation_id,
+      billTo: row.bill_to,
       flightNumber: row.flight_number,
       airline: row.airline,
       departure: row.departure_airport,
@@ -171,7 +179,8 @@ export async function getRunById(
 
     let sql = `
       SELECT 
-        id, flight_number, airline, departure_airport, arrival_airport,
+        id, report_template_id, reservation_id, bill_to,
+        flight_number, airline, departure_airport, arrival_airport,
         pickup_location, dropoff_location, scheduled_time, estimated_duration, actual_duration, status, type,
         price, notes, user_id, created_at, updated_at, completed_at, activated_at
       FROM runs
@@ -195,6 +204,9 @@ export async function getRunById(
     return {
       id: row.id,
       userId: row.user_id,
+      reportTemplateId: row.report_template_id,
+      reservation_id: row.reservation_id,
+      billTo: row.bill_to,
       flightNumber: row.flight_number,
       airline: row.airline,
       departure: row.departure_airport,
@@ -351,6 +363,9 @@ export async function updateRun(
     const updatedRun: Run = {
       id: row.id,
       userId: row.user_id,
+      reportTemplateId: row.report_template_id,
+      reservation_id: row.reservation_id,
+      billTo: row.bill_to,
       flightNumber: row.flight_number,
       airline: row.airline,
       departure: row.departure_airport,

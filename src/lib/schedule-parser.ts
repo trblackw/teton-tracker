@@ -499,6 +499,9 @@ export function convertParsedRunToForm(
     type: parsedRun.type,
     price: cleanPrice,
     notes: cleanNotes,
+    reportTemplateId: '',
+    reservation_id: '',
+    billTo: '',
   };
 }
 

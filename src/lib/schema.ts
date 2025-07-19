@@ -1,18 +1,24 @@
+import type { Organization } from '@clerk/clerk-sdk-node';
 import { z } from 'zod';
 
-// Base schemas for reusable types
+export const AIRLINE_CODE_REGEX = /^[A-Z]{1,3}[0-9]{1,4}[A-Z]?$/;
+export const AIRPORT_CODE_REGEX = /^[A-Z]{3,4}$/;
+export const FLIGHT_NUMBER_REGEX = /^[A-Z]{1,3}[0-9]{1,4}[A-Z]?$/;
+export const RESERVATION_ID_REGEX = /^\d{7}$/;
+export const DATE_TIME_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+
 export const AirportCodeSchema = z
   .string()
   .min(3, 'Airport code must be at least 3 characters')
   .max(4, 'Airport code must be at most 4 characters')
-  .regex(/^[A-Z]{3,4}$/, 'Airport code must be uppercase letters only');
+  .regex(AIRPORT_CODE_REGEX, 'Airport code must be uppercase letters only');
 
 export const FlightNumberSchema = z
   .string()
   .min(2, 'Flight number must be at least 2 characters')
   .max(10, 'Flight number must be at most 10 characters')
   .regex(
-    /^[A-Z]{1,3}[0-9]{1,4}[A-Z]?$/,
+    FLIGHT_NUMBER_REGEX,
     'Flight number format invalid (e.g., AA1234, UA123A)'
   );
 
@@ -39,11 +45,7 @@ export const PriceSchema = z
 export const DateTimeSchema = z
   .string()
   .datetime({ message: 'Invalid datetime format' })
-  .or(
-    z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, 'Invalid datetime format')
-  );
+  .or(z.string().regex(DATE_TIME_REGEX, 'Invalid datetime format'));
 
 export const DurationSchema = z
   .number()
@@ -109,6 +111,10 @@ export const ClerkUserSchema = z.object({
 });
 
 export type ClerkUserRole = 'admin' | 'driver';
+
+export interface ClerkOrganization extends Organization {
+  readonly role: ClerkUserRole;
+}
 
 export enum ReportType {
   flight = 'flight',
@@ -285,6 +291,16 @@ export const NotificationSchema = z.object({
 export const RunSchema = z.object({
   id: z.string().uuid('Invalid run ID format'),
   userId: z.string().min(1, 'User ID is required'),
+  reportTemplateId: z.string().uuid('Invalid report template ID format'),
+  reservation_id: z
+    .string()
+    .regex(/^\d{7}$/, 'Reservation ID must be exactly 7 digits')
+    .transform(val => val.trim()),
+  billTo: z
+    .string()
+    .length(2, 'Bill to code must be exactly 2 characters')
+    .optional()
+    .nullable(),
   flightNumber: FlightNumberSchema,
   airline: z
     .string()
@@ -367,6 +383,16 @@ export const TrafficDataSchema = z.object({
 // Form schemas (for input validation)
 export const NewRunFormSchema = z.object({
   userId: z.string().min(1, 'User ID is required').optional(), // Optional for forms, will be auto-generated
+  reportTemplateId: z.string().uuid('Invalid report template ID format'),
+  reservation_id: z
+    .string()
+    .regex(/^\d{7}$/, 'Reservation ID must be exactly 7 digits')
+    .transform(val => val.trim()),
+  billTo: z
+    .string()
+    .length(2, 'Bill to code must be exactly 2 characters')
+    .optional()
+    .nullable(),
   flightNumber: FlightNumberSchema,
   airline: z
     .string()

@@ -40,7 +40,7 @@ export const Route = createFileRoute('/create-runs')({
 });
 
 function CreateRunsPage() {
-  const { isAdmin, organization } = useNonAdminRedirect('/runs');
+  const { isAdmin } = useNonAdminRedirect('/runs');
 
   // Fetch templates using the same API client as report-templates.tsx
   const { data: templates = [], isLoading: templatesLoading } = useQuery({
@@ -86,8 +86,6 @@ function CreateRunsPage() {
       date: selectedDate.toISOString(),
     });
   };
-
-  console.log(organization);
 
   // Show loading or nothing while redirecting non-admin users
   if (!isAdmin) {

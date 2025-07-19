@@ -1,7 +1,10 @@
 import { clerk } from '../lib/api/clerk-client';
 import { getDatabase } from '../lib/db/index';
 import { createNotification } from '../lib/db/notifications';
-import { createReportTemplate } from '../lib/db/report-templates';
+import {
+  createReportTemplate,
+  getReportTemplates,
+} from '../lib/db/report-templates';
 import { createRun } from '../lib/db/runs';
 import type { ReportType, RunStatus, RunType } from '../lib/schema';
 
@@ -190,6 +193,48 @@ function generateFlightNumber(airlineCode: string): string {
 function generatePrice(): string {
   const price = Math.floor(Math.random() * 400) + 100; // $100-$500
   return price.toString();
+}
+
+export function generateReservationId(): string {
+  return Math.floor(1000000 + Math.random() * 9000000).toString();
+}
+
+// Generate a 2-character bill-to code (sometimes null)
+export function generateBillTo(): string | null {
+  // 70% chance of having a bill-to code, 30% chance of null
+  if (Math.random() > 0.7) {
+    return null;
+  }
+
+  const codes = [
+    'AA',
+    'BB',
+    'CC',
+    'DD',
+    'EE',
+    'FF',
+    'GG',
+    'HH',
+    'II',
+    'JJ',
+    'KK',
+    'LL',
+    'MM',
+    'NN',
+    'OO',
+    'PP',
+    'QQ',
+    'RR',
+    'SS',
+    'TT',
+    'UU',
+    'VV',
+    'WW',
+    'XX',
+    'YY',
+    'ZZ',
+  ];
+  return randomItem(codes);
 }
 
 // Helper function to get organization ID for a user
@@ -395,6 +440,53 @@ export async function seedDataForUser(userId: string): Promise<{
       // Continue anyway - might be first run
     }
 
+    // Get organization ID and default report template
+    console.log(
+      '📋 Getting organization context and generating report templates...'
+    );
+    const organizationId = await getUserOrganizationId(userId);
+
+    if (!organizationId) {
+      throw new Error(
+        'User must be in an organization to create runs with report templates'
+      );
+    }
+
+    // Generate sample report templates for the organization FIRST
+    console.log('📋 Generating report templates before creating runs...');
+    const templatesCreated = await generateReportTemplates(userId);
+    console.log(`✅ Created ${templatesCreated} report templates`);
+
+    // Now get default report template for the organization
+    const defaultTemplates = await getReportTemplates({
+      organizationId,
+      isDefault: true,
+      limit: 1,
+    });
+
+    let defaultReportTemplateId: string;
+    if (defaultTemplates.length === 0) {
+      // If no default template exists, get any template for this organization
+      const anyTemplates = await getReportTemplates({
+        organizationId,
+        limit: 1,
+      });
+
+      if (anyTemplates.length === 0) {
+        throw new Error(
+          'No report templates found for organization. Please create report templates first.'
+        );
+      }
+
+      defaultReportTemplateId = anyTemplates[0].id;
+      console.log(
+        `⚠️ No default template found, using: ${anyTemplates[0].name}`
+      );
+    } else {
+      defaultReportTemplateId = defaultTemplates[0].id;
+      console.log(`✅ Using default template: ${defaultTemplates[0].name}`);
+    }
+
     // Generate date range and runs with realistic distribution
     const now = new Date();
     const pastDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); // 90 days ago
@@ -402,6 +494,9 @@ export async function seedDataForUser(userId: string): Promise<{
 
     const allRuns: Array<{
       userId: string;
+      reportTemplateId: string;
+      reservation_id: string;
+      billTo: string | null;
       flightNumber: string;
       airline: string;
       departure: string;
@@ -527,6 +622,9 @@ export async function seedDataForUser(userId: string): Promise<{
 
         const runData = {
           userId: targetUserId,
+          reportTemplateId: defaultReportTemplateId,
+          reservation_id: generateReservationId(),
+          billTo: generateBillTo(),
           flightNumber,
           airline: airline.name,
           departure,
@@ -651,7 +749,7 @@ export async function seedDataForUser(userId: string): Promise<{
     );
 
     // Generate sample report templates for the organization
-    const templatesCreated = await generateReportTemplates(userId);
+    // const templatesCreated = await generateReportTemplates(userId); // This line is now redundant as it's moved
 
     console.log(`👥 Data distributed across ${allUserIds.length} users:`);
     console.log(`   - Current user received substantial data for testing`);
