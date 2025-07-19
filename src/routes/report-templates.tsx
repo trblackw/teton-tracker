@@ -23,6 +23,7 @@ import {
   Ellipsis,
   Eye,
   GripVertical,
+  LayoutTemplate,
   Plus,
   Settings,
   Trash2,
@@ -231,14 +232,15 @@ function ReportTemplatesPage() {
     );
   }
 
+  const defaultTemplate = templates.find(template => template.isDefault);
+
   return (
-    <div className="container mx-auto py-6 max-w-4xl px-4">
+    <div className="container mx-auto py-2 max-w-4xl px-4">
       <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Report Templates</h1>
           <p className="text-muted-foreground text-sm">
-            Manage report templates and configure which columns appear in
-            reports.
+            Manage report templates & configure which columns appear in reports
           </p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -251,6 +253,15 @@ function ReportTemplatesPage() {
               Create Template
             </Button>
           </DialogTrigger>
+          {defaultTemplate && (
+            <div className="text-muted-foreground text-xs text-center">
+              <span className="inline-flex items-center gap-2">
+                Default:
+                <LayoutTemplate className="h-4 w-4" />{' '}
+                <b className="inline">{defaultTemplate.name}</b>
+              </span>
+            </div>
+          )}
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <TemplateFormDialog
               mode="create"
@@ -267,7 +278,10 @@ function ReportTemplatesPage() {
       {/* Templates Grid */}
       <div className="grid gap-4">
         {templates.map(template => (
-          <Card key={template.id}>
+          <Card
+            key={template.id}
+            className={template.isDefault ? 'border-2 border-slate-600' : ''}
+          >
             <CardHeader>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
@@ -295,12 +309,16 @@ function ReportTemplatesPage() {
             </CardContent>
             <CardFooter>
               <div className="flex items-center justify-between gap-1 w-full">
-                <Badge
-                  className={runTypeToBadgeColor[template.reportType]}
-                  variant={template.isDefault ? 'default' : 'secondary'}
-                >
-                  {template.isDefault ? 'Default' : template.reportType}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge className={runTypeToBadgeColor[template.reportType]}>
+                    {template.reportType}
+                  </Badge>
+                  {template.isDefault && (
+                    <Badge className="bg-slate-600 text-slate-100">
+                      Default
+                    </Badge>
+                  )}
+                </div>
                 <div>
                   <Dialog>
                     <DialogTrigger asChild>
@@ -310,10 +328,10 @@ function ReportTemplatesPage() {
                         className="h-8 w-8 hover:bg-accent"
                         aria-label="Preview template"
                       >
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-4 w-4 text-blue-200" />
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-3xl">
+                    <DialogContent className="max-w-3xl overflow-x-auto">
                       <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                           <Eye className="h-4 w-4" /> Preview: {template.name}
@@ -358,7 +376,7 @@ function ReportTemplatesPage() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8 hover:bg-red-50 text-red-600 hover:text-red-700"
+                      className="h-8 w-8 text-destructive hover:text-destructive/80"
                       onClick={() => handleDeleteTemplate(template.id)}
                       disabled={deleteTemplateMutation.isPending}
                       aria-label="Delete template"
@@ -824,9 +842,9 @@ function TemplatePreview({ template }: { template: ReportTemplate }) {
 
   return (
     <div className="space-y-4">
-      <div className="border rounded-lg overflow-hidden">
+      <div className="border rounded-lg">
         <div className="p-4 bg-muted/50 border-b font-medium">
-          <div className="overflow-x-auto">
+          <div>
             <table className="w-full text-xs border-collapse">
               {/* Table Header */}
               <thead>

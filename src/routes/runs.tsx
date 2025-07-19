@@ -97,6 +97,8 @@ function Runs() {
           run.pickupLocation.toLowerCase().includes(searchLower) ||
           run.dropoffLocation.toLowerCase().includes(searchLower) ||
           run.departure.toLowerCase().includes(searchLower) ||
+          run.reservation_id.toLowerCase().includes(searchLower) ||
+          (run.billTo && run.billTo.toLowerCase().includes(searchLower)) ||
           run.arrival.toLowerCase().includes(searchLower) ||
           (run.notes && run.notes.toLowerCase().includes(searchLower))
       );
@@ -310,7 +312,7 @@ function Runs() {
     <div>
       <Input
         type="text"
-        placeholder="Search by flight number, airline, locations, or notes"
+        placeholder={`Search ${activeTab === 'current' ? 'current' : 'past'} runs...`}
         value={searchTerm}
         onChange={e => setSearchTerm(e.target.value)}
         className="w-full"

@@ -1,15 +1,17 @@
-import { isPast } from 'date-fns';
+import { formatDistanceToNow, isPast } from 'date-fns';
 import {
   AlertTriangle,
+  ArrowRight,
   CheckCircle,
   Clock,
-  Clock10,
   DollarSignIcon,
   Edit,
   FileText,
+  Hash,
   MapPin,
   Navigation,
   Plane,
+  ReceiptText,
 } from 'lucide-react';
 import type {
   FlightStatus,
@@ -56,7 +58,7 @@ export function RunCard({
 
   return (
     <Card key={run.id} className={runCardClassName}>
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-1">
         <div className="flex items-start justify-between">
           <div>
             <CardTitle className="text-lg">
@@ -111,30 +113,35 @@ export function RunCard({
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-sm font-medium">
-                {formatScheduleTime(run.scheduledTime)}
-              </span>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 w-full justify-between">
+              <div className="flex items-center gap-2">
+                <Hash className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-sm text-muted-foreground">
+                  {run.reservation_id}
+                </span>
+              </div>
+              {run.billTo && (
+                <span className="text-sm text-muted-foreground flex items-center gap-2">
+                  <ReceiptText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  {run.billTo}
+                </span>
+              )}
             </div>
-            <div className="flex items-center gap-2">
-              <Clock10 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-sm text-muted-foreground">
-                Est. {run.estimatedDuration} min
-              </span>
+            <div className="flex items-center gap-2 justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-sm font-medium">
+                  {formatScheduleTime(run.scheduledTime)}
+                </span>
+              </div>
+              <div className="flex items-start">
+                <DollarSignIcon className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                <span className="text-sm">{run.price}</span>
+              </div>
             </div>
-            <div className="flex items-start gap-2">
-              <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-              <span className="text-sm">
-                {run.type === 'pickup' ? 'Pickup' : 'Dropoff'} •{' '}
-                {run.pickupLocation} → {run.dropoffLocation}
-              </span>
-            </div>
-            <div className="flex items-start gap-2">
-              <DollarSignIcon className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-              <span className="text-sm">{run.price}</span>
-            </div>
+            <RunPickupDropoff run={run} />
+
             {run.notes && (
               <div className="flex items-start gap-2">
                 <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
@@ -147,10 +154,11 @@ export function RunCard({
 
           <div className="space-y-3">
             {flightStatus && !isPastRun && (
-              <div className="flex items-center gap-2">
-                <Plane className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <span className="text-sm">
-                  Flight: {flightStatus.status}
+              <div className="flex items-center gap-2 text-blue-400">
+                <Plane className="h-4 w-4 flex-shrink-0" />
+                <span className="text-sm text-blue-400">
+                  Flight:{' '}
+                  <span className="font-semibold">{flightStatus.status}</span>
                   {flightStatus.delay && flightStatus.delay > 0 && (
                     <span className="text-red-600 ml-1">
                       (+{flightStatus.delay} min)
@@ -160,10 +168,16 @@ export function RunCard({
               </div>
             )}
             {trafficData && !isPastRun && (
-              <div className="flex items-start gap-2">
-                <Navigation className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+              <div className="flex items-start gap-2 text-green-400">
+                <Navigation className="h-4 w-4 flex-shrink-0 mt-0.5" />
                 <span className="text-sm">
-                  Traffic: {trafficData.duration} min • {trafficData.distance} •{' '}
+                  Traffic:{' '}
+                  <span className="font-semibold">
+                    {trafficData.duration} min
+                  </span>{' '}
+                  /{' '}
+                  <span className="font-semibold">{trafficData.distance}</span>{' '}
+                  /{' '}
                   <span
                     className={
                       trafficData.status === 'good'
@@ -178,16 +192,12 @@ export function RunCard({
                 </span>
               </div>
             )}
-            {!isPastRun && (
+            {!isPastRun && run.updatedAt instanceof Date && (
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs text-muted-foreground">
                   Last updated: <br />
-                  {new Date().toLocaleString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
+                  {formatDistanceToNow(run.updatedAt, {
+                    addSuffix: true,
                   })}
                 </span>
                 <RefreshButton
@@ -204,6 +214,23 @@ export function RunCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function RunPickupDropoff({ run }: { run: Run }) {
+  return (
+    <div className="flex items-start gap-2 mt-4">
+      <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+      <div className="text-sm flex items-center gap-2 justify-between">
+        <span className="font-medium text-muted-foreground">
+          {run.pickupLocation}
+        </span>
+        <ArrowRight className="size-4 min-w-4" />{' '}
+        <span className="font-medium text-muted-foreground">
+          {run.dropoffLocation}
+        </span>
+      </div>
+    </div>
   );
 }
 

@@ -122,7 +122,7 @@ function OrganizationPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 max-w-full overflow-hidden">
+    <div className="container mx-auto py-2 max-w-full overflow-hidden">
       {/* Organization Overview */}
       <div className="mb-6 sm:mb-8">
         <Card>

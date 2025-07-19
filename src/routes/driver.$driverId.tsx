@@ -336,7 +336,7 @@ function DriverDetailPage() {
   const filteredApplied = searchTerm || selectedLocations.length > 0;
 
   return (
-    <div className="container mx-auto py-1 max-w-full overflow-hidden">
+    <div className="container mx-auto py-2 max-w-full overflow-hidden">
       {/* Header */}
       <div className="mb-6">
         <Link
