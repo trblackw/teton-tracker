@@ -85,16 +85,6 @@ export const Route = createFileRoute('/report-templates')({
   component: ReportTemplatesPage,
 });
 
-// const runTypeToBadgeColor = (runType: ReportType) => {
-//   switch (runType) {
-//     case ReportType.run:
-//       return 'bg-blue-400/10 text-blue-400';
-//     case ReportType.flight:
-//       return 'bg-green-400/10 text-green-400';
-//     default:
-//   }
-// };
-
 const runTypeToBadgeColor: { [key in ReportType]: string } = {
   [ReportType.run]: 'bg-cyan-300/10 text-cyan-300 border-cyan-300',
   [ReportType.flight]: 'bg-green-300/10 text-green-300 border-green-300',

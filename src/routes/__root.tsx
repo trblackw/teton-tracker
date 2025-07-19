@@ -42,6 +42,7 @@ import {
 import { UserProfilePopover } from '../components/user-profile-popover';
 import { AppContextProvider } from '../lib/AppContextProvider';
 import { isFeatureEnabled } from '../lib/features';
+import { useCurrentRunsCount } from '../lib/hooks/use-current-runs-count';
 import { useMobile } from '../lib/hooks/use-mobile';
 import {
   useIsUserAdmin,
@@ -69,6 +70,31 @@ function MobileAwareNavLink({
     <Link {...linkProps} onClick={handleClick}>
       {children}
     </Link>
+  );
+}
+
+// Current Runs Navigation Item with Badge
+function CurrentRunsNavItem() {
+  const currentRunsCount = useCurrentRunsCount();
+
+  return (
+    <Button asChild variant="ghost" className="w-full justify-start">
+      <MobileAwareNavLink
+        to="/runs"
+        className="flex items-center gap-2 w-full"
+        activeProps={{
+          className: activeNavClass,
+        }}
+      >
+        <Car className="h-4 w-4" />
+        Current Runs
+        {currentRunsCount > 0 && (
+          <span className="text-blue-400 text-xs ml-auto">
+            {currentRunsCount > 99 ? '99+' : currentRunsCount}
+          </span>
+        )}
+      </MobileAwareNavLink>
+    </Button>
   );
 }
 
@@ -192,22 +218,7 @@ function RootComponent() {
                     </SidebarHeader>
                     <SidebarContent className="flex flex-col">
                       <SidebarNav className="flex-1">
-                        <Button
-                          asChild
-                          variant="ghost"
-                          className="w-full justify-start"
-                        >
-                          <MobileAwareNavLink
-                            to="/runs"
-                            className="flex items-center gap-2"
-                            activeProps={{
-                              className: activeNavClass,
-                            }}
-                          >
-                            <Car className="h-4 w-4" />
-                            Current Runs
-                          </MobileAwareNavLink>
-                        </Button>
+                        <CurrentRunsNavItem />
                         {isFeatureEnabled('realTimeFlightTraffic') && (
                           <Button
                             asChild
@@ -278,22 +289,7 @@ function RootComponent() {
                     </SidebarHeader>
                     <SidebarContent className="flex flex-col">
                       <SidebarNav className="flex-1">
-                        <Button
-                          asChild
-                          variant="ghost"
-                          className="w-full justify-start"
-                        >
-                          <MobileAwareNavLink
-                            to="/runs"
-                            className="flex items-center gap-2"
-                            activeProps={{
-                              className: activeNavClass,
-                            }}
-                          >
-                            <Car className="h-4 w-4" />
-                            Current Runs
-                          </MobileAwareNavLink>
-                        </Button>
+                        <CurrentRunsNavItem />
                         {isFeatureEnabled('realTimeFlightTraffic') && (
                           <Button
                             asChild

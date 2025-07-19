@@ -7,12 +7,14 @@ import {
   Calendar,
   Car,
   Clock,
+  Filter,
   MapPin,
   MessageCircle,
+  Search,
   Send,
   Users,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import {
@@ -22,6 +24,13 @@ import {
   CardHeader,
   CardTitle,
 } from '../components/ui/card';
+import {
+  ExpandableActionsDrawer,
+  type DrawerAction,
+} from '../components/ui/expandable-actions-drawer';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { MultiSelect } from '../components/ui/multi-select';
 import {
   Select,
   SelectContent,
@@ -69,6 +78,10 @@ function DriverDetailPage() {
   const [selectedRunId, setSelectedRunId] = useState<string>('');
   const [sendingStatus, setSendingStatus] = useState(false);
 
+  // Search and filter state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+
   const { isAdmin, organization } = useNonAdminRedirect('/runs');
 
   // Fetch organization members to get driver information
@@ -105,6 +118,133 @@ function DriverDetailPage() {
 
   // Filter runs for this specific driver
   const driverRuns = allRuns.filter((run: Run) => run.userId === driverId);
+
+  // Get unique locations for filter options
+  const uniqueLocations = useMemo(() => {
+    const locations = new Set<string>();
+    driverRuns.forEach((run: Run) => {
+      locations.add(run.pickupLocation);
+      locations.add(run.dropoffLocation);
+    });
+    return Array.from(locations).sort();
+  }, [driverRuns]);
+
+  // Apply search and filters
+  const filteredDriverRuns = useMemo(() => {
+    let filtered = driverRuns;
+
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (run: Run) =>
+          run.flightNumber.toLowerCase().includes(search) ||
+          run.pickupLocation.toLowerCase().includes(search) ||
+          run.dropoffLocation.toLowerCase().includes(search) ||
+          run.notes?.toLowerCase().includes(search)
+      );
+    }
+
+    // Apply location filter
+    if (selectedLocations.length > 0) {
+      filtered = filtered.filter(
+        (run: Run) =>
+          selectedLocations.includes(run.pickupLocation) ||
+          selectedLocations.includes(run.dropoffLocation)
+      );
+    }
+
+    return filtered;
+  }, [driverRuns, searchTerm, selectedLocations]);
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedLocations([]);
+  };
+
+  // Create drawer actions
+  const drawerActions: DrawerAction[] = [
+    {
+      id: 'search',
+      icon: <Search className="h-4 w-4" />,
+      label: 'Search Runs',
+      badge: searchTerm ? '●' : undefined,
+      showHeader: false,
+      content: (
+        <div className="space-y-3">
+          <div>
+            <Label htmlFor="search-input" className="text-sm font-medium">
+              Search flights, locations, or notes
+            </Label>
+            <Input
+              id="search-input"
+              type="text"
+              placeholder="Type to search..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          {searchTerm && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                {filteredDriverRuns.length} result
+                {filteredDriverRuns.length !== 1 ? 's' : ''} found
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSearchTerm('')}
+              >
+                Clear
+              </Button>
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'filter-location',
+      icon: <Filter className="h-4 w-4" />,
+      label: 'Filter by Location',
+      badge:
+        selectedLocations.length > 0 ? selectedLocations.length : undefined,
+      showHeader: false,
+      content: (
+        <div className="space-y-3">
+          <div>
+            <Label className="text-sm font-medium mb-2 block">
+              Filter by pickup or dropoff location
+            </Label>
+            <MultiSelect
+              options={uniqueLocations}
+              selected={selectedLocations}
+              onSelectionChange={setSelectedLocations}
+              placeholder="Select locations..."
+              emptyMessage="No locations found."
+              maxDisplay={2}
+            />
+          </div>
+          {selectedLocations.length > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                {selectedLocations.length} location
+                {selectedLocations.length !== 1 ? 's' : ''} selected
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedLocations([])}
+              >
+                Clear
+              </Button>
+            </div>
+          )}
+        </div>
+      ),
+    },
+  ];
 
   // Calculate metrics
   const now = new Date();
@@ -336,21 +476,57 @@ function DriverDetailPage() {
       {/* Driver Runs List */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Car className="h-5 w-5" />
-            Driver Runs
-          </CardTitle>
-          <CardDescription>All runs assigned to this driver</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Car className="h-5 w-5" />
+                Driver Runs
+              </CardTitle>
+              <CardDescription>
+                All runs assigned to this driver
+              </CardDescription>
+            </div>
+            {(searchTerm || selectedLocations.length > 0) && (
+              <Button variant="outline" size="sm" onClick={clearFilters}>
+                Clear All Filters
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          {driverRuns.length === 0 ? (
+          {/* Search and Filter Actions */}
+          <div className="mb-6">
+            <ExpandableActionsDrawer actions={drawerActions} className="mb-4" />
+          </div>
+
+          {filteredDriverRuns.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Car className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No runs found for this driver</p>
+              {searchTerm || selectedLocations.length > 0 ? (
+                <div>
+                  <p className="mb-2">No runs match your current filters</p>
+                  <Button variant="outline" size="sm" onClick={clearFilters}>
+                    Clear filters to see all runs
+                  </Button>
+                </div>
+              ) : (
+                <p>No runs found for this driver</p>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
-              {driverRuns.map((run: Run) => (
+              {/* Results summary */}
+              {(searchTerm || selectedLocations.length > 0) && (
+                <div className="text-sm text-muted-foreground border-b pb-2">
+                  Showing {filteredDriverRuns.length} of {driverRuns.length}{' '}
+                  runs
+                  {searchTerm && ` matching "${searchTerm}"`}
+                  {selectedLocations.length > 0 &&
+                    ` in ${selectedLocations.length} location${selectedLocations.length !== 1 ? 's' : ''}`}
+                </div>
+              )}
+
+              {filteredDriverRuns.map((run: Run) => (
                 <div key={run.id} className="border rounded-lg p-4 bg-muted/50">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
