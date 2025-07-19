@@ -1,6 +1,7 @@
 import { clerk } from '../lib/api/clerk-client';
 import { getDatabase } from '../lib/db/index';
 import { createNotification } from '../lib/db/notifications';
+import { saveUserPreferences } from '../lib/db/preferences';
 import {
   createReportTemplate,
   getReportTemplates,
@@ -404,6 +405,21 @@ export async function seedDataForUser(userId: string): Promise<{
   console.log(`🌱 Starting data seeding for user: ${userId}`);
 
   try {
+    // Set user's home airport to JAC (Jackson Hole Airport)
+    console.log('🏠 Setting home airport to JAC (Jackson Hole Airport)...');
+    try {
+      await saveUserPreferences(
+        {
+          homeAirport: 'JAC',
+        },
+        userId
+      );
+      console.log('✅ Home airport set to JAC');
+    } catch (error) {
+      console.warn('⚠️ Failed to set home airport:', error);
+      // Continue with seeding even if this fails
+    }
+
     // Get organization members to use as drivers
     const organizationMembers = await getOrganizationDrivers(userId);
     const allUserIds =
@@ -834,31 +850,22 @@ export async function DELETE(request: Request): Promise<Response> {
       );
       deletedNotifications = parseInt(notificationsResult.rows[0].count);
 
-      const preferencesResult = await db.query(
-        'SELECT COUNT(*) as count FROM user_preferences WHERE user_id = $1',
-        [userId]
-      );
-      deletedPreferences = parseInt(preferencesResult.rows[0].count);
-
-      // Delete all user data except the user record itself
+      // Delete all user data except the user record itself and preferences
       await db.query('DELETE FROM notifications WHERE user_id = $1', [userId]);
       await db.query('DELETE FROM runs WHERE user_id = $1', [userId]);
-      await db.query('DELETE FROM user_preferences WHERE user_id = $1', [
-        userId,
-      ]);
 
       console.log(`✅ Cleared all data for user ${userId}:`);
       console.log(`   - ${deletedRuns} runs`);
       console.log(`   - ${deletedNotifications} notifications`);
-      console.log(`   - ${deletedPreferences} preferences`);
+      console.log(`   - Preserved user preferences`);
 
       return new Response(
         JSON.stringify({
           success: true,
-          message: `Cleared ${deletedRuns} runs, ${deletedNotifications} notifications, and ${deletedPreferences} preferences`,
+          message: `Cleared ${deletedRuns} runs and ${deletedNotifications} notifications (preferences preserved)`,
           deletedRuns,
           deletedNotifications,
-          deletedPreferences,
+          deletedPreferences: 0, // No preferences deleted
         }),
         {
           headers: { 'Content-Type': 'application/json' },

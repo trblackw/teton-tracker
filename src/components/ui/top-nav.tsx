@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
-import { Plane } from 'lucide-react';
 import * as React from 'react';
+import { useUserOrganization } from '../../lib/hooks/use-organizations';
 import IconSidebar from '../../lib/icons/icon-sidebar';
 import { SidebarTrigger, useSidebar } from './sidebar';
 
@@ -64,11 +64,16 @@ export function TopNavRight({
 
 export function TopNavLogo({ className }: { className?: string }) {
   const { isOpen, setIsOpen } = useSidebar();
+  const { data: organization } = useUserOrganization();
   return (
     <div className={cn('flex items-center gap-2 w-full', className)}>
-      <Plane className="size-7 text-primary" />
+      <div className="flex items-center gap-2">
+        {organization?.name && (
+          <span className="text-xs font-medium">{organization.name}</span>
+        )}
+      </div>
       <IconSidebar
-        className="ml-auto scale-x-[-1] size-7 text-primary lg:hidden"
+        className="ml-auto scale-x-[-1] size-6 text-primary lg:hidden"
         onClick={() => setIsOpen(!isOpen)}
       />
     </div>

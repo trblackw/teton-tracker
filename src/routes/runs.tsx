@@ -621,11 +621,11 @@ function Runs() {
   const { title, subtitle } = getTabHeader();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-foreground">{title}</h2>
-          <p className="text-muted-foreground mt-1">{subtitle}</p>
+          <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
         </div>
       </div>
 

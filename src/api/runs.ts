@@ -7,11 +7,12 @@ import { clerk } from '../lib/api/clerk-client';
 import {
   createRun,
   deleteRun,
+  getRunById,
   getRuns,
   updateRun,
   type RunsQuery,
 } from '../lib/db/runs';
-import { type NewRunForm, type RunStatus } from '../lib/schema';
+import { type NewRunForm, type Run, type RunStatus } from '../lib/schema';
 
 // Helper function to get all organization member user IDs for an admin
 async function getOrganizationMemberIds(
@@ -234,11 +235,32 @@ export async function PUT(request: Request): Promise<Response> {
 
     if (action === 'update_status') {
       // For status updates, we need to update the run with the new status
-      const updateData: any = { status };
+      const updateData: Partial<Run> = { status };
 
-      // Set completed_at if status is completed
+      // Set activated_at when status changes to active
+      if (status === 'active') {
+        updateData.activatedAt = new Date();
+      }
+
+      // Set completed_at and calculate actual duration if status is completed
       if (status === 'completed') {
-        updateData.completedAt = new Date().toISOString();
+        updateData.completedAt = new Date();
+        updateData.activatedAt = null;
+
+        // Calculate actual duration if the run was previously activated
+        try {
+          const currentRun = await getRunById(id, userId);
+          if (currentRun?.activatedAt) {
+            const activatedTime = new Date(currentRun.activatedAt).getTime();
+            const completedTime = updateData.completedAt.getTime();
+            const durationMs = completedTime - activatedTime;
+            const durationMinutes = Math.round(durationMs / (1000 * 60)); // Convert to minutes
+            updateData.actualDuration = Math.max(0, durationMinutes); // Ensure non-negative
+          }
+        } catch (error) {
+          console.warn('Failed to calculate actual duration:', error);
+          // Continue with the update even if duration calculation fails
+        }
       }
 
       const updatedRun = await updateRun(id, updateData, userId);

@@ -889,8 +889,9 @@ function Settings() {
                 Clear All Data
               </h4>
               <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
-                This will delete all your runs, notifications, and preferences.
-                This action cannot be undone.
+                This will delete all your runs and notifications. Your
+                preferences and settings will be preserved. This action cannot
+                be undone.
               </p>
               <Button
                 onClick={handleClearUserData}
@@ -905,7 +906,7 @@ function Settings() {
                 ) : (
                   <>
                     <Trash className="h-4 w-4 mr-2" />
-                    Clear Data
+                    Clear All Data
                   </>
                 )}
               </Button>
@@ -948,8 +949,10 @@ function Settings() {
               <ul className="space-y-1 text-sm text-red-600 dark:text-red-400">
                 <li>• All your runs and shuttles</li>
                 <li>• All notifications and alerts</li>
-                <li>• All your preferences and settings</li>
               </ul>
+              <p className="text-sm text-muted-foreground">
+                Your preferences and settings will be preserved.
+              </p>
               <p className="text-sm font-medium text-red-700 dark:text-red-300">
                 Are you absolutely sure you want to continue?
               </p>
