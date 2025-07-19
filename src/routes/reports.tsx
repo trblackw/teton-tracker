@@ -9,9 +9,10 @@ import {
   startOfDay,
   startOfToday,
 } from 'date-fns';
-import { Download } from 'lucide-react';
+import { AlertTriangle, Download } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
+import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Calendar as CalendarComponent } from '../components/ui/calendar';
 import {
@@ -27,10 +28,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '../components/ui/popover';
-import { runsApi } from '../lib/api/client';
+import { reportTemplatesApi, runsApi } from '../lib/api/client';
 import {
   defaultReportTemplateFields,
   type DefaultReportConfigFields,
+  type ReportTemplate,
   type Run,
 } from '../lib/schema';
 import { toasts } from '../lib/toast';
@@ -104,9 +106,6 @@ function Reports() {
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>();
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  const [selectedFields, setSelectedFields] = useState<
-    DefaultReportConfigFields[]
-  >(defaultReportTemplateFields);
   const [selectedRunIds, setSelectedRunIds] = useState<Set<string>>(new Set());
 
   // Fetch all runs
@@ -117,6 +116,16 @@ function Reports() {
   } = useQuery({
     queryKey: ['runs'],
     queryFn: runsApi.getRuns,
+  });
+
+  // Fetch report templates
+  const {
+    data: reportTemplates = [],
+    isLoading: templatesLoading,
+    error: templatesError,
+  } = useQuery({
+    queryKey: ['report-templates'],
+    queryFn: reportTemplatesApi.getReportTemplates,
   });
 
   // Filter to only past runs (before today)
@@ -156,6 +165,49 @@ function Reports() {
     return filteredRuns.filter(run => selectedRunIds.has(run.id));
   }, [filteredRuns, selectedRunIds]);
 
+  // Group selected runs by their report template
+  const runsByTemplate = useMemo(() => {
+    const grouped = new Map<
+      string,
+      { template: ReportTemplate | null; runs: Run[] }
+    >();
+
+    selectedRuns.forEach(run => {
+      const template =
+        reportTemplates.find(t => t.id === run.reportTemplateId) || null;
+      const templateId = template?.id || 'unknown';
+
+      if (!grouped.has(templateId)) {
+        grouped.set(templateId, { template, runs: [] });
+      }
+      grouped.get(templateId)!.runs.push(run);
+    });
+
+    return grouped;
+  }, [selectedRuns, reportTemplates]);
+
+  // Check if there are multiple templates
+  const hasMultipleTemplates = runsByTemplate.size > 1;
+  const templateInfo = useMemo(() => {
+    if (runsByTemplate.size === 0) {
+      return { type: 'none' as const };
+    } else if (runsByTemplate.size === 1) {
+      const templateGroups = Array.from(runsByTemplate.values());
+      const templateGroup = templateGroups[0];
+      return {
+        type: 'single' as const,
+        template: templateGroup.template,
+        count: templateGroup.runs.length,
+      };
+    } else {
+      return {
+        type: 'multiple' as const,
+        templates: Array.from(runsByTemplate.values()),
+        totalRuns: selectedRuns.length,
+      };
+    }
+  }, [runsByTemplate, selectedRuns.length]);
+
   // Calculate stats - use filtered runs when date range is selected, otherwise all past runs
   const statsRuns = selectedRange?.from ? filteredRuns : pastRuns;
   const totalRuns = statsRuns.length;
@@ -176,11 +228,9 @@ function Reports() {
     0
   );
 
-  // Handle field selection toggle
+  // Handle field selection toggle (no longer needed but keeping for compatibility)
   const toggleField = (field: DefaultReportConfigFields) => {
-    setSelectedFields(prev =>
-      prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field]
-    );
+    // Field selection is now handled by report templates
   };
 
   // Handle run selection toggle
@@ -212,22 +262,57 @@ function Reports() {
       return;
     }
 
-    if (selectedFields.length === 0) {
-      toasts.error('Please select at least one field to export');
+    if (templateInfo.type === 'none') {
+      toasts.error('No report template found for selected runs');
       return;
     }
 
-    const csvContent = generateCSV(selectedRuns, selectedFields);
     const fromDate = selectedRange?.from
       ? format(selectedRange.from, 'yyyy-MM-dd')
       : 'unknown';
     const toDate = selectedRange?.to
       ? format(selectedRange.to, 'yyyy-MM-dd')
       : fromDate;
-    const filename = `runs-report-${fromDate}-to-${toDate}.csv`;
 
-    downloadCSV(csvContent, filename);
-    toasts.success(`Exported ${selectedRuns.length} runs to ${filename}`);
+    if (templateInfo.type === 'single') {
+      // Single template - generate one CSV
+      const template = templateInfo.template;
+      const fields =
+        template?.columnConfig?.map(
+          col => col.field as DefaultReportConfigFields
+        ) || defaultReportTemplateFields;
+      const csvContent = generateCSV(selectedRuns, fields);
+      const templateName = template?.name
+        ? `-${template.name.replace(/\s+/g, '-').toLowerCase()}`
+        : '';
+      const filename = `runs-report${templateName}-${fromDate}-to-${toDate}.csv`;
+
+      downloadCSV(csvContent, filename);
+      toasts.success(`Exported ${selectedRuns.length} runs to ${filename}`);
+    } else {
+      // Multiple templates - generate separate CSV for each
+      let totalExported = 0;
+      templateInfo.templates.forEach((templateGroup, index) => {
+        const template = templateGroup.template;
+        const runs = templateGroup.runs;
+        const fields =
+          template?.columnConfig?.map(
+            col => col.field as DefaultReportConfigFields
+          ) || defaultReportTemplateFields;
+        const csvContent = generateCSV(runs, fields);
+        const templateName = template?.name
+          ? `-${template.name.replace(/\s+/g, '-').toLowerCase()}`
+          : `-unknown-template-${index + 1}`;
+        const filename = `runs-report${templateName}-${fromDate}-to-${toDate}.csv`;
+
+        downloadCSV(csvContent, filename);
+        totalExported += runs.length;
+      });
+
+      toasts.success(
+        `Exported ${totalExported} runs across ${templateInfo.templates.length} CSV files`
+      );
+    }
   };
 
   // Custom day renderer with run indicators and click handlers
@@ -255,11 +340,11 @@ function Reports() {
     const classNames: Record<string, string> = {
       today: 'text-blue-500 font-semibold',
       range_start:
-        'bg-yellow-200 text-primary-foreground font-medium hover:bg-primary/90',
+        'bg-emerald-200 text-primary-foreground font-medium hover:bg-primary/90',
       range_end:
-        'bg-yellow-100 text-primary-foreground font-medium hover:bg-primary/90',
+        'bg-emerald-100 text-primary-foreground font-medium hover:bg-primary/90',
       range_middle:
-        'bg-yellow-100/80 text-primary font-medium hover:bg-primary/30',
+        'bg-emerald-100/80 text-primary font-medium hover:bg-primary/30',
     };
 
     // Style for days with runs - these will layer with range styles
@@ -295,16 +380,20 @@ function Reports() {
       !selectedRange?.from ||
       selectedRuns.length === 0 ||
       isLoading ||
-      selectedFields.length === 0
+      templatesLoading
     );
-  }, [selectedRange, selectedRuns, isLoading, selectedFields]);
+  }, [selectedRange, selectedRuns, isLoading, templatesLoading]);
 
-  if (error) {
+  if (error || templatesError) {
     return (
       <div className="space-y-6">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
-          <p className="text-destructive">Failed to load runs data</p>
+          <p className="text-destructive">
+            {error
+              ? 'Failed to load runs data'
+              : 'Failed to load report templates'}
+          </p>
         </div>
       </div>
     );
@@ -344,9 +433,9 @@ function Reports() {
               </div>
             </div>
           </CardContent>
-          <CardFooter className="text-sm text-blue-400 flex justify-center items-center">
+          <CardFooter className="text-xs text-blue-400 flex justify-center items-center">
             {selectedRange?.from
-              ? `Selected: ${format(selectedRange.from, 'MMM d, yyyy')}${
+              ? `${format(selectedRange.from, 'MMM d, yyyy')}${
                   selectedRange.to
                     ? ` - ${format(selectedRange.to, 'MMM d, yyyy')}`
                     : ''
@@ -386,7 +475,7 @@ function Reports() {
                 onDayClick={handleDayClick}
                 numberOfMonths={1}
                 className="rounded-md border bg-accent"
-                disabled={isLoading}
+                disabled={isLoading || templatesLoading}
                 modifiers={dayModifiers}
                 modifiersClassNames={dayModifiersClassNames}
                 classNames={{
@@ -463,57 +552,100 @@ function Reports() {
             <CardHeader>
               <CardTitle>Generate Report</CardTitle>
               <CardDescription>
-                Export detailed CSV reports for the selected date range
+                Export run reports for selected timeframe
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Report includes:</h4>
+              {templateInfo.type === 'single' && (
                 <div className="space-y-2">
-                  {defaultReportTemplateFields.map(field => (
-                    <label
-                      key={field}
-                      className="flex items-center gap-2 cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedFields.includes(field)}
-                        onChange={() => toggleField(field)}
-                        className="rounded border-border text-primary focus:ring-primary focus:ring-offset-0"
-                      />
-                      <span className="text-sm text-muted-foreground">
-                        {field === 'flightNumber' && 'Flight Number'}
-                        {field === 'airline' && 'Airline'}
-                        {field === 'departure' && 'Departure Airport'}
-                        {field === 'arrival' && 'Arrival Airport'}
-                        {field === 'pickupLocation' && 'Pickup Location'}
-                        {field === 'type' && 'Run Type (Pickup/Dropoff)'}
-                        {field === 'dropoffLocation' && 'Dropoff Location'}
-                        {field === 'price' && 'Price'}
+                  <h4 className="text-sm font-medium">Report Template:</h4>
+                  <div className="p-3 bg-muted rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">
+                        {templateInfo.template?.name || 'Default Template'}
                       </span>
-                    </label>
-                  ))}
+                      <span className="text-sm text-muted-foreground/60">
+                        {templateInfo.count} runs
+                      </span>
+                    </div>
+                    {templateInfo.template?.description && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {templateInfo.template.description}
+                      </p>
+                    )}
+                    <div className="text-xs text-muted-foreground mt-2 flex flex-wrap gap-1">
+                      Fields:{' '}
+                      {templateInfo.template?.columnConfig?.map(col => (
+                        <Badge
+                          variant="outline"
+                          className="text-xs bg-blue-400/10 text-blue-400"
+                        >
+                          {col.label}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {templateInfo.type === 'multiple' && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium">
+                    <AlertTriangle className="size-4" /> Multiple Report
+                    Templates Detected:
+                  </h4>
+                  <div className="space-y-2">
+                    {templateInfo.templates.map((templateGroup, index) => (
+                      <div key={index} className="p-3 bg-muted rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">
+                            {templateGroup.template?.name ||
+                              `Unknown Template ${index + 1}`}
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            {templateGroup.runs.length} runs
+                          </span>
+                        </div>
+                        {templateGroup.template?.description && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {templateGroup.template.description}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-yellow-800">
+                      Multiple CSV files will be generated - one for each
+                      template ({templateInfo.templates.length} files total)
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {templateInfo.type === 'none' && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-800">
+                    No report template found for the selected runs. Please
+                    select runs with valid templates.
+                  </p>
+                </div>
+              )}
 
               <Button
                 onClick={handleExportCSV}
-                disabled={exportDisabled}
+                disabled={exportDisabled || templateInfo.type === 'none'}
                 className="w-full bg-emerald-400 hover:bg-emerald-400/90 text-white"
               >
                 <Download className="size-4" strokeWidth={2} />
-                Export CSV Report
+                {templateInfo.type === 'multiple'
+                  ? `Export ${templateInfo.templates.length} CSV Reports`
+                  : 'Export CSV Report'}
               </Button>
 
               {!selectedRange?.from && (
                 <p className="text-xs text-muted-foreground text-center">
                   Select a date range to enable export
-                </p>
-              )}
-
-              {selectedFields.length === 0 && (
-                <p className="text-xs text-destructive text-center">
-                  Select at least one field to export
                 </p>
               )}
 
@@ -539,11 +671,6 @@ function Reports() {
                   {selectedRuns.length} of {filteredRuns.length} selected)
                 </CardDescription>
               </div>
-              <Button variant="outline" size="sm" onClick={toggleAllRuns}>
-                {selectedRunIds.size === filteredRuns.length
-                  ? 'Deselect All'
-                  : 'Select All'}
-              </Button>
             </div>
           </CardHeader>
           <CardContent>
