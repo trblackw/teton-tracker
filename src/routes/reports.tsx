@@ -551,7 +551,7 @@ function Reports() {
           </Card>
 
           {!exportDisabled && (
-            <Card>
+            <Card className="mb-3">
               <CardHeader>
                 <CardTitle>Generate Report</CardTitle>
                 <CardDescription>
@@ -661,63 +661,6 @@ function Reports() {
             </Card>
           )}
         </div>
-
-        {/* Selected Runs Preview */}
-        {filteredRuns.length > 0 && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Selected Runs Preview</CardTitle>
-                  <CardDescription>
-                    Choose which runs to include in the report (
-                    {selectedRuns.length} of {filteredRuns.length} selected)
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {filteredRuns.slice(0, 20).map(run => (
-                  <label
-                    key={run.id}
-                    className="flex items-center gap-3 p-2 bg-muted rounded-lg text-sm cursor-pointer hover:bg-muted/80 transition-colors"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedRunIds.has(run.id)}
-                      onChange={() => toggleRun(run.id)}
-                      className="rounded border-border text-primary focus:ring-primary focus:ring-offset-0"
-                    />
-                    <div className="flex items-center justify-start gap-3 flex-1">
-                      <div className="flex items-center gap-3">
-                        <span className="font-mono bg-primary/10 text-primary px-2 py-1 rounded">
-                          {run.flightNumber}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 text-muted-foreground">
-                        <span>{run.type}</span>
-                        <span>${run.price}</span>
-                        <span>
-                          {format(parseISO(run.scheduledTime), 'MMM d')}
-                        </span>
-                      </div>
-                    </div>
-                  </label>
-                ))}
-                {filteredRuns.length > 20 && (
-                  <p className="text-sm text-muted-foreground text-center pt-2">
-                    ... and {filteredRuns.length - 20} more runs (all{' '}
-                    {selectedRunIds.size === filteredRuns.length
-                      ? 'selected'
-                      : 'can be selected'}
-                    )
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </>
   );

@@ -1,25 +1,18 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, useRouter, useSearch } from '@tanstack/react-router';
-import { format } from 'date-fns';
 import {
   AlertTriangle,
-  Calendar as CalendarIcon,
-  Check,
-  ChevronDown,
   Database,
   Info,
   Loader2,
-  MapPin,
   Plus,
-  Search,
   Settings,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '../components/ui/button';
-import { Calendar } from '../components/ui/calendar';
 import {
   Card,
   CardContent,
@@ -27,13 +20,6 @@ import {
   CardHeader,
   CardTitle,
 } from '../components/ui/card';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from '../components/ui/command';
 import {
   Form,
   FormControl,
@@ -44,29 +30,17 @@ import {
 } from '../components/ui/form';
 import { Input } from '../components/ui/input';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '../components/ui/popover';
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '../components/ui/tabs';
 import { Textarea } from '../components/ui/textarea';
 import { reportTemplatesApi, runsApi } from '../lib/api/client';
 import { useNonAdminRedirect } from '../lib/hooks/use-non-admin-redirect';
 import type { ReportTemplate } from '../lib/schema';
 import { toasts } from '../lib/toast';
-import { cn } from '../lib/utils';
 
 // Dynamic form schema based on selected template
 const createDynamicFormSchema = (template: ReportTemplate | null) => {
@@ -108,21 +82,10 @@ function AddRuns() {
     organization,
   } = useNonAdminRedirect('/runs');
 
-  // Tab state
-  const [activeTab, setActiveTab] = useState<'single' | 'bulk'>('single');
-
   // Single run state
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [selectedTemplate, setSelectedTemplate] =
     useState<ReportTemplate | null>(null);
-
-  // Bulk run state
-  const [bulkSelectedTemplate, setBulkSelectedTemplate] = useState<string>('');
-  const [bulkRunType, setBulkRunType] = useState<string>('pickup');
-  const [bulkSelectedDate, setBulkSelectedDate] = useState<Date>(new Date());
-  const [templateOpen, setTemplateOpen] = useState(false);
-  const [dateOpen, setDateOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState('');
 
   // Query for report templates
   const {
@@ -147,7 +110,7 @@ function AddRuns() {
     enabled: !!search.edit && !!isAdmin,
   });
 
-  // Set default template on load for single run
+  // Set default template on load
   useEffect(() => {
     if (templates.length > 0 && !selectedTemplateId && !editingRun) {
       const templateToSelect = defaultTemplate || templates[0];
@@ -155,14 +118,6 @@ function AddRuns() {
       setSelectedTemplate(templateToSelect);
     }
   }, [templates, defaultTemplate, selectedTemplateId, editingRun]);
-
-  // Set default template on load for bulk run
-  useEffect(() => {
-    if (templates.length > 0 && !bulkSelectedTemplate) {
-      const templateToSelect = defaultTemplate || templates[0];
-      setBulkSelectedTemplate(templateToSelect.id);
-    }
-  }, [templates, defaultTemplate, bulkSelectedTemplate]);
 
   // Update selected template when templateId changes
   useEffect(() => {
@@ -237,7 +192,6 @@ function AddRuns() {
       });
 
       form.reset(formData);
-      setActiveTab('single'); // Switch to single tab for editing
     }
   }, [editingRun, selectedTemplate, form]);
 
@@ -357,32 +311,6 @@ function AddRuns() {
     setSelectedTemplate(template || null);
   };
 
-  // Handle bulk run creation
-  const handleCreateBulkRun = () => {
-    if (!bulkSelectedTemplate) return;
-
-    // TODO: Implement bulk run creation logic
-    console.log('Creating bulk run:', {
-      templateId: bulkSelectedTemplate,
-      runType: bulkRunType,
-      date: bulkSelectedDate.toISOString(),
-    });
-
-    toasts.info('Bulk run creation', 'This feature is coming soon!');
-  };
-
-  // Filter templates based on search for bulk creation
-  const filteredTemplates = templates.filter(
-    template =>
-      template.name.toLowerCase().includes(searchValue.toLowerCase()) ||
-      (template.description &&
-        template.description.toLowerCase().includes(searchValue.toLowerCase()))
-  );
-
-  const bulkSelectedTemplateObj = templates.find(
-    t => t.id === bulkSelectedTemplate
-  );
-
   // Show loading state while checking admin access
   if (adminLoading || !isAdmin) {
     return (
@@ -402,8 +330,7 @@ function AddRuns() {
         <div>
           <h2 className="text-2xl font-bold text-foreground">Add Runs</h2>
           <p className="text-muted-foreground mt-1">
-            Create individual runs or bulk runs using organization report
-            templates
+            Create runs using organization report templates
           </p>
         </div>
         <Card>
@@ -431,8 +358,7 @@ function AddRuns() {
         <div>
           <h2 className="text-2xl font-bold text-foreground">Add Runs</h2>
           <p className="text-muted-foreground mt-1">
-            Create individual runs or bulk runs using organization report
-            templates
+            Create runs using organization report templates
           </p>
         </div>
         <Card>
@@ -456,8 +382,7 @@ function AddRuns() {
         <div>
           <h2 className="text-2xl font-bold text-foreground">Add Runs</h2>
           <p className="text-muted-foreground mt-1">
-            Create individual runs or bulk runs using organization report
-            templates
+            Create runs using organization report templates
           </p>
         </div>
         <Card>
@@ -493,7 +418,7 @@ function AddRuns() {
         <p className="text-muted-foreground mt-1">
           {editingRun
             ? 'Update the details for this run'
-            : 'Create individual runs or bulk runs using organization report templates'}
+            : 'Create runs using organization report templates'}
         </p>
       </div>
 
@@ -504,340 +429,187 @@ function AddRuns() {
             Run Creation
           </CardTitle>
           <CardDescription>
-            Choose to create a single run with detailed fields or bulk runs with
-            template defaults
+            Select a report template and fill in the required information to
+            create a new run
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs
-            value={activeTab}
-            onValueChange={value => setActiveTab(value as 'single' | 'bulk')}
-            className="w-full"
-          >
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="single">Single Run</TabsTrigger>
-              <TabsTrigger value="bulk" disabled={!!editingRun}>
-                Bulk Runs
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Single Run Tab */}
-            <TabsContent value="single" className="space-y-6">
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(onSubmitSingle)}
-                  className="space-y-6"
-                >
-                  {/* Template Selection */}
-                  <FormField
-                    control={form.control}
-                    name="templateId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <Settings className="h-4 w-4" />
-                          Report Template
-                          <small className="text-destructive">*</small>
-                          {defaultTemplate &&
-                            selectedTemplateId === defaultTemplate.id && (
-                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                                Default
-                              </span>
-                            )}
-                        </FormLabel>
-                        <Select
-                          onValueChange={value => {
-                            field.onChange(value);
-                            handleTemplateChange(value);
-                          }}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a report template" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {templates.map(template => (
-                              <SelectItem key={template.id} value={template.id}>
-                                <div className="flex items-center gap-2">
-                                  <span>{template.name}</span>
-                                  {template.isDefault && (
-                                    <span className="text-xs bg-blue-100 text-blue-700 px-1 py-0.5 rounded">
-                                      Default
-                                    </span>
-                                  )}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        {selectedTemplate?.description && (
-                          <p className="text-sm text-muted-foreground">
-                            {selectedTemplate.description}
-                          </p>
-                        )}
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Dynamic fields based on selected template */}
-                  {selectedTemplate && (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                        <Info className="h-4 w-4" />
-                        Template Fields ({
-                          selectedTemplate.columnConfig.length
-                        }{' '}
-                        fields)
-                      </div>
-
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        {selectedTemplate.columnConfig
-                          .sort((a, b) => a.order - b.order)
-                          .map(column => (
-                            <FormField
-                              key={column.field}
-                              control={form.control}
-                              name={column.field}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>
-                                    {column.label}
-                                    {column.required && (
-                                      <small className="text-destructive ml-1">
-                                        *
-                                      </small>
-                                    )}
-                                  </FormLabel>
-                                  <FormControl>
-                                    {column.field === 'type' ? (
-                                      <Select
-                                        onValueChange={field.onChange}
-                                        value={field.value || ''}
-                                      >
-                                        <SelectTrigger>
-                                          <SelectValue placeholder="Select run type" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="pickup">
-                                            Pickup
-                                          </SelectItem>
-                                          <SelectItem value="dropoff">
-                                            Dropoff
-                                          </SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    ) : column.field === 'notes' ? (
-                                      <Textarea
-                                        placeholder={`Enter ${column.label.toLowerCase()}`}
-                                        {...field}
-                                        value={field.value || ''}
-                                        rows={3}
-                                      />
-                                    ) : (
-                                      <Input
-                                        placeholder={`Enter ${column.label.toLowerCase()}`}
-                                        {...field}
-                                        value={field.value || ''}
-                                        type={
-                                          column.field === 'estimatedDuration'
-                                            ? 'number'
-                                            : 'text'
-                                        }
-                                        min={
-                                          column.field === 'estimatedDuration'
-                                            ? '1'
-                                            : undefined
-                                        }
-                                        max={
-                                          column.field === 'estimatedDuration'
-                                            ? '1440'
-                                            : undefined
-                                        }
-                                      />
-                                    )}
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex flex-col gap-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => router.navigate({ to: '/runs' })}
-                      disabled={createRunMutation.isPending}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      className="bg-green-600 text-white hover:bg-green-700"
-                      disabled={
-                        createRunMutation.isPending || !selectedTemplate
-                      }
-                    >
-                      {createRunMutation.isPending ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                          {editingRun ? 'Updating Run...' : 'Creating Run...'}
-                        </>
-                      ) : (
-                        <span className="flex items-center gap-2">
-                          <Plus className="h-4 w-4" />
-                          {editingRun ? 'Update Run' : 'Add Run'}
-                        </span>
-                      )}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </TabsContent>
-
-            {/* Bulk Runs Tab */}
-            <TabsContent value="bulk" className="space-y-6">
-              <div className="space-y-4">
-                {/* Template Selector */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Report Template</label>
-                  <Popover open={templateOpen} onOpenChange={setTemplateOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={templateOpen}
-                        className="w-full justify-between"
-                      >
-                        {bulkSelectedTemplateObj
-                          ? bulkSelectedTemplateObj.name
-                          : 'Select template...'}
-                        <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
-                      <Command>
-                        <div className="flex items-center border-b px-3">
-                          <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-                          <input
-                            placeholder="Search templates..."
-                            value={searchValue}
-                            onChange={e => setSearchValue(e.target.value)}
-                            className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                          />
-                        </div>
-                        <CommandList>
-                          <CommandEmpty>No templates found.</CommandEmpty>
-                          <CommandGroup>
-                            {filteredTemplates.map(template => (
-                              <CommandItem
-                                key={template.id}
-                                value={template.id}
-                                onSelect={() => {
-                                  setBulkSelectedTemplate(template.id);
-                                  setTemplateOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    'mr-2 h-4 w-4',
-                                    bulkSelectedTemplate === template.id
-                                      ? 'opacity-100'
-                                      : 'opacity-0'
-                                  )}
-                                />
-                                <div className="flex flex-col">
-                                  <span className="font-medium">
-                                    {template.name}
-                                  </span>
-                                  {template.description && (
-                                    <span className="text-sm text-muted-foreground">
-                                      {template.description}
-                                    </span>
-                                  )}
-                                </div>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {/* Date Selector */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Date</label>
-                  <Popover open={dateOpen} onOpenChange={setDateOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          'w-full justify-start text-left font-normal h-10',
-                          !bulkSelectedDate && 'text-muted-foreground'
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {bulkSelectedDate
-                          ? format(bulkSelectedDate, 'PPP')
-                          : 'Select date'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={bulkSelectedDate}
-                        onSelect={date => {
-                          if (date) {
-                            setBulkSelectedDate(date);
-                            setDateOpen(false);
-                          }
+          <div className="space-y-6">
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(onSubmitSingle)}
+                className="space-y-6"
+              >
+                {/* Template Selection */}
+                <FormField
+                  control={form.control}
+                  name="templateId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Settings className="h-4 w-4" />
+                        Report Template
+                        <small className="text-destructive">*</small>
+                        {defaultTemplate &&
+                          selectedTemplateId === defaultTemplate.id && (
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                              Default
+                            </span>
+                          )}
+                      </FormLabel>
+                      <Select
+                        onValueChange={value => {
+                          field.onChange(value);
+                          handleTemplateChange(value);
                         }}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a report template" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {templates.map(template => (
+                            <SelectItem key={template.id} value={template.id}>
+                              <div className="flex items-center gap-2">
+                                <span>{template.name}</span>
+                                {template.isDefault && (
+                                  <span className="text-xs bg-blue-100 text-blue-700 px-1 py-0.5 rounded">
+                                    Default
+                                  </span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                      {selectedTemplate?.description && (
+                        <p className="text-sm text-muted-foreground">
+                          {selectedTemplate.description}
+                        </p>
+                      )}
+                    </FormItem>
+                  )}
+                />
 
-                {/* Create Run CTA with Run Type Dropdown */}
-                <div className="flex gap-2">
+                {/* Dynamic fields based on selected template */}
+                {selectedTemplate && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                      <Info className="h-4 w-4" />
+                      Template Fields ({
+                        selectedTemplate.columnConfig.length
+                      }{' '}
+                      fields)
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {selectedTemplate.columnConfig
+                        .sort((a, b) => a.order - b.order)
+                        .map(column => (
+                          <FormField
+                            key={column.field}
+                            control={form.control}
+                            name={column.field}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>
+                                  {column.label}
+                                  {column.required && (
+                                    <small className="text-destructive ml-1">
+                                      *
+                                    </small>
+                                  )}
+                                </FormLabel>
+                                <FormControl>
+                                  {column.field === 'type' ? (
+                                    <Select
+                                      onValueChange={field.onChange}
+                                      value={field.value || ''}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select run type" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="pickup">
+                                          Pickup
+                                        </SelectItem>
+                                        <SelectItem value="dropoff">
+                                          Dropoff
+                                        </SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  ) : column.field === 'notes' ? (
+                                    <Textarea
+                                      placeholder={`Enter ${column.label.toLowerCase()}`}
+                                      {...field}
+                                      value={field.value || ''}
+                                      rows={3}
+                                    />
+                                  ) : (
+                                    <Input
+                                      placeholder={`Enter ${column.label.toLowerCase()}`}
+                                      {...field}
+                                      value={field.value || ''}
+                                      type={
+                                        column.field === 'estimatedDuration'
+                                          ? 'number'
+                                          : 'text'
+                                      }
+                                      min={
+                                        column.field === 'estimatedDuration'
+                                          ? '1'
+                                          : undefined
+                                      }
+                                      max={
+                                        column.field === 'estimatedDuration'
+                                          ? '1440'
+                                          : undefined
+                                      }
+                                    />
+                                  )}
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-3">
                   <Button
-                    onClick={handleCreateBulkRun}
-                    disabled={!bulkSelectedTemplate}
-                    className="flex-1 bg-emerald-400 text-white hover:bg-emerald-400/90 font-bold"
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.navigate({ to: '/runs' })}
+                    disabled={createRunMutation.isPending}
                   >
-                    <Plus className="h-4 w-4" strokeWidth={3} />
-                    Create Bulk Runs
+                    Cancel
                   </Button>
-                  <Select value={bulkRunType} onValueChange={setBulkRunType}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pickup">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-emerald-500" />
-                          Pickup
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="dropoff">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-blue-500" />
-                          Dropoff
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Button
+                    type="submit"
+                    className="bg-green-600 text-white hover:bg-green-700"
+                    disabled={createRunMutation.isPending || !selectedTemplate}
+                  >
+                    {createRunMutation.isPending ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                        {editingRun ? 'Updating Run...' : 'Creating Run...'}
+                      </>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <Plus className="h-4 w-4" />
+                        {editingRun ? 'Update Run' : 'Add Run'}
+                      </span>
+                    )}
+                  </Button>
                 </div>
-              </div>
-            </TabsContent>
-          </Tabs>
+              </form>
+            </Form>
+          </div>
         </CardContent>
       </Card>
     </div>
