@@ -153,14 +153,14 @@ function AdminNavItems() {
       </Button>
       <Button asChild variant="ghost" className="w-full justify-start">
         <MobileAwareNavLink
-          to="/create-runs"
+          to="/add-runs"
           className="flex items-center gap-2"
           activeProps={{
             className: activeNavClass,
           }}
         >
           <Plus className="h-4 w-4" />
-          Create Runs
+          Add Runs
         </MobileAwareNavLink>
       </Button>
       <Button asChild variant="ghost" className="w-full justify-start">

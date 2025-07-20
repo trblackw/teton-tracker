@@ -18,8 +18,7 @@ import { Route as OrganizationRouteImport } from './routes/organization';
 import { Route as NotificationsRouteImport } from './routes/notifications';
 import { Route as FlightsRouteImport } from './routes/flights';
 import { Route as DriversRouteImport } from './routes/drivers';
-import { Route as CreateRunsRouteImport } from './routes/create-runs';
-import { Route as AddRouteImport } from './routes/add';
+import { Route as AddRunsRouteImport } from './routes/add-runs';
 import { Route as ActiveRunRouteImport } from './routes/active-run';
 import { Route as IndexRouteImport } from './routes/index';
 import { Route as DriverDriverIdRouteImport } from './routes/driver.$driverId';
@@ -69,14 +68,9 @@ const DriversRoute = DriversRouteImport.update({
   path: '/drivers',
   getParentRoute: () => rootRouteImport,
 } as any);
-const CreateRunsRoute = CreateRunsRouteImport.update({
-  id: '/create-runs',
-  path: '/create-runs',
-  getParentRoute: () => rootRouteImport,
-} as any);
-const AddRoute = AddRouteImport.update({
-  id: '/add',
-  path: '/add',
+const AddRunsRoute = AddRunsRouteImport.update({
+  id: '/add-runs',
+  path: '/add-runs',
   getParentRoute: () => rootRouteImport,
 } as any);
 const ActiveRunRoute = ActiveRunRouteImport.update({
@@ -98,8 +92,7 @@ const DriverDriverIdRoute = DriverDriverIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute;
   '/active-run': typeof ActiveRunRoute;
-  '/add': typeof AddRoute;
-  '/create-runs': typeof CreateRunsRoute;
+  '/add-runs': typeof AddRunsRoute;
   '/drivers': typeof DriversRoute;
   '/flights': typeof FlightsRoute;
   '/notifications': typeof NotificationsRoute;
@@ -114,8 +107,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute;
   '/active-run': typeof ActiveRunRoute;
-  '/add': typeof AddRoute;
-  '/create-runs': typeof CreateRunsRoute;
+  '/add-runs': typeof AddRunsRoute;
   '/drivers': typeof DriversRoute;
   '/flights': typeof FlightsRoute;
   '/notifications': typeof NotificationsRoute;
@@ -131,8 +123,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   '/': typeof IndexRoute;
   '/active-run': typeof ActiveRunRoute;
-  '/add': typeof AddRoute;
-  '/create-runs': typeof CreateRunsRoute;
+  '/add-runs': typeof AddRunsRoute;
   '/drivers': typeof DriversRoute;
   '/flights': typeof FlightsRoute;
   '/notifications': typeof NotificationsRoute;
@@ -149,8 +140,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/active-run'
-    | '/add'
-    | '/create-runs'
+    | '/add-runs'
     | '/drivers'
     | '/flights'
     | '/notifications'
@@ -165,8 +155,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/active-run'
-    | '/add'
-    | '/create-runs'
+    | '/add-runs'
     | '/drivers'
     | '/flights'
     | '/notifications'
@@ -181,8 +170,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/active-run'
-    | '/add'
-    | '/create-runs'
+    | '/add-runs'
     | '/drivers'
     | '/flights'
     | '/notifications'
@@ -198,8 +186,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
   ActiveRunRoute: typeof ActiveRunRoute;
-  AddRoute: typeof AddRoute;
-  CreateRunsRoute: typeof CreateRunsRoute;
+  AddRunsRoute: typeof AddRunsRoute;
   DriversRoute: typeof DriversRoute;
   FlightsRoute: typeof FlightsRoute;
   NotificationsRoute: typeof NotificationsRoute;
@@ -277,18 +264,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DriversRouteImport;
       parentRoute: typeof rootRouteImport;
     };
-    '/create-runs': {
-      id: '/create-runs';
-      path: '/create-runs';
-      fullPath: '/create-runs';
-      preLoaderRoute: typeof CreateRunsRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    '/add': {
-      id: '/add';
-      path: '/add';
-      fullPath: '/add';
-      preLoaderRoute: typeof AddRouteImport;
+    '/add-runs': {
+      id: '/add-runs';
+      path: '/add-runs';
+      fullPath: '/add-runs';
+      preLoaderRoute: typeof AddRunsRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/active-run': {
@@ -318,8 +298,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActiveRunRoute: ActiveRunRoute,
-  AddRoute: AddRoute,
-  CreateRunsRoute: CreateRunsRoute,
+  AddRunsRoute: AddRunsRoute,
   DriversRoute: DriversRoute,
   FlightsRoute: FlightsRoute,
   NotificationsRoute: NotificationsRoute,
