@@ -3,7 +3,7 @@ import { getDatabase, handleDatabaseError } from './index';
 import { deleteNotificationsByRunId } from './notifications';
 
 export interface RunsQuery {
-  userId?: string;
+  createdById?: string;
   status?: RunStatus[];
   limit?: number;
   offset?: number;
@@ -14,10 +14,17 @@ export interface RunsQuery {
 // Create a new run
 export async function createRun(
   runData: NewRunForm,
-  userId: string
+  createdById: string,
+  organizationId?: string
 ): Promise<Run> {
-  if (!userId) {
-    throw new Error('User ID is required');
+  if (!createdById) {
+    throw new Error('Created by ID is required');
+  }
+
+  // Use provided organizationId or get it from runData
+  const finalOrganizationId = organizationId || runData.organizationId;
+  if (!finalOrganizationId) {
+    throw new Error('Organization ID is required');
   }
 
   try {
@@ -27,7 +34,8 @@ export async function createRun(
 
     const run: Run = {
       id: runId,
-      userId: userId,
+      createdById: createdById,
+      organizationId: finalOrganizationId,
       ...runData,
       airline: runData.airline || '',
       status: (runData as any).status || 'scheduled', // Use provided status or default to scheduled
@@ -40,14 +48,15 @@ export async function createRun(
 
     await db.query(
       `INSERT INTO runs (
-        id, user_id, report_template_id, reservation_id, bill_to,
+        id, created_by_id, organization_id, report_template_id, reservation_id, bill_to,
         flight_number, airline, departure_airport, arrival_airport,
         pickup_location, dropoff_location, scheduled_time, estimated_duration, status, type,
         price, notes, created_at, updated_at, activated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`,
       [
         run.id,
-        run.userId,
+        run.createdById,
+        run.organizationId,
         run.reportTemplateId,
         run.reservationId,
         run.billTo || null,
@@ -81,7 +90,7 @@ export async function createRun(
 export async function getRuns(query: RunsQuery = {}): Promise<Run[]> {
   try {
     const db = getDatabase();
-    const { userId, status, limit = 50, offset = 0 } = query;
+    const { createdById, status, limit = 50, offset = 0 } = query;
 
     // Handle orderBy and orderDirection with proper null-safe defaults
     const orderBy =
@@ -100,10 +109,10 @@ export async function getRuns(query: RunsQuery = {}): Promise<Run[]> {
     // Start with base query
     let sql = `
       SELECT 
-        id, report_template_id, reservation_id, bill_to,
+        id, created_by_id, organization_id, report_template_id, reservation_id, bill_to,
         flight_number, airline, departure_airport, arrival_airport,
         pickup_location, dropoff_location, scheduled_time, estimated_duration, actual_duration, status, type,
-        price, notes, user_id, created_at, updated_at, completed_at, activated_at
+        price, notes, created_at, updated_at, completed_at, activated_at
       FROM runs
     `;
 
@@ -111,9 +120,9 @@ export async function getRuns(query: RunsQuery = {}): Promise<Run[]> {
     const args: any[] = [];
 
     // Add conditions only if they exist
-    if (userId) {
-      conditions.push('user_id = $' + (args.length + 1));
-      args.push(userId);
+    if (createdById) {
+      conditions.push('created_by_id = $' + (args.length + 1));
+      args.push(createdById);
     }
 
     if (status && Array.isArray(status) && status.length > 0) {
@@ -139,7 +148,8 @@ export async function getRuns(query: RunsQuery = {}): Promise<Run[]> {
     // Transform database rows to Run objects
     const runs: Run[] = result.rows.map((row: any) => ({
       id: row.id,
-      userId: row.user_id,
+      createdById: row.created_by_id,
+      organizationId: row.organization_id,
       reportTemplateId: row.report_template_id,
       reservationId: row.reservation_id,
       billTo: row.bill_to,
@@ -179,10 +189,10 @@ export async function getRunById(
 
     let sql = `
       SELECT 
-        id, report_template_id, reservation_id, bill_to,
+        id, created_by_id, organization_id, report_template_id, reservation_id, bill_to,
         flight_number, airline, departure_airport, arrival_airport,
         pickup_location, dropoff_location, scheduled_time, estimated_duration, actual_duration, status, type,
-        price, notes, user_id, created_at, updated_at, completed_at, activated_at
+        price, notes, created_at, updated_at, completed_at, activated_at
       FROM runs
       WHERE id = $1
     `;
@@ -190,7 +200,7 @@ export async function getRunById(
     const args = [id];
 
     if (userId) {
-      sql += ' AND user_id = $2';
+      sql += ' AND created_by_id = $2';
       args.push(userId);
     }
 
@@ -203,7 +213,8 @@ export async function getRunById(
     const row = result.rows[0];
     return {
       id: row.id,
-      userId: row.user_id,
+      createdById: row.created_by_id,
+      organizationId: row.organization_id,
       reportTemplateId: row.report_template_id,
       reservationId: row.reservation_id,
       billTo: row.bill_to,
@@ -347,7 +358,7 @@ export async function updateRun(
     let sql = `
       UPDATE runs 
       SET ${setFields.join(', ')}
-      WHERE id = $${args.length + 1} AND user_id = $${args.length + 2}
+      WHERE id = $${args.length + 1} AND created_by_id = $${args.length + 2}
     `;
     args.push(id, userId);
 
@@ -362,7 +373,8 @@ export async function updateRun(
     const row = result.rows[0];
     const updatedRun: Run = {
       id: row.id,
-      userId: row.user_id,
+      createdById: row.created_by_id,
+      organizationId: row.organization_id,
       reportTemplateId: row.report_template_id,
       reservationId: row.reservation_id,
       billTo: row.bill_to,
@@ -410,7 +422,7 @@ export async function deleteRun(id: string, userId: string): Promise<boolean> {
     await deleteNotificationsByRunId(id, userId);
 
     // Delete the run only if it belongs to the user
-    const sql = 'DELETE FROM runs WHERE id = $1 AND user_id = $2';
+    const sql = 'DELETE FROM runs WHERE id = $1 AND created_by_id = $2';
     const result = await db.query(sql, [id, userId]);
 
     const success = result.rowCount != null && result.rowCount > 0;
@@ -438,7 +450,7 @@ export async function getRunsStats(userId?: string): Promise<{
     const args: any[] = [];
 
     if (userId) {
-      sql += ' WHERE user_id = $1';
+      sql += ' WHERE created_by_id = $1';
       args.push(userId);
     }
 
@@ -484,10 +496,15 @@ export async function getRunsStats(userId?: string): Promise<{
 // Bulk create runs (for import functionality)
 export async function createRunsBatch(
   runsData: NewRunForm[],
-  userId: string
+  userId: string,
+  organizationId: string
 ): Promise<Run[]> {
   if (!userId) {
     throw new Error('User ID is required');
+  }
+
+  if (!organizationId) {
+    throw new Error('Organization ID is required');
   }
 
   try {
@@ -503,7 +520,8 @@ export async function createRunsBatch(
         const runId = crypto.randomUUID();
         const run: Run = {
           id: runId,
-          userId: userId,
+          createdById: userId,
+          organizationId: organizationId,
           ...runData,
           airline: runData.airline || '',
           reservationId: runData.reservationId || '',
@@ -514,13 +532,14 @@ export async function createRunsBatch(
 
         await db.query(
           `INSERT INTO runs (
-            id, user_id, flight_number, airline, departure_airport, arrival_airport,
+            id, created_by_id, organization_id, flight_number, airline, departure_airport, arrival_airport,
             pickup_location, dropoff_location, scheduled_time, estimated_duration, status, type,
             price, notes, created_at, updated_at, activated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
           [
             run.id,
-            run.userId,
+            run.createdById,
+            run.organizationId,
             run.flightNumber,
             run.airline,
             run.departure,

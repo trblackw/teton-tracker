@@ -13,13 +13,16 @@ import {
   ReportType,
 } from '../src/lib/schema';
 
-// Get user ID from command line arguments
+// Get user ID and organization ID from command line arguments
 const userId = process.argv[2];
+const organizationId = process.argv[3];
 
-if (!userId) {
-  console.error('❌ Error: User ID is required');
-  console.error('Usage: bun run seed-data.ts <user-id>');
-  console.error('Example: bun run seed-data.ts user_2abc123def456');
+if (!userId || !organizationId) {
+  console.error('❌ Error: User ID and Organization ID are required');
+  console.error('Usage: bun run seed-data.ts <user-id> <organization-id>');
+  console.error(
+    'Example: bun run seed-data.ts user_2abc123def456 org_2xyz789ghi012'
+  );
   process.exit(1);
 }
 
@@ -27,6 +30,14 @@ if (!userId) {
 if (!userId.startsWith('user_')) {
   console.error(
     '❌ Error: User ID must be a valid Clerk user ID (starts with "user_")'
+  );
+  process.exit(1);
+}
+
+// Validate organization ID format (basic check for Clerk organization ID format)
+if (!organizationId.startsWith('org_')) {
+  console.error(
+    '❌ Error: Organization ID must be a valid Clerk organization ID (starts with "org_")'
   );
   console.error('Example: user_2abc123def456');
   process.exit(1);
@@ -79,6 +90,7 @@ async function seedDatabase() {
     console.log('🏃 Creating sample runs...');
     const sampleRuns: NewRunForm[] = [
       {
+        organizationId: organizationId,
         reportTemplateId: reportTemplate.id,
         reservationId: generateReservationId(),
         billTo: generateBillTo(),
@@ -95,6 +107,7 @@ async function seedDatabase() {
         notes: 'Sample pickup run',
       },
       {
+        organizationId: organizationId,
         reportTemplateId: reportTemplate.id,
         reservationId: generateReservationId(),
         billTo: null, // Testing nullable field
@@ -112,7 +125,7 @@ async function seedDatabase() {
       },
     ];
 
-    const runs = await createRunsBatch(sampleRuns, userId);
+    const runs = await createRunsBatch(sampleRuns, userId, organizationId);
 
     // Create sample notifications
     console.log('📢 Creating sample notifications...');

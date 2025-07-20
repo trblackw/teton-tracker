@@ -89,7 +89,7 @@ function DriversPage() {
     driver: { userId: string },
     filter: string
   ) => {
-    const driverRuns = allRuns.filter(run => run.userId === driver.userId);
+    const driverRuns = allRuns.filter(run => run.createdById === driver.userId);
     const now = new Date();
 
     const activeRuns = driverRuns.filter(run => run.status === 'active');
@@ -264,7 +264,7 @@ function DriversPage() {
 
   // Helper function to get availability status text
   const getAvailabilityText = (driver: { userId: string }) => {
-    const driverRuns = allRuns.filter(run => run.userId === driver.userId);
+    const driverRuns = allRuns.filter(run => run.createdById === driver.userId);
     const activeRuns = driverRuns.filter(run => run.status === 'active');
     const scheduledRuns = driverRuns.filter(run => run.status === 'scheduled');
 
@@ -364,7 +364,7 @@ function DriversPage() {
             }) => {
               // Calculate stats for this driver
               const driverRuns = allRuns.filter(
-                run => run.userId === driver.userId
+                run => run.createdById === driver.userId
               );
               const activeRuns = driverRuns.filter(
                 run => run.status === 'active'

@@ -82,7 +82,7 @@ export async function getOrganizationRuns(request: Request): Promise<Response> {
 
     // Fetch runs for all organization members
     const allRuns = await Promise.all(
-      memberUserIds.map(userId => getRuns({ userId }))
+      memberUserIds.map(createdById => getRuns({ createdById }))
     );
 
     // Flatten the results
@@ -144,7 +144,7 @@ export async function GET(request: Request): Promise<Response> {
         : undefined;
 
     const query: RunsQuery = {
-      userId, // This ensures we only get runs for the authenticated user
+      createdById: userId, // This ensures we only get runs created by the authenticated user
       status,
       limit,
       offset,

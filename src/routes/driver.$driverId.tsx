@@ -118,7 +118,7 @@ function DriverDetailPage() {
   });
 
   // Filter runs for this specific driver
-  const driverRuns = allRuns.filter((run: Run) => run.userId === driverId);
+  const driverRuns = allRuns.filter((run: Run) => run.createdById === driverId);
 
   // Get unique locations for filter options
   const uniqueLocations = useMemo(() => {

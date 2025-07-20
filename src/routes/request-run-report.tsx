@@ -164,7 +164,7 @@ function RequestRunReportPage() {
     (sum, run) => sum + parseInt(run.price),
     0
   );
-  const uniqueDrivers = new Set(driverRuns.map(run => run.userId)).size;
+  const uniqueDrivers = new Set(driverRuns.map(run => run.createdById)).size;
 
   // Handle request report submission
   const handleRequestReport = async () => {

@@ -4,6 +4,7 @@ import * as organizationsApi from './api/organizations';
 import * as preferencesApi from './api/preferences';
 import * as reportTemplatesApi from './api/report-templates';
 import * as runsApi from './api/runs';
+import * as seedApi from './api/seed';
 
 // Start minimal development server - let Bun handle everything else
 async function startDevServer() {
@@ -69,6 +70,15 @@ async function startDevServer() {
                 : request.method === 'DELETE'
                   ? reportTemplatesApi.DELETE(request)
                   : new Response('Method not allowed', { status: 405 });
+        }
+
+        // Handle seed API routes
+        if (url.pathname === '/api/seed') {
+          return request.method === 'POST'
+            ? seedApi.POST(request)
+            : request.method === 'DELETE'
+              ? seedApi.DELETE(request)
+              : new Response('Method not allowed', { status: 405 });
         }
 
         // Handle parameterized routes

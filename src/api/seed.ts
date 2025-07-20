@@ -443,7 +443,9 @@ export async function seedDataForUser(userId: string): Promise<{
     try {
       // Delete existing runs and notifications for all users in the organization
       for (const targetUserId of allUserIds) {
-        await db.query(`DELETE FROM runs WHERE user_id = $1`, [targetUserId]);
+        await db.query(`DELETE FROM runs WHERE created_by_id = $1`, [
+          targetUserId,
+        ]);
         await db.query(`DELETE FROM notifications WHERE user_id = $1`, [
           targetUserId,
         ]);
@@ -509,7 +511,8 @@ export async function seedDataForUser(userId: string): Promise<{
     const futureDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days future
 
     const allRuns: Array<{
-      userId: string;
+      createdById: string;
+      organizationId: string;
       reportTemplateId: string;
       reservationId: string;
       billTo: string | null;
@@ -637,7 +640,8 @@ export async function seedDataForUser(userId: string): Promise<{
             : undefined;
 
         const runData = {
-          userId: targetUserId,
+          createdById: targetUserId,
+          organizationId: organizationId!,
           reportTemplateId: defaultReportTemplateId,
           reservationId: generateReservationId(),
           billTo: generateBillTo(),
@@ -662,7 +666,7 @@ export async function seedDataForUser(userId: string): Promise<{
     // Create runs in database
     for (const runData of allRuns) {
       const { targetUserId, userName, ...runCreateData } = runData;
-      const run = await createRun(runCreateData, targetUserId);
+      const run = await createRun(runCreateData, targetUserId, organizationId!);
       console.log(
         `✅ Created run: ${run.flightNumber} (${run.status}) for ${userName}`
       );
@@ -839,7 +843,7 @@ export async function DELETE(request: Request): Promise<Response> {
     try {
       // Count existing data before deletion
       const runsResult = await db.query(
-        'SELECT COUNT(*) as count FROM runs WHERE user_id = $1',
+        'SELECT COUNT(*) as count FROM runs WHERE created_by_id = $1',
         [userId]
       );
       deletedRuns = parseInt(runsResult.rows[0].count);
@@ -852,7 +856,7 @@ export async function DELETE(request: Request): Promise<Response> {
 
       // Delete all user data except the user record itself and preferences
       await db.query('DELETE FROM notifications WHERE user_id = $1', [userId]);
-      await db.query('DELETE FROM runs WHERE user_id = $1', [userId]);
+      await db.query('DELETE FROM runs WHERE created_by_id = $1', [userId]);
 
       console.log(`✅ Cleared all data for user ${userId}:`);
       console.log(`   - ${deletedRuns} runs`);

@@ -22,15 +22,16 @@ export async function checkRunOwnership(
   userId: string
 ): Promise<void> {
   const db = getDatabase();
-  const result = await db.query('SELECT user_id FROM runs WHERE id = $1', [
-    runId,
-  ]);
+  const result = await db.query(
+    'SELECT created_by_id FROM runs WHERE id = $1',
+    [runId]
+  );
 
   if (result.rows.length === 0) {
     throw new Error('Run not found');
   }
 
-  if (result.rows[0].user_id !== userId) {
+  if (result.rows[0].created_by_id !== userId) {
     throw new Error('Access denied');
   }
 }

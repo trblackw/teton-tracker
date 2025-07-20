@@ -290,7 +290,8 @@ export const NotificationSchema = z.object({
 // Main data model schemas
 export const RunSchema = z.object({
   id: z.string().uuid('Invalid run ID format'),
-  userId: z.string().min(1, 'User ID is required'),
+  createdById: z.string().min(1, 'Created by ID is required'), // Must reference a Clerk user with admin role
+  organizationId: z.string().min(1, 'Organization ID is required'), // Must reference the admin user's organization
   reportTemplateId: z.string().uuid('Invalid report template ID format'),
   reservationId: z
     .string()
@@ -382,7 +383,8 @@ export const TrafficDataSchema = z.object({
 
 // Form schemas (for input validation)
 export const NewRunFormSchema = z.object({
-  userId: z.string().min(1, 'User ID is required').optional(), // Optional for forms, will be auto-generated
+  createdById: z.string().min(1, 'Created by ID is required').optional(), // Optional for forms, will be auto-generated from admin user
+  organizationId: z.string().min(1, 'Organization ID is required').optional(), // Optional for forms, will be auto-generated from admin user's organization
   reportTemplateId: z.string().uuid('Invalid report template ID format'),
   reservationId: z
     .string()
