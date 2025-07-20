@@ -98,6 +98,17 @@ function matchRoute(pathname: string): {
     };
   }
 
+  // Organization user role routes
+  const orgUserRoleMatch = pathname.match(
+    /^\/api\/organizations\/([^\/]+)\/user-role$/
+  );
+  if (orgUserRoleMatch && pathname.includes('/user-role')) {
+    return {
+      handler: { GET: organizationsApi.getUserRole },
+      params: { orgId: orgUserRoleMatch[1] },
+    };
+  }
+
   return {};
 }
 
