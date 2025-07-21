@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/cn';
 import { RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from './button';

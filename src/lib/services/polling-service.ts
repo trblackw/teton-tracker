@@ -1,5 +1,5 @@
+import { isDevelopment } from '../environment';
 import type { FlightStatus, Run, TrafficData } from '../schema';
-import { isDevelopmentMode } from '../utils';
 import { getFlightServiceWithConfig } from './flight-service';
 import { notifications } from './notification-service';
 import { getTrafficData } from './tomtom-service';
@@ -44,7 +44,7 @@ export class IntelligentPollingService {
   constructor(config: Partial<PollingConfig> = {}) {
     this.config = {
       intervalMs: 5 * 60 * 1000, // 5 minutes
-      enableDebugMode: isDevelopmentMode(),
+      enableDebugMode: isDevelopment(),
       enablePolling: true,
       enableNotifications: true,
       ...config,
@@ -67,13 +67,6 @@ export class IntelligentPollingService {
       pollingEnabled: this.config.enablePolling,
       notificationsEnabled: this.config.enableNotifications,
     });
-  }
-
-  /**
-   * Detect if we're in debug/development mode
-   */
-  private isDebugMode(): boolean {
-    return isDevelopmentMode();
   }
 
   /**

@@ -582,9 +582,7 @@ function DriversPage() {
                   No other organization members found to display as drivers
                 </p>
                 <p className="text-muted-foreground text-xs">
-                  Add more members to your organization in the Clerk dashboard,
-                  then use the seed data generator in Settings → Debug Tools to
-                  create sample runs
+                  Add more members to your organization to see them here.
                 </p>
               </CardContent>
             </Card>

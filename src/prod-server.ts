@@ -1,180 +1,34 @@
 #!/usr/bin/env bun
-import * as authApi from './api/auth';
-import * as configApi from './api/config';
-import * as notificationsApi from './api/notifications';
-import * as organizationsApi from './api/organizations';
-import * as preferencesApi from './api/preferences';
-import * as reportTemplatesApi from './api/report-templates';
-import * as runsApi from './api/runs';
+import { createServer } from './server';
 
-// API route handlers
-const apiRoutes = {
-  '/api/config': {
-    GET: configApi.GET,
-  },
-  '/api/auth/validate-password': {
-    POST: authApi.passwordValidationHandler,
-  },
-  '/api/auth/check': {
-    GET: authApi.checkAuthHandler,
-  },
-  '/api/auth/logout': {
-    POST: authApi.logoutHandler,
-  },
-  '/api/organizations': {
-    GET: organizationsApi.GET,
-  },
-  '/api/runs': {
-    GET: runsApi.GET,
-    POST: runsApi.POST,
-  },
-  '/api/runs/organization': {
-    GET: runsApi.getOrganizationRuns,
-  },
-  '/api/runs/:id/status': {
-    PUT: runsApi.PUT,
-  },
-  '/api/runs/:id': {
-    DELETE: runsApi.DELETE,
-  },
-  '/api/preferences': {
-    GET: preferencesApi.GET,
-    PUT: preferencesApi.PUT,
-  },
-  '/api/report-templates': {
-    GET: reportTemplatesApi.GET,
-    POST: reportTemplatesApi.POST,
-    PUT: reportTemplatesApi.PUT,
-    DELETE: reportTemplatesApi.DELETE,
-  },
-  '/api/notifications': {
-    GET: notificationsApi.GET,
-    POST: notificationsApi.POST,
-    PUT: notificationsApi.PUT,
-    DELETE: notificationsApi.DELETE,
-  },
-  '/api/notifications/stats': {
-    GET: notificationsApi.getStats,
-  },
-};
-
-// Route matcher for parameterized routes
-function matchRoute(pathname: string): {
-  handler?: any;
-  params?: Record<string, string>;
-} {
-  // Exact matches first
-  for (const [route, methods] of Object.entries(apiRoutes)) {
-    if (pathname === route && methods) {
-      return { handler: methods };
-    }
-  }
-
-  // Parameterized routes
-  if (pathname.startsWith('/api/runs/') && pathname.endsWith('/status')) {
-    const id = pathname.split('/')[3];
-    return {
-      handler: apiRoutes['/api/runs/:id/status'],
-      params: { id },
-    };
-  }
-
-  if (pathname.startsWith('/api/runs/') && pathname.split('/').length === 4) {
-    const id = pathname.split('/')[3];
-    return {
-      handler: apiRoutes['/api/runs/:id'],
-      params: { id },
-    };
-  }
-
-  // Organization member routes
-  const orgMembersMatch = pathname.match(
-    /^\/api\/organizations\/([^\/]+)\/members$/
-  );
-  if (orgMembersMatch && pathname.includes('/members')) {
-    return {
-      handler: { GET: organizationsApi.getOrganizationMembers },
-      params: { orgId: orgMembersMatch[1] },
-    };
-  }
-
-  // Organization user role routes
-  const orgUserRoleMatch = pathname.match(
-    /^\/api\/organizations\/([^\/]+)\/user-role$/
-  );
-  if (orgUserRoleMatch && pathname.includes('/user-role')) {
-    return {
-      handler: { GET: organizationsApi.getUserRole },
-      params: { orgId: orgUserRoleMatch[1] },
-    };
-  }
-
-  return {};
-}
-
-// Start server
+// Production server configuration
 async function startServer() {
-  const server = Bun.serve({
-    port: process.env.PORT || 3000,
-    hostname: '0.0.0.0', // Listen on all interfaces for Railway
+  const server = createServer({
+    corsOrigin: origin => {
+      // Allow same-origin requests (no origin header)
+      if (!origin) return null;
 
-    async fetch(request) {
-      const url = new URL(request.url);
-      const pathname = url.pathname;
+      // Allow production domains
+      const allowedOrigins = [
+        'https://tetontracker.com',
+        'https://www.tetontracker.com',
+        // Add localhost for testing
+        'http://localhost:3000',
+        'http://localhost:3001',
+      ];
 
-      // Temporarily redirect non-www to www (until main domain DNS is ready)
-      // if (url.hostname === 'tetontracker.com') {
-      //   return new Response(null, {
-      //     status: 301,
-      //     headers: {
-      //       Location: `https://www.tetontracker.com${url.pathname}${url.search}`,
-      //     },
-      //   });
-      // }
-
-      // Handle API routes
-      if (pathname.startsWith('/api/')) {
-        const { handler, params } = matchRoute(pathname);
-
-        if (handler && typeof handler === 'object') {
-          const methodHandler = handler[request.method as keyof typeof handler];
-          if (methodHandler) {
-            // Add params to request if needed
-            if (params) {
-              (request as any).params = params;
-            }
-            return await methodHandler(request);
-          }
-        }
-
-        return new Response('Not Found', { status: 404 });
-      }
-
-      // Serve static files and SPA routes
-      const filePath =
-        pathname === '/' ? './dist/index.html' : `./dist${pathname}`;
-
-      try {
-        const file = Bun.file(filePath);
-        const exists = await file.exists();
-
-        if (exists) {
-          return new Response(file);
-        } else {
-          // SPA fallback - serve index.html for client-side routing
-          const indexFile = Bun.file('./dist/index.html');
-          return new Response(indexFile);
-        }
-      } catch (error) {
-        console.error('Error serving file:', error);
-        return new Response('Internal Server Error', { status: 500 });
-      }
+      return allowedOrigins.includes(origin) ? origin : null;
     },
-
-    development: process.env.NODE_ENV !== 'production',
+    isDevelopment: false, // Disables /api/seed routes
+    hostname: '0.0.0.0', // Listen on all interfaces for Railway
   });
 
-  console.log(`🌐 Server running at http://0.0.0.0:${server.port}`);
+  console.log(
+    `🚀 Production server running at http://localhost:${server.port}/`
+  );
 }
 
-startServer().catch(console.error);
+startServer().catch(error => {
+  console.error('Failed to start production server:', error);
+  process.exit(1);
+});

@@ -1,6 +1,5 @@
 #!/usr/bin/env bun
 import { serve } from 'bun';
-import * as authApi from './api/auth';
 import * as configApi from './api/config';
 import * as notificationsApi from './api/notifications';
 import * as organizationsApi from './api/organizations';
@@ -8,7 +7,8 @@ import * as preferencesApi from './api/preferences';
 import * as reportTemplatesApi from './api/report-templates';
 import * as runsApi from './api/runs';
 import * as seedApi from './api/seed';
-
+import { initJSONResponse } from './lib/api/api-tools';
+import { auth } from './lib/auth';
 import { initializeDatabase } from './lib/db';
 
 // Initialize database
@@ -19,7 +19,8 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
+  'Access-Control-Allow-Credentials': 'true',
+} as const;
 
 // Generic API routes
 const genericApiRoutes = {
@@ -30,14 +31,7 @@ const genericApiRoutes = {
   '/api/report-templates': reportTemplatesApi,
   '/api/runs': runsApi,
   '/api/seed': seedApi,
-};
-
-// Auth routes (these have custom path handling)
-const authRoutes = {
-  '/api/auth/validate-password': authApi.passwordValidationHandler,
-  '/api/auth/check': authApi.checkAuthHandler,
-  '/api/auth/logout': authApi.logoutHandler,
-};
+} as const;
 
 // Generic API route handler
 async function handleApiRoute(
@@ -79,33 +73,6 @@ async function handleApiRoute(
   }
 }
 
-// Special handler for auth routes
-async function handleAuthRoute(
-  request: Request,
-  handler: Function
-): Promise<Response> {
-  try {
-    const response = await handler(request);
-    // Add CORS headers to response
-    const headers = new Headers(response.headers);
-    Object.entries(corsHeaders).forEach(([key, value]) => {
-      headers.set(key, value);
-    });
-
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers,
-    });
-  } catch (error) {
-    console.error(`Auth ${request.url} error:`, error);
-    return new Response(JSON.stringify({ error: 'Authentication failed' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-}
-
 // Create the server
 const server = serve({
   port: process.env.API_PORT || 3001,
@@ -121,10 +88,37 @@ const server = serve({
     }
 
     try {
-      // Check for auth routes first (special handling)
-      const authHandler = authRoutes[url.pathname as keyof typeof authRoutes];
-      if (authHandler) {
-        return await handleAuthRoute(request, authHandler);
+      // Handle better-auth routes (all /api/auth/* routes)
+      if (url.pathname.startsWith('/api/auth/')) {
+        try {
+          const response = await auth.handler(request);
+
+          // Add CORS headers to better-auth responses
+          const headers = new Headers(response.headers);
+          Object.entries(corsHeaders).forEach(([key, value]) => {
+            headers.set(key, value);
+          });
+
+          return new Response(response.body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers,
+          });
+        } catch (error) {
+          console.error('🚨 Better-auth error:', error);
+          console.error(
+            '🚨 Error stack:',
+            error instanceof Error ? error.stack : 'No stack trace'
+          );
+          return initJSONResponse(
+            {
+              error: 'Authentication failed',
+              details: error instanceof Error ? error.message : 'Unknown error',
+            },
+            500,
+            corsHeaders
+          );
+        }
       }
 
       // Check for special sub-path routes

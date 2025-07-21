@@ -1,19 +1,13 @@
 /**
  * Authentication API endpoints
  *
- * Note: User management is now handled entirely by Clerk.
- * This file only contains temporary password protection for development.
+ * This handles the temporary password gate for development access.
+ * All user authentication is now handled by BetterAuth.
  */
 
-// Session storage for authenticated sessions (in production, use Redis or database)
-const authenticatedSessions = new Set<string>();
+import { initJSONResponse } from '../lib/api/api-tools';
 
-// Generate a secure session token
-function generateSessionToken(): string {
-  return crypto.randomUUID() + '-' + Date.now();
-}
-
-// Validate temporary access password
+// Validate temporary access password (development gate)
 export async function validatePassword(password: string): Promise<boolean> {
   const correctPassword = process.env.TEMP_ENTRY_PASSWORD;
 
@@ -25,12 +19,20 @@ export async function validatePassword(password: string): Promise<boolean> {
   return password === correctPassword;
 }
 
-// API handler for password validation
+// Simple session storage for temporary password validation (development only)
+const tempPasswordSessions = new Set<string>();
+
+// Generate a simple token for temporary password access
+function generateTempAccessToken(): string {
+  return crypto.randomUUID();
+}
+
+// API handler for temporary password validation (development gate)
 export const passwordValidationHandler = async (
   request: Request
 ): Promise<Response> => {
   if (request.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
+    return initJSONResponse({ error: 'Method not allowed' }, 405);
   }
 
   try {
@@ -39,49 +41,37 @@ export const passwordValidationHandler = async (
     const isValid = await validatePassword(password);
 
     if (isValid) {
-      const sessionToken = generateSessionToken();
-      authenticatedSessions.add(sessionToken);
+      const tempAccessToken = generateTempAccessToken();
+      tempPasswordSessions.add(tempAccessToken);
 
-      const response = new Response(
-        JSON.stringify({ success: true, message: 'Access granted' }),
-        {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
+      const response = initJSONResponse({
+        success: true,
+        message: 'Development access granted',
+      });
 
-      // Set session cookie
+      // Set temporary access cookie (separate from BetterAuth sessions)
       response.headers.set(
         'Set-Cookie',
-        `session=${sessionToken}; HttpOnly; Path=/; Max-Age=86400; SameSite=Strict`
+        `temp_access=${tempAccessToken}; HttpOnly; Path=/; Max-Age=86400; SameSite=Strict`
       );
 
       return response;
     } else {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Invalid password' }),
-        {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        }
+      return initJSONResponse(
+        { success: false, error: 'Invalid temporary password' },
+        401
       );
     }
   } catch (error) {
-    console.error('Password validation error:', error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: 'An error occurred during authentication',
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
+    console.error('Temporary password validation error:', error);
+    return initJSONResponse(
+      { success: false, error: 'An error occurred during password validation' },
+      500
     );
   }
 };
 
-// API handler for checking authentication status
+// API handler for checking temporary access status (development gate)
 export const checkAuthHandler = async (request: Request): Promise<Response> => {
   if (request.method !== 'GET') {
     return new Response('Method not allowed', { status: 405 });
@@ -89,27 +79,21 @@ export const checkAuthHandler = async (request: Request): Promise<Response> => {
 
   try {
     const cookies = request.headers.get('cookie') || '';
-    const sessionMatch = cookies.match(/session=([^;]+)/);
-    const sessionToken = sessionMatch ? sessionMatch[1] : null;
+    const tempAccessMatch = cookies.match(/temp_access=([^;]+)/);
+    const tempAccessToken = tempAccessMatch ? tempAccessMatch[1] : null;
 
-    const authenticated = sessionToken
-      ? authenticatedSessions.has(sessionToken)
+    const hasTemporaryAccess = tempAccessToken
+      ? tempPasswordSessions.has(tempAccessToken)
       : false;
 
-    return new Response(JSON.stringify({ authenticated }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return initJSONResponse({ authenticated: hasTemporaryAccess });
   } catch (error) {
-    console.error('Auth check error:', error);
-    return new Response(JSON.stringify({ authenticated: false }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error('Temporary access check error:', error);
+    return initJSONResponse({ authenticated: false }, 500);
   }
 };
 
-// API handler for logout
+// API handler for temporary access logout (development gate)
 export const logoutHandler = async (request: Request): Promise<Response> => {
   if (request.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
@@ -117,39 +101,30 @@ export const logoutHandler = async (request: Request): Promise<Response> => {
 
   try {
     const cookies = request.headers.get('cookie') || '';
-    const sessionMatch = cookies.match(/session=([^;]+)/);
-    const sessionToken = sessionMatch ? sessionMatch[1] : null;
+    const tempAccessMatch = cookies.match(/temp_access=([^;]+)/);
+    const tempAccessToken = tempAccessMatch ? tempAccessMatch[1] : null;
 
-    if (sessionToken) {
-      authenticatedSessions.delete(sessionToken);
+    if (tempAccessToken) {
+      tempPasswordSessions.delete(tempAccessToken);
     }
 
-    const response = new Response(
-      JSON.stringify({ success: true, message: 'Logged out successfully' }),
-      {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    const response = initJSONResponse({
+      success: true,
+      message: 'Temporary access revoked',
+    });
 
-    // Clear session cookie
+    // Clear temporary access cookie
     response.headers.set(
       'Set-Cookie',
-      'session=; HttpOnly; Path=/; Max-Age=0; SameSite=Strict'
+      'temp_access=; HttpOnly; Path=/; Max-Age=0; SameSite=Strict'
     );
 
     return response;
   } catch (error) {
-    console.error('Logout error:', error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: 'An error occurred during logout',
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
+    console.error('Temporary access logout error:', error);
+    return initJSONResponse(
+      { success: false, error: 'An error occurred during logout' },
+      500
     );
   }
 };

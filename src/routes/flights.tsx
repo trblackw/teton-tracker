@@ -37,10 +37,9 @@ import { TimePicker } from '../components/ui/time-picker';
 import airlinesData from '../data/airlines.json';
 import airportsData from '../data/airports-comprehensive.json';
 import { preferencesApi } from '../lib/api/client';
-import { isDebugMode } from '../lib/debug';
+import { debugLog, isDevelopment } from '../lib/environment';
 import { useTimezone, useTimezoneFormatters } from '../lib/hooks/use-timezone';
 import { getFlightServiceWithConfig } from '../lib/services/flight-service';
-import { isDevelopmentMode } from '../lib/utils';
 
 interface Airline {
   id: string;
@@ -87,7 +86,7 @@ function UpcomingFlights() {
 
   // Initialize debug mode state
   useEffect(() => {
-    setIsDebugModeEnabled(isDebugMode());
+    setIsDebugModeEnabled(isDevelopment());
   }, []);
 
   // Helper function to format time filter for display
@@ -436,7 +435,7 @@ function UpcomingFlights() {
 
   // Apply time filter client-side when in "selected" mode
   if (searchMode === 'selected' && filterTime) {
-    if (isDevelopmentMode()) {
+    if (isDevelopment()) {
       console.log(`🔍 Applying time filter client-side: ${formatTimeFilter()}`);
     }
 
@@ -484,11 +483,10 @@ function UpcomingFlights() {
       }
     });
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log(
-        `📊 Client-side time filtering result: ${filteredFlights.length} flights match`
-      );
-    }
+    // Development logging
+    debugLog(
+      `📊 Client-side time filtering result: ${filteredFlights.length} flights match`
+    );
   }
 
   // Get available statuses from current flights

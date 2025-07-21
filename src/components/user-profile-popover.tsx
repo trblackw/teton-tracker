@@ -1,27 +1,32 @@
-import { useAuth } from '@clerk/clerk-react';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { Building2, LogOut, Settings, User } from 'lucide-react';
 import { useState } from 'react';
-import { useAppContext } from '../lib/AppContextProvider';
+import { signOut } from '../lib/auth-client';
 import { useUserOrganization } from '../lib/hooks/use-organizations';
+import { useCurrentUserData } from '../lib/hooks/use-user';
+import { toasts } from '../lib/toast';
 import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 
 export function UserProfilePopover() {
   const [isOpen, setIsOpen] = useState(false);
-  const { signOut } = useAuth();
-  const { currentUser } = useAppContext();
+  const navigate = useNavigate();
+  const { user: currentUser, isLoading: userLoading } = useCurrentUserData();
   const { data: organization, isLoading: orgsLoading } = useUserOrganization();
-  if (!currentUser) {
+
+  if (userLoading || !currentUser) {
     return null;
   }
 
   const handleSignOut = async () => {
     setIsOpen(false); // Close popover immediately
     try {
-      await signOut({ redirectUrl: '/' });
+      await signOut();
+      toasts.success('Successfully signed out');
+      navigate({ to: '/sign-in' });
     } catch (error) {
       console.error('Error signing out:', error);
+      toasts.error('Failed to sign out');
     }
   };
 

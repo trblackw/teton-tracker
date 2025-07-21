@@ -2,10 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import {
   Bell,
-  Building,
   Clock,
   Database,
-  Mail,
   Monitor,
   Moon,
   Palette,
@@ -18,7 +16,6 @@ import {
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
-import { AirportCombobox } from '../components/ui/airport-combobox';
 import { Button } from '../components/ui/button';
 import {
   Card,
@@ -36,6 +33,7 @@ import {
   DialogTitle,
 } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import { TimezoneCombobox } from '../components/ui/timezone-combobox';
 import { IOSToggle } from '../components/ui/toggle';
 import airportsData from '../data/airports-comprehensive.json';
@@ -91,8 +89,6 @@ function Settings() {
     queryFn: () => preferencesApi.getPreferences(),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
-
-  // Email and phone number are now managed by Clerk - no local state needed
 
   // Load notification permission state on mount
   useEffect(() => {
@@ -180,8 +176,6 @@ function Settings() {
       );
     },
   });
-
-  // Email and phone number handlers removed - fields are now readonly and managed by Clerk
 
   // Mutation for requesting notification permissions
   const requestNotificationPermission = useMutation({
@@ -375,615 +369,560 @@ function Settings() {
         </p>
       </div>
 
-      {/* User Profile */}
+      {/* Account Settings Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
-            Account Information
+            Account
           </CardTitle>
-          <CardDescription>
-            Your account details managed by Clerk
-          </CardDescription>
+          <p className="text-sm text-muted-foreground">Your account details</p>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
-            {currentUser?.imageUrl && (
-              <img
-                src={currentUser.imageUrl}
-                alt="User Avatar"
-                className="h-12 w-12 rounded-full border-2 border-gray-200"
-              />
-            )}
-            <div className="flex-1">
-              <p className="font-medium text-foreground">
-                {currentUser.name || currentUser.email || 'User'}
-              </p>
-            </div>
-          </div>
-          <div className="pt-2 border-t">
+        <CardContent className="grid gap-4">
+          {/* Name */}
+          <div className="space-y-2">
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              type="text"
+              value={currentUser?.name || ''}
+              readOnly
+              className="bg-muted"
+            />
             <p className="text-xs text-muted-foreground">
-              To update your profile, email, or password, please use the account
-              settings.
+              Contact your administrator to update your name
             </p>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Home Airport */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building className="h-5 w-5" />
-            Home Airport
-          </CardTitle>
-          <CardDescription>
-            Set your primary airport for flight tracking
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <AirportCombobox
-                  airports={airports}
-                  value={preferences?.homeAirport || ''}
-                  onValueChange={handleHomeAirportChange}
-                  placeholder="Search for your home airport..."
-                  emptyMessage="No airports found matching your search."
-                />
-              </div>
-              {preferences?.homeAirport && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handleHomeAirportChange('')}
-                  disabled={updatePreferencesMutation.isPending}
-                  title="Clear home airport"
-                >
-                  <X className="h-4 w-4 text-destructive hover:text-destructive/80" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Email - Managed by Clerk */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
-            Email
-          </CardTitle>
-          <CardDescription>
-            Your email address is managed by your account provider
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <div className="flex-1 min-w-0">
-                <Input
-                  type="email"
-                  value={currentUser.email || 'Not set'}
-                  readOnly
-                  className="bg-muted text-muted-foreground cursor-not-allowed"
-                />
-              </div>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              To change your email address, please use the account settings in
-              your profile.
+          {/* Email - Managed by BetterAuth */}
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={currentUser?.email || ''}
+              readOnly
+              className="bg-muted"
+            />
+            <p className="text-xs text-muted-foreground">
+              Contact your administrator to update your email address
             </p>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Phone Number & SMS Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Phone className="h-5 w-5" />
-            Phone Number & SMS
-          </CardTitle>
-          <CardDescription>
-            Configure your phone number for SMS notifications
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <div className="flex-1 min-w-0">
-                <Input
-                  type="tel"
-                  placeholder="+1 (555) 123-4567"
-                  value={preferences?.phoneNumber || ''}
-                  onChange={e => {
-                    updatePreferencesMutation.mutate({
-                      phoneNumber: e.target.value,
-                    });
-                  }}
-                  disabled={updatePreferencesMutation.isPending}
-                />
-              </div>
-              {preferences?.phoneNumber && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() =>
-                    updatePreferencesMutation.mutate({ phoneNumber: '' })
-                  }
-                  disabled={updatePreferencesMutation.isPending}
-                  title="Clear phone number"
-                >
-                  <X className="h-4 w-4 text-destructive hover:text-destructive/80" />
-                </Button>
-              )}
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Enter your phone number in international format (e.g.,
-              +1234567890) to receive SMS notifications.
-            </p>
-
-            {/* SMS Notifications Toggle */}
-            <div className="pt-3 border-t">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium">SMS Notifications</p>
-                  <p className="text-sm text-muted-foreground">
-                    Receive flight updates and alerts via text message
-                  </p>
-                </div>
-                <IOSToggle
-                  pressed={
-                    preferences?.notificationPreferences
-                      ?.smsNotificationsEnabled ?? false
-                  }
-                  onPressedChange={(value: boolean) =>
-                    handleNotificationToggle('smsNotificationsEnabled', value)
-                  }
-                  disabled={
-                    updatePreferencesMutation.isPending ||
-                    !preferences?.phoneNumber
-                  }
-                />
-              </div>
-
-              {/* SMS Notification Type Preferences */}
-              {preferences?.notificationPreferences
-                ?.smsNotificationsEnabled && (
-                <div className="mt-4 space-y-3 pl-4 border-l-2 border-muted">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Flight Updates</p>
-                      <p className="text-xs text-muted-foreground">
-                        Status changes, delays, gate changes
-                      </p>
-                    </div>
-                    <IOSToggle
-                      pressed={
-                        preferences?.notificationPreferences
-                          ?.smsFlightUpdates ?? true
-                      }
-                      onPressedChange={(value: boolean) =>
-                        handleNotificationToggle('smsFlightUpdates', value)
-                      }
+          {/* Phone Number & SMS Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Phone className="h-5 w-5" />
+                Phone Number & SMS
+              </CardTitle>
+              <CardDescription>
+                Configure your phone number for SMS notifications
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <div className="flex-1 min-w-0">
+                    <Input
+                      type="tel"
+                      placeholder="+1 (555) 123-4567"
+                      value={preferences?.phoneNumber || ''}
+                      onChange={e => {
+                        updatePreferencesMutation.mutate({
+                          phoneNumber: e.target.value,
+                        });
+                      }}
                       disabled={updatePreferencesMutation.isPending}
                     />
                   </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Traffic Alerts</p>
-                      <p className="text-xs text-muted-foreground">
-                        Road conditions and route delays
-                      </p>
-                    </div>
-                    <IOSToggle
-                      pressed={
-                        preferences?.notificationPreferences
-                          ?.smsTrafficAlerts ?? true
-                      }
-                      onPressedChange={(value: boolean) =>
-                        handleNotificationToggle('smsTrafficAlerts', value)
-                      }
-                      disabled={updatePreferencesMutation.isPending}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Run Reminders</p>
-                      <p className="text-xs text-muted-foreground">
-                        Upcoming pickup and dropoff times
-                      </p>
-                    </div>
-                    <IOSToggle
-                      pressed={
-                        preferences?.notificationPreferences?.smsRunReminders ??
-                        true
-                      }
-                      onPressedChange={(value: boolean) =>
-                        handleNotificationToggle('smsRunReminders', value)
-                      }
-                      disabled={updatePreferencesMutation.isPending}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {!preferences?.phoneNumber &&
-                preferences?.notificationPreferences
-                  ?.smsNotificationsEnabled && (
-                  <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800">
-                    Please add a phone number above to receive SMS
-                    notifications.
-                  </div>
-                )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Timezone Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Timezone
-          </CardTitle>
-          <CardDescription>
-            Set your preferred timezone for flight times
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <div className="flex-1 min-w-0">
-                <TimezoneCombobox
-                  timezones={timezones}
-                  value={preferences?.timezone || ''}
-                  onValueChange={handleTimezoneChange}
-                  placeholder="Select your timezone..."
-                  emptyMessage="No timezones found matching your search."
-                />
-              </div>
-              {preferences?.timezone && preferences.timezone !== 'UTC' && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handleTimezoneChange('UTC')}
-                  disabled={updatePreferencesMutation.isPending}
-                  title="Reset to UTC"
-                >
-                  <X className="h-4 w-4 text-destructive hover:text-destructive/80" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Theme Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="h-5 w-5" />
-            Theme
-          </CardTitle>
-          <CardDescription>
-            Choose your preferred theme appearance
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                variant={theme === 'light' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => handleThemeChange('light')}
-                disabled={updatePreferencesMutation.isPending}
-                className="flex items-center gap-2 justify-center"
-              >
-                <Sun className="h-4 w-4" />
-                Light
-              </Button>
-              <Button
-                variant={theme === 'dark' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => handleThemeChange('dark')}
-                disabled={updatePreferencesMutation.isPending}
-                className="flex items-center gap-2 justify-center"
-              >
-                <Moon className="h-4 w-4" />
-                Dark
-              </Button>
-              <Button
-                variant={theme === 'system' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => handleThemeChange('system')}
-                disabled={updatePreferencesMutation.isPending}
-                className="flex items-center gap-2 justify-center"
-              >
-                <Monitor className="h-4 w-4" />
-                System
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Notification Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Notifications
-          </CardTitle>
-          <CardDescription>
-            Configure push notifications for flight updates and alerts
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          {/* Push Notifications Permission */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="font-medium">Push Notifications</p>
-                <p className="text-sm text-muted-foreground">
-                  Enable browser notifications for flight updates and alerts
-                </p>
-                {!notificationPermission.supported && (
-                  <p className="text-sm text-amber-600 mt-1">
-                    Not supported in this browser
-                  </p>
-                )}
-                {notificationPermission.permission === 'denied' && (
-                  <p className="text-sm text-red-600 mt-1">
-                    Blocked - please enable in browser settings
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <IOSToggle
-                  pressed={
-                    notificationPermission.enabled &&
-                    (preferences?.notificationPreferences
-                      ?.pushNotificationsEnabled ??
-                      true)
-                  }
-                  onPressedChange={handlePushNotificationsToggle}
-                  disabled={
-                    !notificationPermission.supported ||
-                    notificationPermission.permission === 'denied' ||
-                    requestNotificationPermission.isPending ||
-                    updatePreferencesMutation.isPending
-                  }
-                />
-                {/* {notificationPermission.enabled &&
-                  (preferences?.notificationPreferences
-                    ?.pushNotificationsEnabled ??
-                    true) && (
+                  {preferences?.phoneNumber && (
                     <Button
                       variant="outline"
-                      size="sm"
-                      onClick={handleTestNotification}
+                      size="icon"
+                      onClick={() =>
+                        updatePreferencesMutation.mutate({ phoneNumber: '' })
+                      }
+                      disabled={updatePreferencesMutation.isPending}
+                      title="Clear phone number"
                     >
-                      Test
+                      <X className="h-4 w-4 text-destructive hover:text-destructive/80" />
                     </Button>
-                  )} */}
-              </div>
-            </div>
-          </div>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Enter your phone number in international format (e.g.,
+                  +1234567890) to receive SMS notifications.
+                </p>
 
-          {/* Notification Preferences */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="font-medium">Flight Updates</p>
-                <p className="text-sm text-muted-foreground">
-                  Get notified about flight status changes, delays, and gate
-                  updates
-                </p>
+                {/* SMS Notifications Toggle */}
+                <div className="pt-3 border-t">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium">SMS Notifications</p>
+                      <p className="text-sm text-muted-foreground">
+                        Receive flight updates and alerts via text message
+                      </p>
+                    </div>
+                    <IOSToggle
+                      pressed={
+                        preferences?.notificationPreferences
+                          ?.smsNotificationsEnabled ?? false
+                      }
+                      onPressedChange={(value: boolean) =>
+                        handleNotificationToggle(
+                          'smsNotificationsEnabled',
+                          value
+                        )
+                      }
+                      disabled={
+                        updatePreferencesMutation.isPending ||
+                        !preferences?.phoneNumber
+                      }
+                    />
+                  </div>
+
+                  {/* SMS Notification Type Preferences */}
+                  {preferences?.notificationPreferences
+                    ?.smsNotificationsEnabled && (
+                    <div className="mt-4 space-y-3 pl-4 border-l-2 border-muted">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">Flight Updates</p>
+                          <p className="text-xs text-muted-foreground">
+                            Status changes, delays, gate changes
+                          </p>
+                        </div>
+                        <IOSToggle
+                          pressed={
+                            preferences?.notificationPreferences
+                              ?.smsFlightUpdates ?? true
+                          }
+                          onPressedChange={(value: boolean) =>
+                            handleNotificationToggle('smsFlightUpdates', value)
+                          }
+                          disabled={updatePreferencesMutation.isPending}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">Traffic Alerts</p>
+                          <p className="text-xs text-muted-foreground">
+                            Road conditions and route delays
+                          </p>
+                        </div>
+                        <IOSToggle
+                          pressed={
+                            preferences?.notificationPreferences
+                              ?.smsTrafficAlerts ?? true
+                          }
+                          onPressedChange={(value: boolean) =>
+                            handleNotificationToggle('smsTrafficAlerts', value)
+                          }
+                          disabled={updatePreferencesMutation.isPending}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">Run Reminders</p>
+                          <p className="text-xs text-muted-foreground">
+                            Upcoming pickup and dropoff times
+                          </p>
+                        </div>
+                        <IOSToggle
+                          pressed={
+                            preferences?.notificationPreferences
+                              ?.smsRunReminders ?? true
+                          }
+                          onPressedChange={(value: boolean) =>
+                            handleNotificationToggle('smsRunReminders', value)
+                          }
+                          disabled={updatePreferencesMutation.isPending}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {!preferences?.phoneNumber &&
+                    preferences?.notificationPreferences
+                      ?.smsNotificationsEnabled && (
+                      <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800">
+                        Please add a phone number above to receive SMS
+                        notifications.
+                      </div>
+                    )}
+                </div>
               </div>
-              <IOSToggle
-                pressed={
-                  preferences?.notificationPreferences?.flightUpdates ?? true
-                }
-                onPressedChange={(value: boolean) =>
-                  handleNotificationToggle('flightUpdates', value)
-                }
-                disabled={updatePreferencesMutation.isPending}
-              />
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="font-medium">Traffic Alerts</p>
-                <p className="text-sm text-muted-foreground">
-                  Get notified about traffic conditions and delays on your
-                  routes
-                </p>
+            </CardContent>
+          </Card>
+
+          {/* Timezone Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Timezone
+              </CardTitle>
+              <CardDescription>
+                Set your preferred timezone for flight times
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <div className="flex-1 min-w-0">
+                    <TimezoneCombobox
+                      timezones={timezones}
+                      value={preferences?.timezone || ''}
+                      onValueChange={handleTimezoneChange}
+                      placeholder="Select your timezone..."
+                      emptyMessage="No timezones found matching your search."
+                    />
+                  </div>
+                  {preferences?.timezone && preferences.timezone !== 'UTC' && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleTimezoneChange('UTC')}
+                      disabled={updatePreferencesMutation.isPending}
+                      title="Reset to UTC"
+                    >
+                      <X className="h-4 w-4 text-destructive hover:text-destructive/80" />
+                    </Button>
+                  )}
+                </div>
               </div>
-              <IOSToggle
-                pressed={
-                  preferences?.notificationPreferences?.trafficAlerts ?? true
-                }
-                onPressedChange={(value: boolean) =>
-                  handleNotificationToggle('trafficAlerts', value)
-                }
-                disabled={updatePreferencesMutation.isPending}
-              />
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="font-medium">Run Reminders</p>
-                <p className="text-sm text-muted-foreground">
-                  Get reminded about upcoming shuttle runs and pickups
-                </p>
+            </CardContent>
+          </Card>
+
+          {/* Theme Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5" />
+                Theme
+              </CardTitle>
+              <CardDescription>
+                Choose your preferred theme appearance
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    variant={theme === 'light' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleThemeChange('light')}
+                    disabled={updatePreferencesMutation.isPending}
+                    className="flex items-center gap-2 justify-center"
+                  >
+                    <Sun className="h-4 w-4" />
+                    Light
+                  </Button>
+                  <Button
+                    variant={theme === 'dark' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleThemeChange('dark')}
+                    disabled={updatePreferencesMutation.isPending}
+                    className="flex items-center gap-2 justify-center"
+                  >
+                    <Moon className="h-4 w-4" />
+                    Dark
+                  </Button>
+                  <Button
+                    variant={theme === 'system' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleThemeChange('system')}
+                    disabled={updatePreferencesMutation.isPending}
+                    className="flex items-center gap-2 justify-center"
+                  >
+                    <Monitor className="h-4 w-4" />
+                    System
+                  </Button>
+                </div>
               </div>
-              <IOSToggle
-                pressed={
-                  preferences?.notificationPreferences?.runReminders ?? true
-                }
-                onPressedChange={(value: boolean) =>
-                  handleNotificationToggle('runReminders', value)
-                }
-                disabled={updatePreferencesMutation.isPending}
-              />
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+
+          {/* Notification Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5" />
+                Notifications
+              </CardTitle>
+              <CardDescription>
+                Configure push notifications for flight updates and alerts
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {/* Push Notifications Permission */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium">Push Notifications</p>
+                    <p className="text-sm text-muted-foreground">
+                      Enable browser notifications for flight updates and alerts
+                    </p>
+                    {!notificationPermission.supported && (
+                      <p className="text-sm text-amber-600 mt-1">
+                        Not supported in this browser
+                      </p>
+                    )}
+                    {notificationPermission.permission === 'denied' && (
+                      <p className="text-sm text-red-600 mt-1">
+                        Blocked - please enable in browser settings
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <IOSToggle
+                      pressed={
+                        notificationPermission.enabled &&
+                        (preferences?.notificationPreferences
+                          ?.pushNotificationsEnabled ??
+                          true)
+                      }
+                      onPressedChange={handlePushNotificationsToggle}
+                      disabled={
+                        !notificationPermission.supported ||
+                        notificationPermission.permission === 'denied' ||
+                        requestNotificationPermission.isPending ||
+                        updatePreferencesMutation.isPending
+                      }
+                    />
+                    {/* {notificationPermission.enabled &&
+                      (preferences?.notificationPreferences
+                        ?.pushNotificationsEnabled ??
+                        true) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleTestNotification}
+                        >
+                          Test
+                        </Button>
+                      )} */}
+                  </div>
+                </div>
+              </div>
+
+              {/* Notification Preferences */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium">Flight Updates</p>
+                    <p className="text-sm text-muted-foreground">
+                      Get notified about flight status changes, delays, and gate
+                      updates
+                    </p>
+                  </div>
+                  <IOSToggle
+                    pressed={
+                      preferences?.notificationPreferences?.flightUpdates ??
+                      true
+                    }
+                    onPressedChange={(value: boolean) =>
+                      handleNotificationToggle('flightUpdates', value)
+                    }
+                    disabled={updatePreferencesMutation.isPending}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium">Traffic Alerts</p>
+                    <p className="text-sm text-muted-foreground">
+                      Get notified about traffic conditions and delays on your
+                      routes
+                    </p>
+                  </div>
+                  <IOSToggle
+                    pressed={
+                      preferences?.notificationPreferences?.trafficAlerts ??
+                      true
+                    }
+                    onPressedChange={(value: boolean) =>
+                      handleNotificationToggle('trafficAlerts', value)
+                    }
+                    disabled={updatePreferencesMutation.isPending}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium">Run Reminders</p>
+                    <p className="text-sm text-muted-foreground">
+                      Get reminded about upcoming shuttle runs and pickups
+                    </p>
+                  </div>
+                  <IOSToggle
+                    pressed={
+                      preferences?.notificationPreferences?.runReminders ?? true
+                    }
+                    onPressedChange={(value: boolean) =>
+                      handleNotificationToggle('runReminders', value)
+                    }
+                    disabled={updatePreferencesMutation.isPending}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Debug Tools */}
+          {isDebugMode() && (
+            <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+                  <Database className="h-5 w-5" />
+                  Debug Tools
+                </CardTitle>
+                <CardDescription className="text-amber-700 dark:text-amber-300">
+                  Development tools for testing and data generation
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-4 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                  <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">
+                    Generate Sample Data
+                  </h4>
+                  <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+                    This will create realistic sample runs and notifications for
+                    your account. Any existing data will be replaced.
+                  </p>
+                  <Button
+                    onClick={handleGenerateSeedData}
+                    disabled={generateSeedDataMutation.isPending}
+                    className="bg-amber-600 hover:bg-amber-700 text-white flex items-center"
+                  >
+                    {generateSeedDataMutation.isPending ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Database className="h-4 w-4" />
+                        Generate Data
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <div className="text-xs text-amber-600 dark:text-amber-400">
+                  <p>• Creates 20 realistic runs with various statuses</p>
+                  <p>• Generates 40+ notifications across different types</p>
+                  <p>• Uses Jackson Hole locations and major airlines</p>
+                  <p>• Only available in development mode</p>
+                </div>
+                <div className="p-4 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                  <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">
+                    Clear All Data
+                  </h4>
+                  <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+                    This will delete all your runs and notifications. Your
+                    preferences and settings will be preserved. This action
+                    cannot be undone.
+                  </p>
+                  <Button
+                    onClick={handleClearUserData}
+                    disabled={clearUserDataMutation.isPending}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    {clearUserDataMutation.isPending ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                        Clearing...
+                      </>
+                    ) : (
+                      <>
+                        <Trash className="h-4 w-4 mr-2" />
+                        Clear All Data
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Status */}
+          {updatePreferencesMutation.isPending && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                  <p className="text-primary text-sm">Saving preferences...</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Clear Data Dialog */}
+          <Dialog
+            open={showClearDataDialog}
+            onOpenChange={setShowClearDataDialog}
+          >
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                  <Trash className="h-5 w-5" />
+                  Clear All Data
+                </DialogTitle>
+                <DialogDescription className="text-red-600 dark:text-red-400">
+                  This action cannot be undone. All your data will be
+                  permanently deleted.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="py-4">
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    This will permanently delete:
+                  </p>
+                  <ul className="space-y-1 text-sm text-red-600 dark:text-red-400">
+                    <li>• All your runs and shuttles</li>
+                    <li>• All notifications and alerts</li>
+                  </ul>
+                  <p className="text-sm text-muted-foreground">
+                    Your preferences and settings will be preserved.
+                  </p>
+                  <p className="text-sm font-medium text-red-700 dark:text-red-300">
+                    Are you absolutely sure you want to continue?
+                  </p>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={handleCancelClearData}
+                  disabled={clearUserDataMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleConfirmClearData}
+                  disabled={clearUserDataMutation.isPending}
+                >
+                  {clearUserDataMutation.isPending ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      Clearing...
+                    </>
+                  ) : (
+                    <>
+                      <Trash className="h-4 w-4 mr-2" />
+                      Clear All Data
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
-
-      {/* Debug Tools */}
-      {isDebugMode() && (
-        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
-              <Database className="h-5 w-5" />
-              Debug Tools
-            </CardTitle>
-            <CardDescription className="text-amber-700 dark:text-amber-300">
-              Development tools for testing and data generation
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-4 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-              <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">
-                Generate Sample Data
-              </h4>
-              <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
-                This will create realistic sample runs and notifications for
-                your account. Any existing data will be replaced.
-              </p>
-              <Button
-                onClick={handleGenerateSeedData}
-                disabled={generateSeedDataMutation.isPending}
-                className="bg-amber-600 hover:bg-amber-700 text-white flex items-center"
-              >
-                {generateSeedDataMutation.isPending ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Database className="h-4 w-4" />
-                    Generate Data
-                  </>
-                )}
-              </Button>
-            </div>
-            <div className="text-xs text-amber-600 dark:text-amber-400">
-              <p>• Creates 20 realistic runs with various statuses</p>
-              <p>• Generates 40+ notifications across different types</p>
-              <p>• Uses Jackson Hole locations and major airlines</p>
-              <p>• Only available in development mode</p>
-            </div>
-            <div className="p-4 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-              <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">
-                Clear All Data
-              </h4>
-              <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
-                This will delete all your runs and notifications. Your
-                preferences and settings will be preserved. This action cannot
-                be undone.
-              </p>
-              <Button
-                onClick={handleClearUserData}
-                disabled={clearUserDataMutation.isPending}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                {clearUserDataMutation.isPending ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                    Clearing...
-                  </>
-                ) : (
-                  <>
-                    <Trash className="h-4 w-4 mr-2" />
-                    Clear All Data
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Status */}
-      {updatePreferencesMutation.isPending && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-              <p className="text-primary text-sm">Saving preferences...</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Clear Data Dialog */}
-      <Dialog open={showClearDataDialog} onOpenChange={setShowClearDataDialog}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
-              <Trash className="h-5 w-5" />
-              Clear All Data
-            </DialogTitle>
-            <DialogDescription className="text-red-600 dark:text-red-400">
-              This action cannot be undone. All your data will be permanently
-              deleted.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-4">
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                This will permanently delete:
-              </p>
-              <ul className="space-y-1 text-sm text-red-600 dark:text-red-400">
-                <li>• All your runs and shuttles</li>
-                <li>• All notifications and alerts</li>
-              </ul>
-              <p className="text-sm text-muted-foreground">
-                Your preferences and settings will be preserved.
-              </p>
-              <p className="text-sm font-medium text-red-700 dark:text-red-300">
-                Are you absolutely sure you want to continue?
-              </p>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={handleCancelClearData}
-              disabled={clearUserDataMutation.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmClearData}
-              disabled={clearUserDataMutation.isPending}
-            >
-              {clearUserDataMutation.isPending ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  Clearing...
-                </>
-              ) : (
-                <>
-                  <Trash className="h-4 w-4 mr-2" />
-                  Clear All Data
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

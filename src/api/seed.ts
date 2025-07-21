@@ -1,4 +1,4 @@
-import { clerk } from '../lib/api/clerk-client';
+import { initJSONResponse } from '../lib/api/api-tools';
 import { getDatabase } from '../lib/db/index';
 import { createNotification } from '../lib/db/notifications';
 import { saveUserPreferences } from '../lib/db/preferences';
@@ -8,8 +8,6 @@ import {
 } from '../lib/db/report-templates';
 import { createRun } from '../lib/db/runs';
 import type { ReportType, RunStatus, RunType } from '../lib/schema';
-
-// Initialize Clerk client for fetching organization data
 
 // Mock data arrays
 const airlines = [
@@ -238,19 +236,20 @@ export function generateBillTo(): string | null {
   return randomItem(codes);
 }
 
-// Helper function to get organization ID for a user
+// Helper function to get organization ID for a user using BetterAuth database
 async function getUserOrganizationId(userId: string): Promise<string | null> {
   try {
-    const organizationMemberships =
-      await clerk.users.getOrganizationMembershipList({
-        userId,
-      });
+    const db = getDatabase();
+    const result = await db.query(
+      'SELECT organization_id FROM organization_memberships WHERE user_id = $1 LIMIT 1',
+      [userId]
+    );
 
-    if (organizationMemberships.data.length === 0) {
+    if (result.rows.length === 0) {
       return null;
     }
 
-    return organizationMemberships.data[0].organization.id;
+    return result.rows[0].organization_id;
   } catch (error) {
     console.error('Error fetching user organization:', error);
     return null;
@@ -327,69 +326,52 @@ async function getOrganizationDrivers(
   try {
     console.log(`🔍 Fetching organization members for user: ${userId}`);
 
-    // Get user's organization memberships
-    const organizationMemberships =
-      await clerk.users.getOrganizationMembershipList({
-        userId,
-      });
+    const db = getDatabase();
 
-    if (organizationMemberships.data.length === 0) {
+    // First get the user's organization ID
+    const userOrgResult = await db.query(
+      'SELECT organization_id FROM organization_memberships WHERE user_id = $1 LIMIT 1',
+      [userId]
+    );
+
+    if (userOrgResult.rows.length === 0) {
       console.log('ℹ️ User is not a member of any organization');
       return [];
     }
 
-    // For single organization model, get the first (and only) organization
-    const userOrg = organizationMemberships.data[0];
-    const orgId = userOrg.organization.id;
+    const organizationId = userOrgResult.rows[0].organization_id;
+
+    // Get all members of the organization with their user details
+    const membersResult = await db.query(
+      `
+      SELECT u.id, u.name, u.email, om.role 
+      FROM "user" u 
+      JOIN organization_memberships om ON u.id = om.user_id 
+      WHERE om.organization_id = $1 AND u.id != $2
+    `,
+      [organizationId, userId]
+    );
+
+    if (membersResult.rows.length === 0) {
+      console.log('ℹ️ No other members found in organization');
+      return [];
+    }
+
+    const memberDetails = membersResult.rows.map(row => ({
+      userId: row.id,
+      name: row.name || 'Unknown User',
+      email: row.email || 'No email',
+      role: row.role || 'driver',
+    }));
 
     console.log(
-      `✅ Found user organization: ${userOrg.organization.name} (${orgId})`
+      `✅ Found ${memberDetails.length} organization members to use as drivers:`
     );
-
-    // Get all organization members
-    const orgMemberships =
-      await clerk.organizations.getOrganizationMembershipList({
-        organizationId: orgId,
-      });
-
-    // Get detailed user info for all members (treating all as potential drivers)
-    const memberDetails = await Promise.all(
-      orgMemberships.data.map(async (membership: any) => {
-        try {
-          const user = await clerk.users.getUser(
-            membership.publicUserData.userId
-          );
-          return {
-            userId: user.id,
-            name:
-              `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-              'Unknown User',
-            email: user.emailAddresses[0]?.emailAddress || 'No email',
-            role: membership.role,
-          };
-        } catch (error) {
-          console.warn(
-            `Failed to fetch user details for ${membership.publicUserData.userId}:`,
-            error
-          );
-          return null;
-        }
-      })
-    );
-
-    // Filter out failed fetches and the requesting user (admin)
-    const validMembers = memberDetails
-      .filter((member): member is NonNullable<typeof member> => member !== null)
-      .filter(member => member.userId !== userId); // Exclude the admin user
-
-    console.log(
-      `✅ Found ${validMembers.length} organization members to use as drivers:`
-    );
-    validMembers.forEach(member => {
+    memberDetails.forEach(member => {
       console.log(`   - ${member.name} (${member.email}) - ${member.userId}`);
     });
 
-    return validMembers;
+    return memberDetails;
   } catch (error) {
     console.error('❌ Error fetching organization members:', error);
     return [];
@@ -798,27 +780,16 @@ export async function POST(request: Request): Promise<Response> {
     const { userId } = body as { userId?: string };
 
     if (!userId) {
-      return new Response(JSON.stringify({ error: 'User ID is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return initJSONResponse({ error: 'User ID is required' }, 400);
     }
 
     // Call the actual seed data generation function
     const result = await seedDataForUser(userId);
 
-    return new Response(JSON.stringify(result), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return initJSONResponse(result);
   } catch (error) {
     console.error('Failed to generate seed data:', error);
-    return new Response(
-      JSON.stringify({ error: 'Failed to generate seed data' }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    return initJSONResponse({ error: 'Failed to generate seed data' }, 500);
   }
 }
 
@@ -829,10 +800,7 @@ export async function DELETE(request: Request): Promise<Response> {
     const { userId } = body as { userId?: string };
 
     if (!userId) {
-      return new Response(JSON.stringify({ error: 'User ID is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return initJSONResponse({ error: 'User ID is required' }, 400);
     }
 
     const db = getDatabase();
@@ -863,43 +831,32 @@ export async function DELETE(request: Request): Promise<Response> {
       console.log(`   - ${deletedNotifications} notifications`);
       console.log(`   - Preserved user preferences`);
 
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: `Cleared ${deletedRuns} runs and ${deletedNotifications} notifications (preferences preserved)`,
-          deletedRuns,
-          deletedNotifications,
-          deletedPreferences: 0, // No preferences deleted
-        }),
-        {
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
+      return initJSONResponse({
+        success: true,
+        message: `Cleared ${deletedRuns} runs and ${deletedNotifications} notifications (preferences preserved)`,
+        deletedRuns,
+        deletedNotifications,
+        deletedPreferences: 0, // No preferences deleted
+      });
     } catch (error) {
       console.error('❌ Error clearing user data:', error);
-      return new Response(
-        JSON.stringify({
+      return initJSONResponse(
+        {
           success: false,
           error: 'Failed to clear user data',
           details: error instanceof Error ? error.message : 'Unknown error',
-        }),
-        {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' },
-        }
+        },
+        500
       );
     }
   } catch (error) {
     console.error('Failed to clear user data:', error);
-    return new Response(
-      JSON.stringify({
+    return initJSONResponse(
+      {
         success: false,
         error: 'Failed to process request',
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
+      },
+      500
     );
   }
 }

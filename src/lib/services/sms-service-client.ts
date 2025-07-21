@@ -1,5 +1,5 @@
 import { smsApi } from '../api/client';
-import { isDevelopmentMode } from '../utils';
+import { isDevelopment } from '../environment';
 
 /**
  * Client-side SMS service for browser-safe SMS functionality
@@ -7,7 +7,6 @@ import { isDevelopmentMode } from '../utils';
  */
 class ClientSMSService {
   private static instance: ClientSMSService;
-  private debug = isDevelopmentMode();
 
   private constructor() {}
 
@@ -46,7 +45,7 @@ class ClientSMSService {
     messageId?: string;
     error?: string;
   }> {
-    if (!isDevelopmentMode()) {
+    if (!isDevelopment()) {
       return {
         success: false,
         error: 'Test SMS only available in development mode',
@@ -116,7 +115,7 @@ class ClientSMSService {
 export const clientSMSService = ClientSMSService.getInstance();
 
 // Development testing helper
-if (isDevelopmentMode() && typeof window !== 'undefined') {
+if (isDevelopment() && typeof window !== 'undefined') {
   (window as any).testSMS = {
     send: (phoneNumber: string) => clientSMSService.testSMS(phoneNumber),
     validate: (phoneNumber: string) =>

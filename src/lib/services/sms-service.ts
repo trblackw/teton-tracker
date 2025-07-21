@@ -1,6 +1,6 @@
 import { parsePhoneNumber } from 'libphonenumber-js';
 import { Twilio } from 'twilio';
-import { isDevelopmentMode } from '../utils';
+import { isDevelopment } from '../environment';
 
 export interface SMSMessage {
   to: string;
@@ -27,7 +27,7 @@ class SMSService {
   private static instance: SMSService;
   private twilioClient: Twilio | null = null;
   private fromNumber: string | null = null;
-  private debug = isDevelopmentMode();
+  private debug = isDevelopment();
 
   private constructor() {
     this.initialize();
@@ -131,7 +131,7 @@ class SMSService {
     }
 
     // In development mode, return mock response
-    if (isDevelopmentMode() || !this.twilioClient) {
+    if (isDevelopment() || !this.twilioClient) {
       if (this.debug) {
         console.log('📱 Mock SMS sent:', {
           to: validation.formatted,
@@ -203,7 +203,7 @@ class SMSService {
       results.push(result);
 
       // Add small delay to avoid rate limiting
-      if (!isDevelopmentMode()) {
+      if (!isDevelopment()) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
@@ -215,7 +215,7 @@ class SMSService {
    * Check if SMS service is properly configured
    */
   isConfigured(): boolean {
-    return this.twilioClient !== null || isDevelopmentMode();
+    return this.twilioClient !== null || isDevelopment();
   }
 
   /**
@@ -231,7 +231,7 @@ class SMSService {
       configured: this.isConfigured(),
       provider: 'Twilio',
       fromNumber: this.fromNumber,
-      mode: isDevelopmentMode() ? 'development' : 'production',
+      mode: isDevelopment() ? 'development' : 'production',
     };
   }
 
@@ -273,7 +273,7 @@ class SMSService {
    * Test SMS functionality (development only)
    */
   async testSMS(phoneNumber: string): Promise<SMSResponse> {
-    if (!isDevelopmentMode()) {
+    if (!isDevelopment()) {
       return {
         success: false,
         error: 'Test SMS only available in development mode',
@@ -291,7 +291,7 @@ class SMSService {
 export const smsService = SMSService.getInstance();
 
 // Development testing helper
-if (isDevelopmentMode() && typeof window !== 'undefined') {
+if (isDevelopment() && typeof window !== 'undefined') {
   (window as any).testSMS = {
     send: (phoneNumber: string) => smsService.testSMS(phoneNumber),
     validate: (phoneNumber: string) =>

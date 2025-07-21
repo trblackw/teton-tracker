@@ -1,26 +1,18 @@
-import {
-  checkPreferencesOwnership,
-  createErrorResponse,
-  requireAuth,
-} from '../lib/access-control';
+import { createErrorResponse, requireAuth } from '../lib/access-control';
+import { initJSONResponse } from '../lib/api/api-tools';
 import { getUserPreferences, saveUserPreferences } from '../lib/db/preferences';
 import { type UserPreferences } from '../lib/schema';
 
 // GET /api/preferences
 export async function GET(request: Request): Promise<Response> {
   try {
-    const url = new URL(request.url);
-    const userId = url.searchParams.get('userId');
-
-    // Check auth
-    const authUserId = requireAuth(userId);
+    // Validate auth and get user from session
+    const user = await requireAuth(request);
 
     // Get preferences (only returns user's own preferences anyway)
-    const preferences = await getUserPreferences(authUserId);
+    const preferences = await getUserPreferences(user.id);
 
-    return new Response(JSON.stringify(preferences), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return initJSONResponse(preferences);
   } catch (error) {
     console.error('Failed to get preferences:', error);
     return createErrorResponse(
@@ -32,24 +24,18 @@ export async function GET(request: Request): Promise<Response> {
 // PUT /api/preferences
 export async function PUT(request: Request): Promise<Response> {
   try {
+    // Validate auth and get user from session
+    const user = await requireAuth(request);
+
     const body = await request.json();
-    const { preferencesData, userId } = body as {
+    const { preferencesData } = body as {
       preferencesData: Partial<UserPreferences>;
-      userId: string;
     };
 
-    // Check auth
-    const authUserId = requireAuth(userId);
+    // Save preferences for the authenticated user
+    const preferences = await saveUserPreferences(preferencesData, user.id);
 
-    // Simple check: can only update your own preferences
-    checkPreferencesOwnership(userId, authUserId);
-
-    // Save preferences
-    const preferences = await saveUserPreferences(preferencesData, authUserId);
-
-    return new Response(JSON.stringify(preferences), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return initJSONResponse(preferences);
   } catch (error) {
     console.error('Failed to update preferences:', error);
     return createErrorResponse(

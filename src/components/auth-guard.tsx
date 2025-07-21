@@ -1,48 +1,42 @@
-import {
-  RedirectToSignIn,
-  SignedIn,
-  SignedOut,
-  useUser,
-} from '@clerk/clerk-react';
-import { type ReactNode } from 'react';
-import { Card, CardContent } from './ui/card';
+import { useNavigate } from '@tanstack/react-router';
+import { useEffect, type ReactNode } from 'react';
+import { useCurrentUserData } from '../lib/hooks/use-user';
 
 interface AuthGuardProps {
   children: ReactNode;
+  fallback?: ReactNode;
 }
 
-export function AuthGuard({ children }: AuthGuardProps) {
-  return (
-    <>
-      <SignedIn>{children}</SignedIn>
-      <SignedOut>
-        <RedirectToSignIn />
-      </SignedOut>
-    </>
-  );
-}
+export function AuthGuard({ children, fallback }: AuthGuardProps) {
+  const { user, isLoading } = useCurrentUserData();
+  const navigate = useNavigate();
 
-// Loading component for authentication state
-export function AuthLoading() {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Card className="w-96">
-        <CardContent className="p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate({ to: '/sign-in' });
+    }
+  }, [user, isLoading, navigate]);
 
-// Component to handle authentication state
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const { isLoaded } = useUser();
-
-  if (!isLoaded) {
-    return <AuthLoading />;
+  // Show loading state
+  if (isLoading) {
+    return (
+      fallback || (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-lg font-medium">Loading...</div>
+            <div className="text-sm text-muted-foreground mt-1">
+              Please wait while we load your account
+            </div>
+          </div>
+        </div>
+      )
+    );
   }
 
-  return <AuthGuard>{children}</AuthGuard>;
+  // Don't render children if not authenticated
+  if (!user) {
+    return null;
+  }
+
+  return <>{children}</>;
 }

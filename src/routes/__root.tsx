@@ -19,6 +19,7 @@ import {
 import { useEffect } from 'react';
 import { Toaster } from 'sonner';
 import { ActiveRunBanner } from '../components/active-run-banner';
+import { AuthGuard } from '../components/auth-guard';
 import { PasswordProtection } from '../components/password-protection';
 import { ThemeProvider } from '../components/theme-provider';
 import { Button } from '../components/ui/button';
@@ -200,201 +201,218 @@ function RootComponent() {
     toasts.dismissAll();
   }, [routerState.location.pathname]);
 
+  // Check if current route is public (doesn't require authentication)
+  const isPublicRoute = ['/sign-in', '/sign-up'].includes(
+    routerState.location.pathname
+  );
+
+  const appContent = (
+    <SidebarProvider isMobile={isMobile} defaultOpen={!isMobile}>
+      <div className="h-screen bg-background overflow-hidden">
+        <style>{`body { overflow: hidden; }`}</style>
+
+        {/* Only show sidebar for authenticated routes */}
+        {!isPublicRoute && !isMobile && (
+          <Sidebar>
+            <SidebarHeader>
+              <TopNavLogo />
+            </SidebarHeader>
+            <SidebarContent className="flex flex-col">
+              <SidebarNav className="flex-1">
+                <CurrentRunsNavItem />
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="w-full justify-start"
+                >
+                  <MobileAwareNavLink
+                    to="/flights"
+                    className="flex items-center gap-2"
+                    activeProps={{
+                      className: activeNavClass,
+                    }}
+                  >
+                    <Plane className="h-4 w-4" />
+                    Upcoming Flights
+                  </MobileAwareNavLink>
+                </Button>
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="w-full justify-start"
+                >
+                  <MobileAwareNavLink
+                    to="/reports"
+                    className="flex items-center gap-2"
+                    activeProps={{
+                      className: activeNavClass,
+                    }}
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    Reports
+                  </MobileAwareNavLink>
+                </Button>
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="w-full justify-start"
+                >
+                  <MobileAwareNavLink
+                    to="/notifications"
+                    className="flex items-center gap-2"
+                    activeProps={{
+                      className: activeNavClass,
+                    }}
+                  >
+                    <Bell className="h-4 w-4" />
+                    Notifications
+                  </MobileAwareNavLink>
+                </Button>
+              </SidebarNav>
+
+              {/* Admin section at bottom */}
+              <div className="mt-auto pt-4 border-t border-border">
+                <AdminNavItems />
+              </div>
+            </SidebarContent>
+          </Sidebar>
+        )}
+
+        {/* Mobile Sidebar - renders separately */}
+        {!isPublicRoute && isMobile && (
+          <Sidebar>
+            <SidebarHeader>
+              <TopNavLogo />
+            </SidebarHeader>
+            <SidebarContent className="flex flex-col">
+              <SidebarNav className="flex-1">
+                <CurrentRunsNavItem />
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="w-full justify-start"
+                >
+                  <MobileAwareNavLink
+                    to="/flights"
+                    className="flex items-center gap-2"
+                    activeProps={{
+                      className: activeNavClass,
+                    }}
+                  >
+                    <Plane className="h-4 w-4" />
+                    Upcoming Flights
+                  </MobileAwareNavLink>
+                </Button>
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="w-full justify-start"
+                >
+                  <MobileAwareNavLink
+                    to="/reports"
+                    className="flex items-center gap-2"
+                    activeProps={{
+                      className: activeNavClass,
+                    }}
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    Reports
+                  </MobileAwareNavLink>
+                </Button>
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="w-full justify-start"
+                >
+                  <MobileAwareNavLink
+                    to="/notifications"
+                    className="flex items-center gap-2"
+                    activeProps={{
+                      className: activeNavClass,
+                    }}
+                  >
+                    <Bell className="h-4 w-4" />
+                    Notifications
+                  </MobileAwareNavLink>
+                </Button>
+              </SidebarNav>
+
+              {/* Admin section at bottom */}
+              <div className="mt-auto pt-4 border-t border-border">
+                <AdminNavItems />
+              </div>
+            </SidebarContent>
+          </Sidebar>
+        )}
+
+        {/* Main Content Area */}
+        <div
+          className={
+            !isPublicRoute && !isMobile
+              ? 'flex flex-col h-screen overflow-hidden ml-64'
+              : 'flex flex-col h-screen overflow-hidden'
+          }
+        >
+          {/* Top Navigation - only for authenticated routes */}
+          {!isPublicRoute && (
+            <TopNav>
+              <TopNavLeft>
+                <TopNavSidebarTrigger />
+              </TopNavLeft>
+              <TopNavCenter>
+                <OrganizationDisplay />
+              </TopNavCenter>
+              <TopNavRight>
+                <UserProfilePopover />
+              </TopNavRight>
+            </TopNav>
+          )}
+
+          {/* Active Run Banner - only for authenticated routes */}
+          {!isPublicRoute && <ActiveRunBanner />}
+
+          {/* Main Content */}
+          <main
+            className={
+              !isPublicRoute
+                ? 'flex-1 px-4 max-w-full lg:container lg:max-w-4xl lg:mx-auto overflow-y-auto'
+                : 'flex-1 overflow-y-auto'
+            }
+          >
+            <Outlet />
+          </main>
+        </div>
+      </div>
+
+      {/* Offline Indicator */}
+      <OfflineIndicator />
+
+      {/* Toast Notifications */}
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          style: {
+            background: 'hsl(var(--background))',
+            color: 'hsl(var(--foreground))',
+            border: '1px solid hsl(var(--border))',
+          },
+        }}
+        theme="system"
+        richColors
+        closeButton
+        offset="20px"
+        expand={false}
+        visibleToasts={3}
+      />
+    </SidebarProvider>
+  );
+
   return (
     <QueryClientProvider client={queryClient}>
       <AppContextProvider>
         <ThemeProvider>
           <PasswordProtection>
-            <SidebarProvider isMobile={isMobile} defaultOpen={!isMobile}>
-              <div className="h-screen bg-background overflow-hidden">
-                <style>{`body { overflow: hidden; }`}</style>
-
-                {/* Sidebar - only affects layout on desktop */}
-                {!isMobile && (
-                  <Sidebar>
-                    <SidebarHeader>
-                      <TopNavLogo />
-                    </SidebarHeader>
-                    <SidebarContent className="flex flex-col">
-                      <SidebarNav className="flex-1">
-                        <CurrentRunsNavItem />
-                        <Button
-                          asChild
-                          variant="ghost"
-                          className="w-full justify-start"
-                        >
-                          <MobileAwareNavLink
-                            to="/flights"
-                            className="flex items-center gap-2"
-                            activeProps={{
-                              className: activeNavClass,
-                            }}
-                          >
-                            <Plane className="h-4 w-4" />
-                            Upcoming Flights
-                          </MobileAwareNavLink>
-                        </Button>
-                        <Button
-                          asChild
-                          variant="ghost"
-                          className="w-full justify-start"
-                        >
-                          <MobileAwareNavLink
-                            to="/reports"
-                            className="flex items-center gap-2"
-                            activeProps={{
-                              className: activeNavClass,
-                            }}
-                          >
-                            <BarChart3 className="h-4 w-4" />
-                            Reports
-                          </MobileAwareNavLink>
-                        </Button>
-                        <Button
-                          asChild
-                          variant="ghost"
-                          className="w-full justify-start"
-                        >
-                          <MobileAwareNavLink
-                            to="/notifications"
-                            className="flex items-center gap-2"
-                            activeProps={{
-                              className: activeNavClass,
-                            }}
-                          >
-                            <Bell className="h-4 w-4" />
-                            Notifications
-                          </MobileAwareNavLink>
-                        </Button>
-                      </SidebarNav>
-
-                      {/* Admin section at bottom */}
-                      <div className="mt-auto pt-4 border-t border-border">
-                        <AdminNavItems />
-                      </div>
-                    </SidebarContent>
-                  </Sidebar>
-                )}
-
-                {/* Mobile Sidebar - renders separately */}
-                {isMobile && (
-                  <Sidebar>
-                    <SidebarHeader>
-                      <TopNavLogo />
-                    </SidebarHeader>
-                    <SidebarContent className="flex flex-col">
-                      <SidebarNav className="flex-1">
-                        <CurrentRunsNavItem />
-                        <Button
-                          asChild
-                          variant="ghost"
-                          className="w-full justify-start"
-                        >
-                          <MobileAwareNavLink
-                            to="/flights"
-                            className="flex items-center gap-2"
-                            activeProps={{
-                              className: activeNavClass,
-                            }}
-                          >
-                            <Plane className="h-4 w-4" />
-                            Upcoming Flights
-                          </MobileAwareNavLink>
-                        </Button>
-                        <Button
-                          asChild
-                          variant="ghost"
-                          className="w-full justify-start"
-                        >
-                          <MobileAwareNavLink
-                            to="/reports"
-                            className="flex items-center gap-2"
-                            activeProps={{
-                              className: activeNavClass,
-                            }}
-                          >
-                            <BarChart3 className="h-4 w-4" />
-                            Reports
-                          </MobileAwareNavLink>
-                        </Button>
-                        <Button
-                          asChild
-                          variant="ghost"
-                          className="w-full justify-start"
-                        >
-                          <MobileAwareNavLink
-                            to="/notifications"
-                            className="flex items-center gap-2"
-                            activeProps={{
-                              className: activeNavClass,
-                            }}
-                          >
-                            <Bell className="h-4 w-4" />
-                            Notifications
-                          </MobileAwareNavLink>
-                        </Button>
-                      </SidebarNav>
-
-                      {/* Admin section at bottom */}
-                      <div className="mt-auto pt-4 border-t border-border">
-                        <AdminNavItems />
-                      </div>
-                    </SidebarContent>
-                  </Sidebar>
-                )}
-
-                {/* Main Content Area */}
-                <div
-                  className={
-                    !isMobile
-                      ? 'flex flex-col h-screen overflow-hidden ml-64'
-                      : 'flex flex-col h-screen overflow-hidden'
-                  }
-                >
-                  {/* Top Navigation */}
-                  <TopNav>
-                    <TopNavLeft>
-                      <TopNavSidebarTrigger />
-                    </TopNavLeft>
-                    <TopNavCenter>
-                      <OrganizationDisplay />
-                    </TopNavCenter>
-                    <TopNavRight>
-                      <UserProfilePopover />
-                    </TopNavRight>
-                  </TopNav>
-
-                  {/* Active Run Banner */}
-                  <ActiveRunBanner />
-
-                  {/* Main Content */}
-                  <main className="flex-1 px-4 max-w-full lg:container lg:max-w-4xl lg:mx-auto overflow-y-auto">
-                    <Outlet />
-                  </main>
-                </div>
-              </div>
-
-              {/* Offline Indicator */}
-              <OfflineIndicator />
-
-              {/* Toast Notifications */}
-              <Toaster
-                position="top-center"
-                toastOptions={{
-                  style: {
-                    background: 'hsl(var(--background))',
-                    color: 'hsl(var(--foreground))',
-                    border: '1px solid hsl(var(--border))',
-                  },
-                }}
-                theme="system"
-                richColors
-                closeButton
-                offset="20px"
-                expand={false}
-                visibleToasts={3}
-              />
-            </SidebarProvider>
+            {isPublicRoute ? appContent : <AuthGuard>{appContent}</AuthGuard>}
           </PasswordProtection>
         </ThemeProvider>
       </AppContextProvider>

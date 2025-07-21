@@ -1,6 +1,6 @@
+import { cn } from '@/lib/cn';
 import { ChevronDown, ChevronUp, Clock } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { cn } from '../../lib/utils';
 import { Button } from './button';
 import { Input } from './input';
 
@@ -144,11 +144,11 @@ export function TimePicker({
 
   return (
     <div className={cn('relative', className)} ref={dropdownRef}>
-      <div className='flex items-center gap-2'>
-        <div className='flex-1'>
+      <div className="flex items-center gap-2">
+        <div className="flex-1">
           <Button
-            type='button'
-            variant='outline'
+            type="button"
+            variant="outline"
             onClick={() => {
               setIsOpen(!isOpen);
               if (!isOpen) {
@@ -157,25 +157,25 @@ export function TimePicker({
               }
             }}
             disabled={disabled}
-            className='justify-start text-left font-normal w-full'
+            className="justify-start text-left font-normal w-full"
           >
-            <Clock className='mr-2 h-4 w-4' />
+            <Clock className="mr-2 h-4 w-4" />
             {displayTime()}
           </Button>
         </div>
 
         {/* Checkbox for after/before time */}
-        <div className='flex items-center gap-1'>
+        <div className="flex items-center gap-1">
           <input
-            type='checkbox'
-            id='isAfterTime'
+            type="checkbox"
+            id="isAfterTime"
             checked={isAfterTime}
             onChange={e => onIsAfterTimeChange?.(e.target.checked)}
-            className='h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded'
+            className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
           />
           <label
-            htmlFor='isAfterTime'
-            className='text-sm text-foreground whitespace-nowrap'
+            htmlFor="isAfterTime"
+            className="text-sm text-foreground whitespace-nowrap"
           >
             {isAfterTime ? 'At/after time' : 'Before time'}
           </label>
@@ -183,84 +183,84 @@ export function TimePicker({
       </div>
 
       {isOpen && (
-        <div className='absolute top-full mt-1 left-0 z-50 bg-background border border-border rounded-lg shadow-lg p-4 min-w-[200px]'>
-          <div className='flex items-center justify-center gap-2'>
+        <div className="absolute top-full mt-1 left-0 z-50 bg-background border border-border rounded-lg shadow-lg p-4 min-w-[200px]">
+          <div className="flex items-center justify-center gap-2">
             {/* Hours Section */}
-            <div className='flex flex-col items-center'>
+            <div className="flex flex-col items-center">
               <Button
-                type='button'
-                variant='ghost'
-                size='sm'
+                type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => adjustHours('up')}
                 disabled={disabled}
-                className='h-8 w-8 p-0'
+                className="h-8 w-8 p-0"
               >
-                <ChevronUp className='h-4 w-4' />
+                <ChevronUp className="h-4 w-4" />
               </Button>
               <Input
-                type='text'
+                type="text"
                 value={hours}
                 onChange={handleHoursChange}
                 onBlur={() => setHours(hours.padStart(2, '0'))}
-                className='w-12 text-center text-lg font-mono'
+                className="w-12 text-center text-lg font-mono"
                 disabled={disabled}
                 maxLength={2}
               />
               <Button
-                type='button'
-                variant='ghost'
-                size='sm'
+                type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => adjustHours('down')}
                 disabled={disabled}
-                className='h-8 w-8 p-0'
+                className="h-8 w-8 p-0"
               >
-                <ChevronDown className='h-4 w-4' />
+                <ChevronDown className="h-4 w-4" />
               </Button>
             </div>
 
             {/* Separator */}
-            <div className='text-2xl font-bold'>:</div>
+            <div className="text-2xl font-bold">:</div>
 
             {/* Minutes Section */}
-            <div className='flex flex-col items-center'>
+            <div className="flex flex-col items-center">
               <Button
-                type='button'
-                variant='ghost'
-                size='sm'
+                type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => adjustMinutes('up')}
                 disabled={disabled}
-                className='h-8 w-8 p-0'
+                className="h-8 w-8 p-0"
               >
-                <ChevronUp className='h-4 w-4' />
+                <ChevronUp className="h-4 w-4" />
               </Button>
               <Input
-                type='text'
+                type="text"
                 value={minutes}
                 onChange={handleMinutesChange}
                 onBlur={() => setMinutes(minutes.padStart(2, '0'))}
-                className='w-12 text-center text-lg font-mono'
+                className="w-12 text-center text-lg font-mono"
                 disabled={disabled}
                 maxLength={2}
               />
               <Button
-                type='button'
-                variant='ghost'
-                size='sm'
+                type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => adjustMinutes('down')}
                 disabled={disabled}
-                className='h-8 w-8 p-0'
+                className="h-8 w-8 p-0"
               >
-                <ChevronDown className='h-4 w-4' />
+                <ChevronDown className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
           {/* Close button */}
-          <div className='mt-3 flex justify-end'>
+          <div className="mt-3 flex justify-end">
             <Button
-              type='button'
-              variant='outline'
-              size='sm'
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={() => setIsOpen(false)}
             >
               Done

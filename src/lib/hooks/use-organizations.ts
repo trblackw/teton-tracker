@@ -1,13 +1,9 @@
-import { useUser } from '@clerk/clerk-react';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { organizationsApi } from '../api/client';
-import type { ClerkOrganization } from '../schema';
+import { useUser } from '../auth-client';
 
 // Hook to get single organization for the current user (new single-org model)
-export function useUserOrganization(): UseQueryResult<
-  ClerkOrganization,
-  Error
-> {
+export function useUserOrganization(): UseQueryResult<any, Error> {
   const { user } = useUser();
 
   return useQuery({
@@ -78,13 +74,13 @@ export function useIsUserAdmin(orgId?: string) {
   if (orgId) {
     // Check specific organization
     return {
-      isAdmin: userRole?.role === 'org:admin',
+      isAdmin: userRole?.role === 'admin',
       isLoading: !userRole,
     };
   }
 
   // Check if admin in any organization
-  const isAdminInAnyOrg = (userOrg as any)?.role === 'org:admin' || false;
+  const isAdminInAnyOrg = (userOrg as any)?.role === 'admin' || false;
 
   return {
     isAdmin: isAdminInAnyOrg,

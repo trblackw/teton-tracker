@@ -1,12 +1,12 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect } from 'react';
-import type { ClerkOrganization } from '../schema';
+import type { Organization } from '../schema';
 import { useIsUserAdmin, useUserOrganization } from './use-organizations';
 
 interface UseNonAdminRedirectResult {
   isAdmin: boolean;
   isLoading: boolean;
-  organization: ClerkOrganization;
+  organization: Organization | null;
 }
 
 export function useNonAdminRedirect(
@@ -29,6 +29,6 @@ export function useNonAdminRedirect(
   return {
     isAdmin,
     isLoading,
-    organization: organization as ClerkOrganization,
+    organization: organization || null,
   };
 }

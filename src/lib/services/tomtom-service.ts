@@ -1,9 +1,9 @@
+import { buildApiUrl, isDevelopment } from '../environment';
 import {
   type TrafficData,
   transformTomTomToTrafficData,
   validateTrafficData,
 } from '../schema';
-import { buildApiUrl, isDevelopmentMode } from '../utils';
 
 // TomTom API configuration
 const TOMTOM_BASE_URL = 'https://api.tomtom.com';
@@ -39,7 +39,7 @@ function isRealApiEnabled(): boolean {
 
 // Determine if we should use mock data
 function shouldUseMockData(): boolean {
-  if (isDevelopmentMode()) {
+  if (isDevelopment()) {
     // In development, use mock data by default unless explicitly enabled
     return !isRealApiEnabled();
   }

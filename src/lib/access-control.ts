@@ -1,3 +1,5 @@
+import { initJSONResponse } from './api/api-tools';
+import { auth } from './auth';
 import { getDatabase } from './db';
 
 /**
@@ -8,12 +10,41 @@ import { getDatabase } from './db';
  * 2. Do they own the resource they're trying to access?
  */
 
-// Basic auth check
-export function requireAuth(userId: string | null | undefined): string {
-  if (!userId) {
+// Helper function to get current user from BetterAuth session
+export async function getCurrentUser(
+  request: Request
+): Promise<{ id: string; email: string; name: string } | null> {
+  try {
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    });
+
+    if (session?.user) {
+      return {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error getting current user:', error);
+    return null;
+  }
+}
+
+// Check if user is authenticated
+export async function requireAuth(
+  request: Request
+): Promise<{ id: string; email: string; name: string }> {
+  const user = await getCurrentUser(request);
+
+  if (!user) {
     throw new Error('Authentication required');
   }
-  return userId;
+
+  return user;
 }
 
 // Check if user owns a run
@@ -83,14 +114,11 @@ export function createErrorResponse(
     status = 403;
   }
 
-  return new Response(
-    JSON.stringify({
+  return initJSONResponse(
+    {
       error: message,
       type: 'access_error',
-    }),
-    {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    }
+    },
+    status
   );
 }

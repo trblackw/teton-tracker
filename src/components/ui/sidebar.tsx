@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/cn';
 import { AnimatePresence, motion } from 'framer-motion';
 import * as React from 'react';
 import { createContext, useContext } from 'react';

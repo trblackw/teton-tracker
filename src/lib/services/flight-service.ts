@@ -1,6 +1,6 @@
 import { getAirportDisplayName } from '../airport-codes';
+import { buildApiUrl, isDevelopment } from '../environment';
 import { type FlightStatus } from '../schema';
-import { buildApiUrl, isDevelopmentMode } from '../utils';
 
 // AviationStack API configuration
 const AVIATIONSTACK_BASE_URL = 'https://api.aviationstack.com/v1';
@@ -51,7 +51,7 @@ function isRealApiEnabled(): boolean {
 
 // Determine if we should use mock data
 function shouldUseMockData(): boolean {
-  if (isDevelopmentMode() && DEV_MODE.USE_MOCK_DATA_BY_DEFAULT) {
+  if (isDevelopment() && DEV_MODE.USE_MOCK_DATA_BY_DEFAULT) {
     // In development, use mock data by default unless explicitly enabled
     return !isRealApiEnabled();
   }

@@ -1,5 +1,4 @@
-// Check if we're in a browser environment
-const isBrowser = typeof window !== 'undefined' && typeof Image !== 'undefined';
+import { isBrowser } from './environment';
 
 // Simple image cache to avoid repeated network requests
 class ImageCache {
@@ -8,7 +7,7 @@ class ImageCache {
 
   async preloadImage(url: string): Promise<HTMLImageElement> {
     // Return early if not in browser environment
-    if (!isBrowser) {
+    if (!isBrowser() || typeof Image === 'undefined') {
       return Promise.reject(
         new Error('Image preloading not available during SSR')
       );
@@ -59,7 +58,7 @@ class ImageCache {
 
   async preloadImages(urls: string[]): Promise<HTMLImageElement[]> {
     // Return empty array if not in browser environment
-    if (!isBrowser) {
+    if (!isBrowser()) {
       return Promise.resolve([]);
     }
 
@@ -76,7 +75,7 @@ class ImageCache {
 
   getCachedImage(url: string): HTMLImageElement | null {
     // Return null if not in browser environment
-    if (!isBrowser) {
+    if (!isBrowser()) {
       return null;
     }
     return this.cache.get(url) || null;

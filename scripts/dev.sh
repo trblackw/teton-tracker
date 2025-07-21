@@ -38,12 +38,13 @@ kill_port 3001
 # Kill any bun processes that might be related to our project
 echo -e "${YELLOW}🧹 Cleaning up any lingering bun processes...${NC}"
 pkill -f "api-server.ts" 2>/dev/null || true
+pkill -f "dev-server.ts" 2>/dev/null || true
 pkill -f "index.html" 2>/dev/null || true
 
 # Wait a moment for cleanup
 sleep 2
 
-echo -e "${GREEN}🚀 Starting fresh development servers...${NC}"
+echo -e "${GREEN}🚀 Starting unified development server...${NC}"
 
-# Start the servers
-exec bun run src/api-server.ts & bun --hot index.html 
+# Start the unified development server (handles both frontend and API)
+exec bun run src/dev-server.ts 

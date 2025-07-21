@@ -1,4 +1,3 @@
-import type { Organization } from '@clerk/clerk-sdk-node';
 import { z } from 'zod';
 
 export const AIRLINE_CODE_REGEX = /^[A-Z]{1,3}[0-9]{1,4}[A-Z]?$/;
@@ -100,20 +99,46 @@ export const ThemeSchema = z.enum(['light', 'dark', 'system'], {
 });
 
 // User schema
-export const ClerkUserSchema = z.object({
+export const UserSchema = z.object({
   id: z.string().min(1, 'User ID is required'),
-  name: z.string().min(1, 'Name is required').optional(),
-  email: z.string().email('Invalid email address').optional(),
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Invalid email address'),
   phoneNumber: z.string().min(1, 'Phone number is required').optional(),
+  imageUrl: z.string().optional(),
+  emailVerifiedAt: z.date().optional(), // TIMESTAMP for when email was verified
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
-  imageUrl: z.string().optional(),
 });
 
-export type ClerkUserRole = 'admin' | 'driver';
+export type UserRole = 'admin' | 'driver';
 
-export interface ClerkOrganization extends Organization {
-  readonly role: ClerkUserRole;
+// Organization schema (simplified)
+export const OrganizationSchema = z.object({
+  id: z.string().min(1, 'Organization ID is required'),
+  name: z.string().min(1, 'Organization name is required'),
+  imageUrl: z.string().optional(),
+  createdBy: z.string().min(1, 'Creator ID is required'),
+  createdAt: z.date().optional(),
+});
+
+// Organization membership schema
+export const OrganizationMembershipSchema = z.object({
+  id: z.string().min(1, 'Membership ID is required'),
+  organizationId: z.string().min(1, 'Organization ID is required'),
+  userId: z.string().min(1, 'User ID is required'),
+  role: z.enum(['admin', 'driver']).default('driver'),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+// Organization with user role (for frontend use)
+export interface OrganizationWithRole {
+  id: string;
+  name: string;
+  imageUrl?: string;
+  createdBy: string;
+  createdAt?: Date;
+  role: UserRole; // User's role in this organization
 }
 
 export enum ReportType {
@@ -458,7 +483,11 @@ export const TomTomRouteResponseSchema = z.object({
 });
 
 // Utility types (inferred from schemas)
-export type ClerkUser = z.infer<typeof ClerkUserSchema>;
+export type User = z.infer<typeof UserSchema>;
+export type Organization = z.infer<typeof OrganizationSchema>;
+export type OrganizationMembership = z.infer<
+  typeof OrganizationMembershipSchema
+>;
 export type UserPreferences = z.infer<typeof UserPreferencesSchema>;
 export type NotificationPreferences = z.infer<
   typeof NotificationPreferencesSchema
@@ -482,8 +511,8 @@ export type Report = z.infer<typeof ReportSchema>;
 export type ReportColumnConfig = ReportTemplate['columnConfig'][0];
 
 // Validation helper functions
-export const validateUser = (data: unknown): ClerkUser => {
-  return ClerkUserSchema.parse(data);
+export const validateUser = (data: unknown): User => {
+  return UserSchema.parse(data);
 };
 
 export const validateUserPreferences = (data: unknown): UserPreferences => {
@@ -518,7 +547,7 @@ export const validateReportTemplateForm = (
 
 // Safe validation functions (return results instead of throwing)
 export const safeValidateUser = (data: unknown) => {
-  return ClerkUserSchema.safeParse(data);
+  return UserSchema.safeParse(data);
 };
 
 export const safeValidateUserPreferences = (data: unknown) => {

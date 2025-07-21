@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/cn';
 import * as React from 'react';
 import { useUserOrganization } from '../../lib/hooks/use-organizations';
 import IconSidebar from '../../lib/icons/icon-sidebar';

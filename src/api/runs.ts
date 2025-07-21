@@ -3,7 +3,8 @@ import {
   createErrorResponse,
   requireAuth,
 } from '../lib/access-control';
-import { clerk } from '../lib/api/clerk-client';
+import { initJSONResponse } from '../lib/api/api-tools';
+import { getDatabase } from '../lib/db/index';
 import {
   createRun,
   deleteRun,
@@ -14,41 +15,46 @@ import {
 } from '../lib/db/runs';
 import { type NewRunForm, type Run, type RunStatus } from '../lib/schema';
 
-// Helper function to get all organization member user IDs for an admin
+// Helper function to get all organization member user IDs for an admin using BetterAuth tables
 async function getOrganizationMemberIds(
   adminUserId: string
 ): Promise<string[]> {
   try {
-    // Get admin's organization memberships
-    const adminOrgMemberships = await clerk.users.getOrganizationMembershipList(
-      {
-        userId: adminUserId,
-      }
+    const db = getDatabase();
+
+    // Get admin's organization memberships from our database
+    const adminMemberships = await db.query(
+      `SELECT organization_id, role 
+       FROM organization_memberships 
+       WHERE user_id = $1`,
+      [adminUserId]
     );
 
-    if (adminOrgMemberships.data.length === 0) {
+    if (adminMemberships.rows.length === 0) {
       return [];
     }
 
-    // Get the organization (assuming single org model)
-    const orgId = adminOrgMemberships.data[0].organization.id;
+    // Find the first organization where user has admin role
+    const adminMembership = adminMemberships.rows.find(
+      row => row.role === 'admin'
+    );
 
-    // Check if admin has admin role in the organization
-    const adminRole = adminOrgMemberships.data[0].role;
-    if (adminRole !== 'org:admin') {
+    if (!adminMembership) {
       throw new Error('Access denied: Admin role required');
     }
 
-    // Get all organization members
-    const orgMemberships =
-      await clerk.organizations.getOrganizationMembershipList({
-        organizationId: orgId,
-      });
+    const orgId = adminMembership.organization_id;
+
+    // Get all organization members from our database
+    const orgMembers = await db.query(
+      `SELECT user_id 
+       FROM organization_memberships 
+       WHERE organization_id = $1`,
+      [orgId]
+    );
 
     // Return all member user IDs
-    return orgMemberships.data.map(
-      (membership: any) => membership.publicUserData.userId
-    );
+    return orgMembers.rows.map(row => row.user_id);
   } catch (error) {
     console.error('Error fetching organization members:', error);
     throw error;
@@ -58,26 +64,14 @@ async function getOrganizationMemberIds(
 // GET /api/runs/organization - Admin-only endpoint to get runs for all org members
 export async function getOrganizationRuns(request: Request): Promise<Response> {
   try {
-    const url = new URL(request.url);
-    const adminUserId = url.searchParams.get('userId');
-
-    if (!adminUserId) {
-      return new Response(
-        JSON.stringify({ error: 'Admin user ID is required' }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-    }
+    // Validate auth and get user from session
+    const user = await requireAuth(request);
 
     // Get all organization member user IDs (includes admin check)
-    const memberUserIds = await getOrganizationMemberIds(adminUserId);
+    const memberUserIds = await getOrganizationMemberIds(user.id);
 
     if (memberUserIds.length === 0) {
-      return new Response(JSON.stringify([]), {
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return initJSONResponse([]);
     }
 
     // Fetch runs for all organization members
@@ -95,9 +89,7 @@ export async function getOrganizationRuns(request: Request): Promise<Response> {
         new Date(a.scheduledTime).getTime()
     );
 
-    return new Response(JSON.stringify(flattenedRuns), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return initJSONResponse(flattenedRuns);
   } catch (error) {
     console.error('Error fetching organization runs:', error);
     return createErrorResponse(
@@ -112,16 +104,10 @@ export async function getOrganizationRuns(request: Request): Promise<Response> {
 // GET /api/runs
 export async function GET(request: Request): Promise<Response> {
   try {
+    // Validate auth and get user from session
+    const user = await requireAuth(request);
+
     const url = new URL(request.url);
-    const userId = url.searchParams.get('userId');
-
-    if (!userId) {
-      return new Response(JSON.stringify({ error: 'User ID is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
     const statusParam = url.searchParams.get('status');
     const status = statusParam
       ? (statusParam.split(',') as RunStatus[])
@@ -144,7 +130,7 @@ export async function GET(request: Request): Promise<Response> {
         : undefined;
 
     const query: RunsQuery = {
-      createdById: userId, // This ensures we only get runs created by the authenticated user
+      createdById: user.id, // Use authenticated user's ID
       status,
       limit,
       offset,
@@ -154,79 +140,54 @@ export async function GET(request: Request): Promise<Response> {
 
     const runs = await getRuns(query);
 
-    return new Response(JSON.stringify(runs), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return initJSONResponse(runs);
   } catch (error) {
     console.error('Failed to get runs:', error);
-    return new Response(JSON.stringify({ error: 'Failed to get runs' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return initJSONResponse({ error: 'Failed to get runs' }, 500);
   }
 }
 
 // POST /api/runs
 export async function POST(request: Request): Promise<Response> {
   try {
+    // Validate auth and get user from session
+    const user = await requireAuth(request);
+
     const body = await request.json();
-    const { runData, userId } = body as {
+    const { runData } = body as {
       runData: NewRunForm;
-      userId: string;
     };
 
-    if (!userId) {
-      return new Response(JSON.stringify({ error: 'User ID is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    // Create run for the authenticated user
+    const run = await createRun(runData, user.id);
 
-    // For creation, we don't need access control validation since the user is creating their own resource
-    const run = await createRun(runData, userId);
-
-    return new Response(JSON.stringify(run), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return initJSONResponse(run, 201);
   } catch (error) {
     console.error('Failed to create run:', error);
-    return new Response(JSON.stringify({ error: 'Failed to create run' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return initJSONResponse({ error: 'Failed to create run' }, 500);
   }
 }
 
 // PUT /api/runs
 export async function PUT(request: Request): Promise<Response> {
   try {
+    // Validate auth and get user from session
+    const user = await requireAuth(request);
+
     const body = await request.json();
-    const { action, id, status, userId } = body as {
+    const { action, id, status } = body as {
       action: string;
       id: string;
       status: any;
-      userId: string;
     };
 
-    if (!userId) {
-      return new Response(JSON.stringify({ error: 'User ID is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
     if (!id) {
-      return new Response(JSON.stringify({ error: 'Run ID is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return initJSONResponse({ error: 'Run ID is required' }, 400);
     }
 
     // Validate that the user owns this run before allowing updates
     try {
-      const authUserId = requireAuth(userId);
-      await checkRunOwnership(id, authUserId);
+      await checkRunOwnership(id, user.id);
     } catch (error) {
       return createErrorResponse(
         error instanceof Error ? error : new Error(String(error))
@@ -249,7 +210,7 @@ export async function PUT(request: Request): Promise<Response> {
 
         // Calculate actual duration if the run was previously activated
         try {
-          const currentRun = await getRunById(id, userId);
+          const currentRun = await getRunById(id, user.id);
           if (currentRun?.activatedAt) {
             const activatedTime = new Date(currentRun.activatedAt).getTime();
             const completedTime = updateData.completedAt.getTime();
@@ -263,68 +224,46 @@ export async function PUT(request: Request): Promise<Response> {
         }
       }
 
-      const updatedRun = await updateRun(id, updateData, userId);
+      const updatedRun = await updateRun(id, updateData, user.id);
       const success = updatedRun !== null;
 
-      return new Response(JSON.stringify({ success, updatedRun }), {
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return initJSONResponse({ success, updatedRun });
     }
 
-    return new Response(JSON.stringify({ error: 'Invalid action' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return initJSONResponse({ error: 'Invalid action' }, 400);
   } catch (error) {
     console.error('Failed to update run:', error);
-    return new Response(JSON.stringify({ error: 'Failed to update run' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return initJSONResponse({ error: 'Failed to update run' }, 500);
   }
 }
 
 // DELETE /api/runs/:id
 export async function DELETE(request: Request): Promise<Response> {
   try {
+    // Validate auth and get user from session
+    const user = await requireAuth(request);
+
     const url = new URL(request.url);
     const id = url.pathname.split('/').pop();
-    const userId = url.searchParams.get('userId');
 
     if (!id) {
-      return new Response(JSON.stringify({ error: 'Missing run ID' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    if (!userId) {
-      return new Response(JSON.stringify({ error: 'User ID is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return initJSONResponse({ error: 'Missing run ID' }, 400);
     }
 
     // Validate that the user owns this run before allowing deletion
     try {
-      const authUserId = requireAuth(userId);
-      await checkRunOwnership(id, authUserId);
+      await checkRunOwnership(id, user.id);
     } catch (error) {
       return createErrorResponse(
         error instanceof Error ? error : new Error(String(error))
       );
     }
 
-    const success = await deleteRun(id, userId);
+    const success = await deleteRun(id, user.id);
 
-    return new Response(JSON.stringify({ success }), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return initJSONResponse({ success });
   } catch (error) {
     console.error('Failed to delete run:', error);
-    return new Response(JSON.stringify({ error: 'Failed to delete run' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return initJSONResponse({ error: 'Failed to delete run' }, 500);
   }
 }

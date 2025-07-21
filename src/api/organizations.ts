@@ -1,119 +1,79 @@
-import { createClerkClient } from '@clerk/clerk-sdk-node';
+import { getCurrentUser } from '../lib/access-control';
+import { initJSONResponse } from '../lib/api/api-tools';
+import {
+  getOrganizationById,
+  getOrganizationMembers as getOrgMembers,
+  getUserOrganizations,
+  getUserRoleInOrganization,
+} from '../lib/db/organizations';
 
-// Initialize Clerk with secret key
-if (!process.env.CLERK_SECRET_KEY) {
-  console.error('❌ CLERK_SECRET_KEY environment variable is required');
-  throw new Error('CLERK_SECRET_KEY environment variable is required');
-}
+console.log('✅ Organizations API initialized with BetterAuth');
 
-// Create Clerk client instance with explicit secret key
-const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+// Helper function to handle organization API errors
+function handleOrganizationError(error: any, operation: string): Response {
+  console.error(`❌ Organization API error in ${operation}:`, error);
 
-console.log('✅ Clerk organizations API initialized with secret key');
-
-// Helper function to handle Clerk API errors
-function handleClerkError(error: any, operation: string): Response {
-  console.error(`❌ Clerk API error in ${operation}:`, {
-    status: error.status,
-    message: error.message,
-    clerkTraceId: error.clerkTraceId,
-  });
-
-  // Return appropriate error response based on status
-  if (error.status === 401) {
-    return new Response(
-      JSON.stringify({
-        error: 'Authentication failed. Please check your Clerk secret key.',
-        details: 'The Clerk secret key is missing or invalid.',
-      }),
+  if (error.message.includes('Authentication required')) {
+    return initJSONResponse(
       {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      }
+        error: 'Authentication required',
+        details: 'Please sign in to access organization data.',
+      },
+      401
     );
   }
 
-  if (error.status === 403) {
-    return new Response(
-      JSON.stringify({
-        error:
-          'Access forbidden. Organizations may not be enabled in your Clerk application.',
-        details: 'Enable organizations in your Clerk dashboard.',
-      }),
+  if (error.message.includes('Access denied')) {
+    return initJSONResponse(
       {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' },
-      }
+        error: 'Access denied',
+        details: 'You do not have permission to access this organization.',
+      },
+      403
     );
   }
 
-  return new Response(
-    JSON.stringify({
-      error: `Clerk API error: ${error.message}`,
-      status: error.status,
-    }),
+  return initJSONResponse(
     {
-      status: error.status || 500,
-      headers: { 'Content-Type': 'application/json' },
-    }
+      error: `Organization API error: ${error.message}`,
+    },
+    500
   );
 }
 
 // GET /api/organizations - Get all organizations for the current user
 export async function GET(request: Request): Promise<Response> {
   try {
-    const url = new URL(request.url);
+    // Get current user from BetterAuth session
+    const currentUser = await getCurrentUser(request);
 
-    const userId = url.searchParams.get('userId');
-
-    if (!userId) {
-      return new Response(JSON.stringify({ error: 'User ID is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    if (!currentUser) {
+      return initJSONResponse({ error: 'Authentication required' }, 401);
     }
 
-    console.log(`🔍 Fetching organizations for user: ${userId}`);
+    // Get user's organizations from our database
+    const userOrganizations = await getUserOrganizations(currentUser.id);
 
-    // Get user's organization memberships from Clerk
-    const organizationMemberships =
-      await clerk.users.getOrganizationMembershipList({
-        userId,
-      });
+    // Transform data to match expected API format
+    const transformedOrganizations = userOrganizations.map(org => ({
+      id: org.id,
+      name: org.name,
+      slug: org.name.toLowerCase().replace(/\s+/g, '-'), // Generate slug from name
+      imageUrl: org.imageUrl,
+      role: org.userRole,
+      permissions: org.userRole === 'admin' ? ['admin'] : ['member'], // Simplified permissions
+      createdAt: org.createdAt,
+      updatedAt: org.createdAt, // We don't track updatedAt separately yet
+      membershipId: `${org.id}-${currentUser.id}`, // Generate membership ID
+      membershipCreatedAt: org.createdAt,
+      membershipUpdatedAt: org.createdAt,
+      memberCount: org.memberCount,
+    }));
 
-    console.log(
-      `✅ Found ${organizationMemberships.data.length} organization memberships`
-    );
-
-    // Transform the data to include organization details and roles
-    const userOrganizations = await Promise.all(
-      organizationMemberships.data.map(async (membership: any) => {
-        const organization = await clerk.organizations.getOrganization({
-          organizationId: membership.organization.id,
-        });
-
-        return {
-          id: organization.id,
-          name: organization.name,
-          slug: organization.slug,
-          imageUrl: organization.imageUrl,
-          role: membership.role,
-          permissions: membership.permissions,
-          createdAt: organization.createdAt,
-          updatedAt: organization.updatedAt,
-          membershipId: membership.id,
-          membershipCreatedAt: membership.createdAt,
-          membershipUpdatedAt: membership.updatedAt,
-        };
-      })
-    );
-
-    return new Response(JSON.stringify(userOrganizations), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return initJSONResponse(transformedOrganizations);
   } catch (error: any) {
     console.error('Failed to get user organizations:', error);
-    return handleClerkError(error, 'getUserOrganizations');
+    return handleOrganizationError(error, 'getUserOrganizations');
   }
 }
 
@@ -122,166 +82,118 @@ export async function getOrganizationMembers(
   request: Request
 ): Promise<Response> {
   try {
-    const url = new URL(request.url);
     const orgId = (request as any).params?.orgId;
-    const requestingUserId = url.searchParams.get('userId');
 
     if (!orgId) {
-      return new Response(
-        JSON.stringify({ error: 'Organization ID is required' }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
+      return initJSONResponse({ error: 'Organization ID is required' }, 400);
     }
 
-    if (!requestingUserId) {
-      return new Response(JSON.stringify({ error: 'User ID is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    // Get current user from BetterAuth session
+    const currentUser = await getCurrentUser(request);
+
+    if (!currentUser) {
+      return initJSONResponse({ error: 'Authentication required' }, 401);
     }
 
     // Check if the requesting user is a member of the organization
-    const userMembershipList = await clerk.organizations
-      .getOrganizationMembershipList({
-        organizationId: orgId,
-      })
-      .catch(() => null);
+    const userRole = await getUserRoleInOrganization(currentUser.id, orgId);
 
-    const userMembership = userMembershipList?.data.find(
-      (m: any) => m.publicUserData.userId === requestingUserId
-    );
-
-    if (!userMembership) {
-      return new Response(
-        JSON.stringify({
-          error: 'Access denied. User is not a member of this organization.',
-        }),
+    if (!userRole) {
+      return initJSONResponse(
         {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' },
-        }
+          error: 'Access denied. User is not a member of this organization.',
+        },
+        403
       );
     }
 
     // Get organization details and all members
-    const [organization, memberships] = await Promise.all([
-      clerk.organizations.getOrganization({ organizationId: orgId }),
-      clerk.organizations.getOrganizationMembershipList({
-        organizationId: orgId,
-      }),
+    const [organization, members] = await Promise.all([
+      getOrganizationById(orgId),
+      getOrgMembers(orgId),
     ]);
 
-    // Transform member data
-    const members = await Promise.all(
-      memberships.data.map(async (membership: any) => {
-        const user = await clerk.users.getUser(
-          membership.publicUserData.userId
-        );
+    if (!organization) {
+      return initJSONResponse({ error: 'Organization not found' }, 404);
+    }
 
-        return {
-          userId: user.id,
-          email: user.emailAddresses[0]?.emailAddress || null,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          imageUrl: user.imageUrl,
-          role: membership.role,
-          permissions: membership.permissions,
-          membershipId: membership.id,
-          membershipCreatedAt: membership.createdAt,
-          membershipUpdatedAt: membership.updatedAt,
-        };
-      })
-    );
+    // Transform member data to match expected format
+    const transformedMembers = members.map(member => ({
+      userId: member.id,
+      email: member.email,
+      firstName: member.name.split(' ')[0] || member.name,
+      lastName: member.name.split(' ').slice(1).join(' ') || '',
+      imageUrl: null, // We don't store imageUrl in user table yet
+      role: member.role,
+      permissions: member.role === 'admin' ? ['admin'] : ['member'],
+      membershipId: `${orgId}-${member.id}`,
+      membershipCreatedAt: member.joinedAt,
+      membershipUpdatedAt: member.joinedAt,
+    }));
 
     const response = {
       organization: {
         id: organization.id,
         name: organization.name,
-        slug: organization.slug,
+        slug: organization.name.toLowerCase().replace(/\s+/g, '-'),
         imageUrl: organization.imageUrl,
         createdAt: organization.createdAt,
-        updatedAt: organization.updatedAt,
+        updatedAt: organization.createdAt,
       },
-      members,
-      requestingUserRole: userMembership.role,
+      members: transformedMembers,
+      requestingUserRole: userRole,
     };
 
-    return new Response(JSON.stringify(response), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return initJSONResponse(response);
   } catch (error: any) {
     console.error('Failed to get organization members:', error);
-    return handleClerkError(error, 'getOrganizationMembers');
+    return handleOrganizationError(error, 'getOrganizationMembers');
   }
 }
 
 // GET /api/organizations/:orgId/user-role - Get user's role in a specific organization
 export async function getUserRole(request: Request): Promise<Response> {
   try {
-    const url = new URL(request.url);
     const orgId = (request as any).params?.orgId;
-    const userId = url.searchParams.get('userId');
 
     if (!orgId) {
-      return new Response(
-        JSON.stringify({ error: 'Organization ID is required' }),
+      return initJSONResponse({ error: 'Organization ID is required' }, 400);
+    }
+
+    // Get current user from BetterAuth session
+    const currentUser = await getCurrentUser(request);
+
+    if (!currentUser) {
+      return initJSONResponse({ error: 'Authentication required' }, 401);
+    }
+
+    // Get user's role in the organization
+    const userRole = await getUserRoleInOrganization(currentUser.id, orgId);
+
+    if (!userRole) {
+      return initJSONResponse(
         {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    if (!userId) {
-      return new Response(JSON.stringify({ error: 'User ID is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Get user's membership in the organization
-    const membershipList = await clerk.organizations
-      .getOrganizationMembershipList({
-        organizationId: orgId,
-      })
-      .catch(() => null);
-
-    const membership = membershipList?.data.find(
-      (m: any) => m.publicUserData.userId === userId
-    );
-
-    if (!membership) {
-      return new Response(
-        JSON.stringify({
           error: 'User is not a member of this organization',
           isMember: false,
           role: null,
-        }),
-        {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' },
-        }
+        },
+        404
       );
     }
 
     const response = {
       isMember: true,
-      role: membership.role,
-      permissions: membership.permissions,
-      membershipId: membership.id,
-      membershipCreatedAt: membership.createdAt,
-      membershipUpdatedAt: membership.updatedAt,
+      role: userRole,
+      permissions: userRole === 'admin' ? ['admin'] : ['member'],
+      membershipId: `${orgId}-${currentUser.id}`,
+      membershipCreatedAt: new Date(), // We'd need to query this separately if needed
+      membershipUpdatedAt: new Date(),
     };
 
-    return new Response(JSON.stringify(response), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return initJSONResponse(response);
   } catch (error: any) {
     console.error('Failed to get user role:', error);
-    return handleClerkError(error, 'getUserRole');
+    return handleOrganizationError(error, 'getUserRole');
   }
 }
 
@@ -290,60 +202,58 @@ export async function checkPermissions(request: Request): Promise<Response> {
   try {
     const url = new URL(request.url);
     const orgId = url.searchParams.get('orgId');
-    const userId = url.searchParams.get('userId');
     const permission = url.searchParams.get('permission');
 
-    if (!orgId || !userId || !permission) {
-      return new Response(
-        JSON.stringify({
-          error: 'Organization ID, User ID, and permission are required',
-        }),
+    if (!orgId || !permission) {
+      return initJSONResponse(
         {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
+          error: 'Organization ID and permission are required',
+        },
+        400
       );
     }
 
-    // Get user's membership in the organization
-    const membershipList = await clerk.organizations
-      .getOrganizationMembershipList({
-        organizationId: orgId,
-      })
-      .catch(() => null);
+    // Get current user from BetterAuth session
+    const currentUser = await getCurrentUser(request);
 
-    const membership = membershipList?.data.find(
-      (m: any) => m.publicUserData.userId === userId
-    );
-
-    if (!membership) {
-      return new Response(
-        JSON.stringify({
+    if (!currentUser) {
+      return initJSONResponse(
+        {
           hasPermission: false,
           isMember: false,
           role: null,
-        }),
-        {
-          headers: { 'Content-Type': 'application/json' },
-        }
+        },
+        401
       );
     }
 
-    // Check if user has the specific permission
-    const hasPermission = membership.permissions.includes(permission);
+    // Get user's role in the organization
+    const userRole = await getUserRoleInOrganization(currentUser.id, orgId);
+
+    if (!userRole) {
+      return initJSONResponse(
+        {
+          hasPermission: false,
+          isMember: false,
+          role: null,
+        },
+        403
+      );
+    }
+
+    // Simple permission check - admins have all permissions, others have basic member permissions
+    const hasPermission = userRole === 'admin' || permission === 'member';
 
     const response = {
       hasPermission,
       isMember: true,
-      role: membership.role,
-      permissions: membership.permissions,
+      role: userRole,
+      permissions: userRole === 'admin' ? ['admin'] : ['member'],
     };
 
-    return new Response(JSON.stringify(response), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return initJSONResponse(response);
   } catch (error: any) {
     console.error('Failed to check permissions:', error);
-    return handleClerkError(error, 'checkPermissions');
+    return handleOrganizationError(error, 'checkPermissions');
   }
 }

@@ -1,5 +1,5 @@
+import { cn } from '@/lib/cn';
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
-import { cn } from '../../lib/utils';
 import { Button } from './button';
 
 interface NavigationArrowProps {

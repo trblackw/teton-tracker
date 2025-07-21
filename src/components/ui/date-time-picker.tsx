@@ -1,7 +1,7 @@
+import { cn } from '@/lib/cn';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import * as React from 'react';
-import { cn } from '../../lib/utils';
 import { Button } from './button';
 import { Calendar } from './calendar';
 import { Input } from './input';
@@ -56,11 +56,11 @@ export function DateTimePicker({
   };
 
   return (
-    <div className='flex gap-2'>
+    <div className="flex gap-2">
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
           <Button
-            variant='outline'
+            variant="outline"
             className={cn(
               'flex-1 justify-start text-left font-normal',
               !selectedDate && 'text-muted-foreground',
@@ -68,13 +68,13 @@ export function DateTimePicker({
             )}
             disabled={disabled}
           >
-            <CalendarIcon className='mr-2 h-4 w-4' />
+            <CalendarIcon className="mr-2 h-4 w-4" />
             {selectedDate ? format(selectedDate, 'PPP') : 'Pick a date'}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className='w-auto p-0' align='start'>
+        <PopoverContent className="w-auto p-0" align="start">
           <Calendar
-            mode='single'
+            mode="single"
             selected={selectedDate}
             onSelect={handleDateSelect}
             initialFocus
@@ -82,12 +82,12 @@ export function DateTimePicker({
         </PopoverContent>
       </Popover>
 
-      <div className='relative'>
+      <div className="relative">
         <Input
-          type='time'
+          type="time"
           value={timeValue}
           onChange={e => handleTimeChange(e.target.value)}
-          className='w-35 flex-shrink-0'
+          className="w-35 flex-shrink-0"
           disabled={disabled}
         />
       </div>

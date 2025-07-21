@@ -1,7 +1,7 @@
 import { notificationsApi, preferencesApi, smsApi } from '../api/client';
+import { isBrowser, isDevelopment } from '../environment';
 import { type NotificationType as DbNotificationType } from '../schema';
 import { toasts } from '../toast';
-import { isDevelopmentMode } from '../utils';
 
 // Notification types
 export type NotificationType =
@@ -114,7 +114,7 @@ export class NotificationService {
   private static instance: NotificationService;
   private registration: ServiceWorkerRegistration | null = null;
   private pushSubscription: PushSubscription | null = null;
-  private debug = isDevelopmentMode();
+  private debug = isDevelopment();
   private messageHandlers: Map<
     string,
     (message: ServiceWorkerMessage) => void
@@ -219,7 +219,7 @@ export class NotificationService {
   private handleNavigate(message: ServiceWorkerMessage): void {
     if (message.url) {
       // Use router navigation if available, otherwise fallback to location
-      if (typeof window !== 'undefined') {
+      if (isBrowser()) {
         window.location.hash = message.url;
       }
     }
@@ -392,7 +392,7 @@ export class NotificationService {
     try {
       // For development, we'll use a mock VAPID key
       // In production, you'd use your actual VAPID public key
-      const publicKey = isDevelopmentMode()
+      const publicKey = isDevelopment()
         ? 'BNNtMcQwuAF6WOYJHuMqrUZFPVUu0ZkxQDa8mDfmZgC1YpN6X7K3lPGpXBXhk6_aWiPWQ7Gn_WQ4F3Y6N8eQHVA'
         : process.env.VAPID_PUBLIC_KEY;
 
@@ -451,7 +451,7 @@ export class NotificationService {
     await this.sendSMSNotification(notification);
 
     // In development mode, show mock notifications
-    if (isDevelopmentMode()) {
+    if (isDevelopment()) {
       this.showMockNotification(notification);
       return;
     }
@@ -1030,7 +1030,7 @@ export class NotificationService {
 export const notificationService = NotificationService.getInstance();
 
 // Development testing helper - attach to window in dev mode
-if (isDevelopmentMode() && typeof window !== 'undefined') {
+if (isDevelopment() && typeof window !== 'undefined') {
   (window as any).testNotifications = {
     // Test basic notification
     test: () => notifications.test(),
