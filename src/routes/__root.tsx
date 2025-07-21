@@ -44,6 +44,7 @@ import {
 import { UserProfilePopover } from '../components/user-profile-popover';
 import { AppContextProvider } from '../lib/AppContextProvider';
 import { useUserOrganization } from '../lib/auth-client';
+import { isDevelopment } from '../lib/environment';
 import { useCurrentRunsCount } from '../lib/hooks/use-current-runs-count';
 import { useMobile } from '../lib/hooks/use-mobile';
 import { queryClient } from '../lib/react-query-client';
@@ -129,6 +130,7 @@ function AdminNavItems() {
   // Simple admin check based on user's role in organization
   const isAdmin =
     organization?.members?.some((member: any) => member.role === 'admin') ||
+    isDevelopment() ||
     false;
 
   if (!isAdmin) {
@@ -152,6 +154,18 @@ function AdminNavItems() {
         >
           <Users className="h-4 w-4" />
           Drivers
+        </MobileAwareNavLink>
+      </Button>
+      <Button asChild variant="ghost" className="w-full justify-start">
+        <MobileAwareNavLink
+          to="/organization"
+          className="flex items-center gap-2"
+          activeProps={{
+            className: activeNavClass,
+          }}
+        >
+          <Building2 className="h-4 w-4" />
+          Organization
         </MobileAwareNavLink>
       </Button>
       <Button asChild variant="ghost" className="w-full justify-start">

@@ -98,48 +98,8 @@ export const ThemeSchema = z.enum(['light', 'dark', 'system'], {
   errorMap: () => ({ message: 'Theme must be light, dark, or system' }),
 });
 
-// User schema
-export const UserSchema = z.object({
-  id: z.string().min(1, 'User ID is required'),
-  name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Invalid email address'),
-  phoneNumber: z.string().min(1, 'Phone number is required').optional(),
-  imageUrl: z.string().optional(),
-  emailVerifiedAt: z.date().optional(), // TIMESTAMP for when email was verified
-  createdAt: z.date().optional(),
-  updatedAt: z.date().optional(),
-});
-
-export type UserRole = 'admin' | 'driver';
-
-// Organization schema (simplified)
-export const OrganizationSchema = z.object({
-  id: z.string().min(1, 'Organization ID is required'),
-  name: z.string().min(1, 'Organization name is required'),
-  imageUrl: z.string().optional(),
-  createdBy: z.string().min(1, 'Creator ID is required'),
-  createdAt: z.date().optional(),
-});
-
-// Organization membership schema
-export const OrganizationMembershipSchema = z.object({
-  id: z.string().min(1, 'Membership ID is required'),
-  organizationId: z.string().min(1, 'Organization ID is required'),
-  userId: z.string().min(1, 'User ID is required'),
-  role: z.enum(['admin', 'driver']).default('driver'),
-  createdAt: z.date().optional(),
-  updatedAt: z.date().optional(),
-});
-
-// Organization with user role (for frontend use)
-export interface OrganizationWithRole {
-  id: string;
-  name: string;
-  imageUrl?: string;
-  createdBy: string;
-  createdAt?: Date;
-  role: UserRole; // User's role in this organization
-}
+// Note: User and Organization schemas are now provided by BetterAuth
+// Import them from '../auth' if needed: import type { User, Session } from '../auth';
 
 export enum ReportType {
   flight = 'flight',
@@ -314,7 +274,7 @@ export const NotificationSchema = z.object({
 // Main data model schemas
 export const RunSchema = z.object({
   id: z.string().uuid('Invalid run ID format'),
-  createdById: z.string().min(1, 'Created by ID is required'), // Must reference a Clerk user with admin role
+  createdById: z.string().min(1, 'Created by ID is required'), // Must reference a BetterAuth user with admin role
   organizationId: z.string().min(1, 'Organization ID is required'), // Must reference the admin user's organization
   reportTemplateId: z.string().uuid('Invalid report template ID format'),
   reservationId: z
@@ -481,12 +441,7 @@ export const TomTomRouteResponseSchema = z.object({
   ),
 });
 
-// Utility types (inferred from schemas)
-export type User = z.infer<typeof UserSchema>;
-export type Organization = z.infer<typeof OrganizationSchema>;
-export type OrganizationMembership = z.infer<
-  typeof OrganizationMembershipSchema
->;
+// Utility types (inferred from schemas) - BetterAuth types should be imported from auth.ts
 export type UserPreferences = z.infer<typeof UserPreferencesSchema>;
 export type NotificationPreferences = z.infer<
   typeof NotificationPreferencesSchema
@@ -509,11 +464,7 @@ export type ReportTemplateForm = z.infer<typeof ReportTemplateFormSchema>;
 export type Report = z.infer<typeof ReportSchema>;
 export type ReportColumnConfig = ReportTemplate['columnConfig'][0];
 
-// Validation helper functions
-export const validateUser = (data: unknown): User => {
-  return UserSchema.parse(data);
-};
-
+// Validation helper functions - removed user and organization validation as BetterAuth handles these
 export const validateUserPreferences = (data: unknown): UserPreferences => {
   return UserPreferencesSchema.parse(data);
 };
@@ -544,11 +495,7 @@ export const validateReportTemplateForm = (
   return ReportTemplateFormSchema.parse(data);
 };
 
-// Safe validation functions (return results instead of throwing)
-export const safeValidateUser = (data: unknown) => {
-  return UserSchema.safeParse(data);
-};
-
+// Safe validation functions (return results instead of throwing) - removed user and organization validation
 export const safeValidateUserPreferences = (data: unknown) => {
   return UserPreferencesSchema.safeParse(data);
 };

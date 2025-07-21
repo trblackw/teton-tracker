@@ -103,9 +103,6 @@ export async function GET(request: Request): Promise<Response> {
   try {
     const [user, response] = await getCurrentAuthUser(request);
 
-    console.log('🚀 ~ GET ~ response:', response);
-    console.log('🚀 ~ GET ~ user:', user);
-
     if (response && response.status !== 200) {
       return response;
     }

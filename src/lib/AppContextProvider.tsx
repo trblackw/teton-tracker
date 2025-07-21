@@ -1,6 +1,6 @@
-import { createContext, useContext } from 'react';
+import React, { createContext, useContext } from 'react';
+import { type User } from './auth';
 import { useCurrentUserData } from './hooks/use-user';
-import { type User } from './schema';
 
 // Use the inferred type from our existing UserSchema - single source of truth
 

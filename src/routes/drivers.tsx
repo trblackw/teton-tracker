@@ -27,8 +27,8 @@ import {
 } from '../components/ui/select';
 import { StickyHeader } from '../components/ui/sticky-header';
 import { useAppContext } from '../lib/AppContextProvider';
+import type { User } from '../lib/auth';
 import { useNonAdminRedirect } from '../lib/hooks/use-non-admin-redirect';
-import type { User } from '../lib/schema';
 
 export const Route = createFileRoute('/drivers')({
   component: DriversPage,
