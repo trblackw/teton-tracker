@@ -1,25 +1,30 @@
 import { betterAuth } from 'better-auth';
+import { Pool } from 'pg';
 import { getBetterAuthUrl } from './api/api-tools';
-import { getDatabase } from './db/index';
 
 export const auth = betterAuth({
-  database: getDatabase(),
+  database: new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl:
+      process.env.NODE_ENV === 'production'
+        ? { rejectUnauthorized: false }
+        : false,
+  }),
   secret: process.env.BETTER_AUTH_SECRET!,
   baseURL: getBetterAuthUrl(),
-  basePath: '/api/auth', // Explicitly set to ensure correct routing
+  basePath: '/api/auth',
 
   emailAndPassword: {
     enabled: true,
   },
 
-  // Social providers can be added later
-  socialProviders: {
-    // Add providers as needed
-  },
-
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day
+    cookieCache: {
+      enabled: true,
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    },
   },
 
   user: {
@@ -30,6 +35,9 @@ export const auth = betterAuth({
       },
     },
   },
+
+  // Let BetterAuth handle its own table creation and management
+  // This will create: user, session, account, verification tables
 });
 
 export type Session = typeof auth.$Infer.Session;
