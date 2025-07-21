@@ -20,6 +20,7 @@ import { useEffect } from 'react';
 import { Toaster } from 'sonner';
 import { ActiveRunBanner } from '../components/active-run-banner';
 import { AuthGuard } from '../components/auth-guard';
+import { ErrorBoundary } from '../components/error-boundary';
 import { PasswordProtection } from '../components/password-protection';
 import { ThemeProvider } from '../components/theme-provider';
 import { Button } from '../components/ui/button';
@@ -409,13 +410,15 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppContextProvider>
-        <ThemeProvider>
-          <PasswordProtection>
-            {isPublicRoute ? appContent : <AuthGuard>{appContent}</AuthGuard>}
-          </PasswordProtection>
-        </ThemeProvider>
-      </AppContextProvider>
+      <ErrorBoundary>
+        <AppContextProvider>
+          <ThemeProvider>
+            <PasswordProtection>
+              {isPublicRoute ? appContent : <AuthGuard>{appContent}</AuthGuard>}
+            </PasswordProtection>
+          </ThemeProvider>
+        </AppContextProvider>
+      </ErrorBoundary>
     </QueryClientProvider>
   );
 }

@@ -1,6 +1,6 @@
 import { preferencesApi } from '@/lib/api/preferences-api';
 import { useQuery } from '@tanstack/react-query';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import {
   AlertTriangle,
   Clock,
@@ -57,6 +57,7 @@ function UpcomingFlights() {
   const [flightLimit, setFlightLimit] = useState<number>(5);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [searchMode, setSearchMode] = useState<'selected' | 'all'>('selected');
+  const navigate = useNavigate();
 
   // Time frame filtering state - now using time instead of dates
   const [filterTime, setFilterTime] = useState<string>('');
@@ -765,12 +766,12 @@ function UpcomingFlights() {
             </p>
             <Button
               asChild
+              variant="link"
               className="bg-blue-500 hover:bg-blue-600 text-white"
+              onClick={() => navigate({ to: '/settings' })}
             >
-              <a href="/settings" className="flex items-center gap-2">
-                <Settings className="size-5" />
-                <span>Settings</span>
-              </a>
+              <Settings className="size-5" />
+              <span>Settings</span>
             </Button>
           </CardContent>
         </Card>

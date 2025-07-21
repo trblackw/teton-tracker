@@ -22,6 +22,7 @@ import { Route as FlightsRouteImport } from './routes/flights'
 import { Route as DriversRouteImport } from './routes/drivers'
 import { Route as AddRunsRouteImport } from './routes/add-runs'
 import { Route as ActiveRunRouteImport } from './routes/active-run'
+import { Route as SplatRouteImport } from './routes/$'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DriverDriverIdRouteImport } from './routes/driver.$driverId'
 
@@ -90,6 +91,11 @@ const ActiveRunRoute = ActiveRunRouteImport.update({
   path: '/active-run',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SplatRoute = SplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -103,6 +109,7 @@ const DriverDriverIdRoute = DriverDriverIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/active-run': typeof ActiveRunRoute
   '/add-runs': typeof AddRunsRoute
   '/drivers': typeof DriversRoute
@@ -120,6 +127,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/active-run': typeof ActiveRunRoute
   '/add-runs': typeof AddRunsRoute
   '/drivers': typeof DriversRoute
@@ -138,6 +146,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/active-run': typeof ActiveRunRoute
   '/add-runs': typeof AddRunsRoute
   '/drivers': typeof DriversRoute
@@ -157,6 +166,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/$'
     | '/active-run'
     | '/add-runs'
     | '/drivers'
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/$'
     | '/active-run'
     | '/add-runs'
     | '/drivers'
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/$'
     | '/active-run'
     | '/add-runs'
     | '/drivers'
@@ -209,6 +221,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SplatRoute: typeof SplatRoute
   ActiveRunRoute: typeof ActiveRunRoute
   AddRunsRoute: typeof AddRunsRoute
   DriversRoute: typeof DriversRoute
@@ -318,6 +331,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ActiveRunRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$': {
+      id: '/$'
+      path: '/$'
+      fullPath: '/$'
+      preLoaderRoute: typeof SplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -337,6 +357,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SplatRoute: SplatRoute,
   ActiveRunRoute: ActiveRunRoute,
   AddRunsRoute: AddRunsRoute,
   DriversRoute: DriversRoute,
