@@ -3,7 +3,6 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import * as configApi from './api/config';
 import * as notificationsApi from './api/notifications';
-import * as organizationsApi from './api/organizations';
 import * as preferencesApi from './api/preferences';
 import * as reportTemplatesApi from './api/report-templates';
 import * as runsApi from './api/runs';
@@ -65,18 +64,6 @@ export function createApp(config: ServerConfig) {
 
   // API Routes - Clean and declarative!
   app.get('/api/config', async c => configApi.GET(c.req.raw));
-
-  app.get('/api/organizations', async c => organizationsApi.GET(c.req.raw));
-  app.get('/api/organizations/:orgId/members', async c => {
-    const request = c.req.raw;
-    (request as any).params = { orgId: c.req.param('orgId') };
-    return organizationsApi.getOrganizationMembers(request);
-  });
-  app.get('/api/organizations/:orgId/user-role', async c => {
-    const request = c.req.raw;
-    (request as any).params = { orgId: c.req.param('orgId') };
-    return organizationsApi.getUserRole(request);
-  });
 
   app.get('/api/runs', async c => runsApi.GET(c.req.raw));
   app.post('/api/runs', async c => runsApi.POST(c.req.raw));

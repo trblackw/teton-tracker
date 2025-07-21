@@ -1,8 +1,7 @@
 import { Link, useNavigate } from '@tanstack/react-router';
 import { Building2, LogOut, Settings, User } from 'lucide-react';
 import { useState } from 'react';
-import { signOut } from '../lib/auth-client';
-import { useUserOrganization } from '../lib/hooks/use-organizations';
+import { signOut, useUserOrganization } from '../lib/auth-client';
 import { useCurrentUserData } from '../lib/hooks/use-user';
 import { toasts } from '../lib/toast';
 import { Button } from './ui/button';
@@ -12,7 +11,7 @@ export function UserProfilePopover() {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const { user: currentUser, isLoading: userLoading } = useCurrentUserData();
-  const { data: organization, isLoading: orgsLoading } = useUserOrganization();
+  const { data: organization, isPending: orgsLoading } = useUserOrganization();
 
   if (userLoading || !currentUser) {
     return null;

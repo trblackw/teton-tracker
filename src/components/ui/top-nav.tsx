@@ -1,6 +1,5 @@
-import { cn } from '@/lib/cn';
-import * as React from 'react';
-import { useUserOrganization } from '../../lib/hooks/use-organizations';
+import { useUserOrganization } from '../../lib/auth-client';
+import { cn } from '../../lib/cn';
 import IconSidebar from '../../lib/icons/icon-sidebar';
 import { SidebarTrigger, useSidebar } from './sidebar';
 

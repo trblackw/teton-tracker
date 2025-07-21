@@ -43,12 +43,9 @@ import {
 } from '../components/ui/top-nav';
 import { UserProfilePopover } from '../components/user-profile-popover';
 import { AppContextProvider } from '../lib/AppContextProvider';
+import { useUserOrganization } from '../lib/auth-client';
 import { useCurrentRunsCount } from '../lib/hooks/use-current-runs-count';
 import { useMobile } from '../lib/hooks/use-mobile';
-import {
-  useIsUserAdmin,
-  useUserOrganization,
-} from '../lib/hooks/use-organizations';
 import { queryClient } from '../lib/react-query-client';
 import { toasts } from '../lib/toast';
 
@@ -100,17 +97,17 @@ function CurrentRunsNavItem() {
 }
 
 function OrganizationDisplay() {
-  const { data: organization, isLoading } = useUserOrganization();
+  const { data: organization, isPending } = useUserOrganization();
 
-  if (isLoading || !organization) {
+  if (isPending || !organization) {
     return null;
   }
 
   return (
     <div className="flex items-center gap-2 text-sm font-medium text-foreground/80">
-      {organization.imageUrl ? (
+      {organization.logo ? (
         <img
-          src={organization.imageUrl}
+          src={organization.logo}
           alt={organization.name}
           className="object-contain max-h-8 max-w-32 w-auto h-auto"
         />
@@ -128,7 +125,11 @@ function OrganizationDisplay() {
 
 function AdminNavItems() {
   const { data: organization } = useUserOrganization();
-  const { isAdmin } = useIsUserAdmin(organization?.id);
+
+  // Simple admin check based on user's role in organization
+  const isAdmin =
+    organization?.members?.some((member: any) => member.role === 'admin') ||
+    false;
 
   if (!isAdmin) {
     return null;

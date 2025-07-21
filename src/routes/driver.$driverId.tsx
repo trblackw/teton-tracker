@@ -1,5 +1,5 @@
-import { organizationsApi } from '@/lib/api/organizations-api';
 import { runsApi } from '@/lib/api/runs-api';
+import { useUserOrganization } from '@/lib/auth-client';
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import {
@@ -77,6 +77,7 @@ async function sendStatusRequestSMS(
 function DriverDetailPage() {
   const { driverId } = Route.useParams();
   const { currentUser } = useAppContext();
+  const { data: organization, isPending } = useUserOrganization();
   const [selectedRunId, setSelectedRunId] = useState<string>('');
   const [sendingStatus, setSendingStatus] = useState(false);
 
@@ -84,25 +85,13 @@ function DriverDetailPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
 
-  const { isAdmin, organization } = useNonAdminRedirect('/runs');
+  const { isAdmin } = useNonAdminRedirect('/runs');
 
-  // Fetch organization members to get driver information
-  const { data: driver, isLoading: driverLoading } = useQuery({
-    queryKey: ['organization-members', organization?.id],
-    queryFn: () => {
-      if (!organization?.id) {
-        throw new Error('Organization ID is required');
-      }
-      return organizationsApi.getOrganizationMemberById(
-        organization.id,
-        driverId
-      );
-    },
-    enabled: !!organization?.id && !!currentUser?.id && isAdmin,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
-
-  const driverName = driver?.name ?? 'Unknown Driver';
+  // Get driver from organization members instead of separate API call
+  const driver = organization?.members?.find(
+    (member: any) => member.userId === driverId
+  );
+  const driverLoading = isPending;
 
   // Fetch all runs for the organization
   const {
@@ -347,7 +336,9 @@ function DriverDetailPage() {
         </Link>
         <div className="flex items-center justify-center gap-2">
           <Users className="h-6 w-6" />
-          <h1 className="text-3xl font-bold">{driverName}</h1>
+          <h1 className="text-3xl font-bold">
+            {driver?.user?.name ?? 'Unknown Driver'}
+          </h1>
         </div>
       </div>
 

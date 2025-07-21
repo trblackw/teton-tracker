@@ -1,6 +1,5 @@
 import { Pool } from 'pg';
 import { notificationsDb } from './notifications-db';
-import { organizationsDb } from './organizations-db';
 import { preferencesDb } from './preferences-db';
 import { reportTemplatesDb } from './report-templates-db';
 import { reportsDb } from './reports-db';
@@ -73,7 +72,6 @@ export async function cleanupExpiredCache(): Promise<void> {
 
 export const db = {
   notifications: notificationsDb,
-  organizations: organizationsDb,
   preferences: preferencesDb,
   reports: reportsDb,
   runs: runsDb,

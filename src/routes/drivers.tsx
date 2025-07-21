@@ -1,4 +1,3 @@
-import { organizationsApi } from '@/lib/api/organizations-api';
 import { runsApi } from '@/lib/api/runs-api';
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
@@ -49,21 +48,22 @@ const AVAILABILITY_FILTERS = [
 
 function DriversPage() {
   const { currentUser } = useAppContext();
-  const { isAdmin, organization } = useNonAdminRedirect();
+  const { isAdmin, organization, isLoading } = useNonAdminRedirect();
   const [availabilityFilter, setAvailabilityFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Fetch organization members
-  const {
-    data: membersData,
-    isLoading: membersLoading,
-    error: membersError,
-  } = useQuery({
-    queryKey: ['organization-members', organization?.id],
-    queryFn: () => organizationsApi.getOrganizationMembers(organization!.id),
-    enabled: !!organization?.id && !!currentUser?.id,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
+  // Use organization members from BetterAuth instead of separate API call
+  const membersData = organization?.members || [];
+  const membersLoading = isLoading;
+  const membersError = null;
+
+  // Filter out current user from drivers list
+  const drivers = useMemo(() => {
+    return (
+      membersData?.filter((member: any) => member.userId !== currentUser?.id) ||
+      []
+    );
+  }, [membersData, currentUser?.id]);
 
   // Fetch all runs to calculate driver stats
   const { data: allRuns = [], isLoading: runsLoading } = useQuery({
@@ -72,11 +72,6 @@ function DriversPage() {
     staleTime: 1000 * 60 * 2, // 2 minutes
     enabled: !!organization?.id && !!currentUser?.id && isAdmin,
   });
-
-  // Filter out the admin user to show only drivers
-  const allDrivers = useMemo(() => {
-    return membersData?.filter(member => member.id !== currentUser?.id) || [];
-  }, [membersData, currentUser?.id]);
 
   // Helper function to check driver availability based on runs
   const getDriverAvailability = (driver: User, filter: string) => {
@@ -136,7 +131,7 @@ function DriversPage() {
 
   // Filter drivers based on search and availability
   const filteredDrivers = useMemo(() => {
-    let filtered = allDrivers;
+    let filtered = drivers;
 
     // Apply search filter
     if (searchTerm.trim()) {
@@ -152,7 +147,7 @@ function DriversPage() {
     );
 
     return filtered;
-  }, [allDrivers, searchTerm, availabilityFilter, allRuns]);
+  }, [drivers, searchTerm, availabilityFilter, allRuns]);
 
   // Clear all filters
   const clearFilters = () => {
@@ -331,14 +326,14 @@ function DriversPage() {
           rightContent={
             filtersApplied ? (
               <div className="text-sm text-muted-foreground">
-                Showing {filteredDrivers.length} of {allDrivers.length} drivers
+                Showing {filteredDrivers.length} of {drivers.length} drivers
               </div>
             ) : undefined
           }
         />
         {!filtersApplied && (
           <div className="text-xs text-muted-foreground/50 flex justify-center">
-            Showing {filteredDrivers.length} of {allDrivers.length} drivers
+            Showing {filteredDrivers.length} of {drivers.length} drivers
           </div>
         )}
       </StickyHeader>
@@ -528,7 +523,7 @@ function DriversPage() {
             );
           })}
 
-          {filteredDrivers.length === 0 && allDrivers.length > 0 && (
+          {filteredDrivers.length === 0 && drivers.length > 0 && (
             <Card className="border-dashed">
               <CardContent className="text-center py-12">
                 <Filter className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
@@ -545,7 +540,7 @@ function DriversPage() {
             </Card>
           )}
 
-          {allDrivers.length === 0 && (
+          {drivers.length === 0 && (
             <Card className="border-dashed">
               <CardContent className="text-center py-12">
                 <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />

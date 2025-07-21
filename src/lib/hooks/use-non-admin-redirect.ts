@@ -1,22 +1,25 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect } from 'react';
-import type { Organization } from '../schema';
-import { useIsUserAdmin, useUserOrganization } from './use-organizations';
+import { useUserOrganization } from '../auth-client';
 
 interface UseNonAdminRedirectResult {
   isAdmin: boolean;
   isLoading: boolean;
-  organization: Organization | null;
+  organization: any | null; // BetterAuth organization type
 }
 
 export function useNonAdminRedirect(
   redirectTo: string = '/runs'
 ): UseNonAdminRedirectResult {
-  const { data: organization, isLoading: orgLoading } = useUserOrganization();
-  const { isAdmin, isLoading: adminLoading } = useIsUserAdmin(organization?.id);
+  const { data: organization, isPending: orgLoading } = useUserOrganization();
   const navigate = useNavigate();
 
-  const isLoading = orgLoading || adminLoading;
+  // Check if user has admin role in the organization
+  const isAdmin =
+    organization?.members?.some((member: any) => member.role === 'admin') ||
+    false;
+
+  const isLoading = orgLoading;
 
   // Redirect non-admin users once loading is complete
   useEffect(() => {

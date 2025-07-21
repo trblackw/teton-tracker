@@ -1,3 +1,4 @@
+import { organizationClient } from 'better-auth/client/plugins';
 import { createAuthClient } from 'better-auth/react';
 import { getApiBaseUrl } from './environment';
 
@@ -7,10 +8,16 @@ export const authClient = createAuthClient({
   fetchOptions: {
     credentials: 'include', // Also set on fetch options for better compatibility
   },
+  plugins: [
+    organizationClient(), // Add organization client plugin
+  ],
 });
 
 // Re-export auth functions for convenience
 export const { signIn, signUp, signOut, useSession, getSession } = authClient;
+
+// Re-export organization functions for convenience
+export const { organization } = authClient;
 
 // Custom hook for user functionality (wraps BetterAuth useSession)
 export function useUser() {
@@ -33,54 +40,41 @@ export function useAuth() {
   };
 }
 
-// Placeholder hooks for organization functionality
+// Now use BetterAuth organization hooks instead of custom ones
 export function useUserOrganization() {
-  // This will be implemented when we add organization functionality
-  return {
-    data: null,
-    isLoading: false,
-    error: null,
-  };
+  return authClient.useActiveOrganization();
 }
 
 export function useUserOrganizations() {
-  // This will be implemented when we add organization functionality
-  return {
-    data: [],
-    isLoading: false,
-    error: null,
-  };
+  return authClient.useListOrganizations();
 }
 
 export function useCreateOrganization() {
-  // This will be implemented when we add organization functionality
   return {
-    mutate: () => {},
-    isPending: false,
+    mutate: authClient.organization.create,
+    isPending: false, // BetterAuth handles loading states
     error: null,
   };
 }
 
 export function useUpdateOrganization() {
-  // This will be implemented when we add organization functionality
   return {
-    mutate: () => {},
+    mutate: authClient.organization.update,
     isPending: false,
     error: null,
   };
 }
 
 export function useDeleteOrganization() {
-  // This will be implemented when we add organization functionality
   return {
-    mutate: () => {},
+    mutate: authClient.organization.delete,
     isPending: false,
     error: null,
   };
 }
 
 export function useOrganizationMemberships() {
-  // This will be implemented when we add organization functionality
+  // This would use authClient.organization.listMembers() when needed
   return {
     data: [],
     isLoading: false,
