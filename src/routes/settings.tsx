@@ -36,6 +36,7 @@ import {
 } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import PageWrapper from '../components/ui/page-wrapper';
 import { TimezoneCombobox } from '../components/ui/timezone-combobox';
 import { IOSToggle } from '../components/ui/toggle';
 import airportsData from '../data/airports-comprehensive.json';
@@ -352,7 +353,7 @@ function Settings() {
   }
 
   return (
-    <div className="space-y-6 px-4 sm:px-0">
+    <PageWrapper>
       <div>
         <h2 className="text-2xl font-bold text-foreground">Settings</h2>
         <p className="text-muted-foreground mt-1">
@@ -914,7 +915,7 @@ function Settings() {
           </Dialog>
         </CardContent>
       </Card>
-    </div>
+    </PageWrapper>
   );
 }
 

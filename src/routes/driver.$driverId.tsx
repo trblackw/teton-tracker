@@ -34,6 +34,7 @@ import {
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { MultiSelect } from '../components/ui/multi-select';
+import PageWrapper from '../components/ui/page-wrapper';
 import {
   Select,
   SelectContent,
@@ -296,20 +297,20 @@ function DriverDetailPage() {
 
   if (runsLoading || driverLoading) {
     return (
-      <div className="container mx-auto py-2 max-w-full overflow-hidden">
+      <PageWrapper>
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground">Loading driver details...</p>
           </div>
         </div>
-      </div>
+      </PageWrapper>
     );
   }
 
   if (runsError) {
     return (
-      <div className="container mx-auto py-2 max-w-full overflow-hidden">
+      <PageWrapper>
         <div className="text-center py-12">
           <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
           <h1 className="text-2xl font-bold mb-4">Error Loading Data</h1>
@@ -317,14 +318,14 @@ function DriverDetailPage() {
             Failed to load driver runs. Please try again.
           </p>
         </div>
-      </div>
+      </PageWrapper>
     );
   }
 
   const filteredApplied = searchTerm || selectedLocations.length > 0;
 
   return (
-    <div className="container mx-auto py-2 max-w-full overflow-hidden">
+    <PageWrapper>
       {/* Header */}
       <div className="mb-6">
         <Link
@@ -555,6 +556,6 @@ function DriverDetailPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageWrapper>
   );
 }

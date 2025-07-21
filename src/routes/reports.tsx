@@ -25,6 +25,7 @@ import {
   CardHeader,
   CardTitle,
 } from '../components/ui/card';
+import PageWrapper from '../components/ui/page-wrapper';
 import {
   Popover,
   PopoverContent,
@@ -402,268 +403,261 @@ function Reports() {
   }
 
   return (
-    <>
+    <PageWrapper>
       <StickyHeader
         title="Reports"
         subtitle="Select a date range to generate & export detailed reports of your past airport runs"
       />
 
-      <div className="space-y-4">
-        {/* Quick Stats Cards */}
-        <div className="grid gap-3 md:grid-cols-1">
-          <Card>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold">{totalRuns}</div>
-                  <p className="text-xs text-muted-foreground">Total Runs</p>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold">
-                    ${totalPrice.toLocaleString()}
-                  </div>
-                  <p className="text-xs text-muted-foreground">Total Price</p>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold">
-                    {averageDuration > 0 ? `${averageDuration}m` : '-'}
-                  </div>
-                  <p className="text-xs text-muted-foreground">Avg Duration</p>
-                </div>
+      {/* Quick Stats Cards */}
+      <div className="grid gap-3 md:grid-cols-1 mb-4">
+        <Card>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold">{totalRuns}</div>
+                <p className="text-xs text-muted-foreground">Total Runs</p>
               </div>
-            </CardContent>
-            <CardFooter className="text-xs text-blue-400 flex justify-center items-center">
-              {selectedRange?.from
-                ? `${format(selectedRange.from, 'MMM d, yyyy')}${
-                    selectedRange.to
-                      ? ` - ${format(selectedRange.to, 'MMM d, yyyy')}`
-                      : ''
-                  }`
-                : pastRuns.length > 0
-                  ? `${format(
-                      parseISO(
-                        pastRuns.sort(
-                          (a, b) =>
-                            parseISO(a.scheduledTime).getTime() -
-                            parseISO(b.scheduledTime).getTime()
-                        )[0].scheduledTime
-                      ),
-                      'MMM d, yyyy'
-                    )} - ${format(new Date(), 'MMM d, yyyy')}`
-                  : 'No runs available'}
-            </CardFooter>
-          </Card>
-        </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">
+                  ${totalPrice.toLocaleString()}
+                </div>
+                <p className="text-xs text-muted-foreground">Total Price</p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">
+                  {averageDuration > 0 ? `${averageDuration}m` : '-'}
+                </div>
+                <p className="text-xs text-muted-foreground">Avg Duration</p>
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter className="text-xs text-blue-400 flex justify-center items-center">
+            {selectedRange?.from
+              ? `${format(selectedRange.from, 'MMM d, yyyy')}${
+                  selectedRange.to
+                    ? ` - ${format(selectedRange.to, 'MMM d, yyyy')}`
+                    : ''
+                }`
+              : pastRuns.length > 0
+                ? `${format(
+                    parseISO(
+                      pastRuns.sort(
+                        (a, b) =>
+                          parseISO(a.scheduledTime).getTime() -
+                          parseISO(b.scheduledTime).getTime()
+                      )[0].scheduledTime
+                    ),
+                    'MMM d, yyyy'
+                  )} - ${format(new Date(), 'MMM d, yyyy')}`
+                : 'No runs available'}
+          </CardFooter>
+        </Card>
+      </div>
 
-        {/* Calendar and Report Generation */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Select Range of Runs</CardTitle>
-              <CardDescription>
-                Click dates with run indicators to see details. Only past runs
-                are shown.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-center relative">
-                <CalendarComponent
-                  mode="range"
-                  selected={selectedRange}
-                  onSelect={setSelectedRange}
-                  onDayClick={handleDayClick}
-                  numberOfMonths={1}
-                  className="rounded-md border bg-accent"
-                  disabled={isLoading || templatesLoading}
-                  modifiers={dayModifiers}
-                  modifiersClassNames={dayModifiersClassNames}
-                  classNames={{
-                    today: 'text-foreground font-semibold', // Override the default blue styling
-                  }}
-                  style={
-                    {
-                      '--rdp-accent-color': 'hsl(var(--chart-2))',
-                      '--rdp-accent-background-color': 'hsl(var(--chart-2))',
-                      '--rdp-range-start-color':
-                        'hsl(var(--primary-foreground))',
-                      '--rdp-range-start-background': 'hsl(var(--destructive))',
-                      '--rdp-range-end-color': 'hsl(var(--primary-foreground))',
-                      '--rdp-range-end-background': 'hsl(var(--destructive))',
-                      '--rdp-range-middle-background-color':
-                        'hsl(var(--destructive))',
-                      '--rdp-range-middle-color': 'hsl(var(--destructive))',
-                      '--rdp-selected-border': 'none',
-                    } as React.CSSProperties
-                  }
-                />
+      {/* Calendar and Report Generation */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Select Range of Runs</CardTitle>
+            <CardDescription>
+              Click dates with run indicators to see details. Only past runs are
+              shown.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-center relative">
+              <CalendarComponent
+                mode="range"
+                selected={selectedRange}
+                onSelect={setSelectedRange}
+                onDayClick={handleDayClick}
+                numberOfMonths={1}
+                className="rounded-md border bg-accent"
+                disabled={isLoading || templatesLoading}
+                modifiers={dayModifiers}
+                modifiersClassNames={dayModifiersClassNames}
+                classNames={{
+                  today: 'text-foreground font-semibold', // Override the default blue styling
+                }}
+                style={
+                  {
+                    '--rdp-accent-color': 'hsl(var(--chart-2))',
+                    '--rdp-accent-background-color': 'hsl(var(--chart-2))',
+                    '--rdp-range-start-color': 'hsl(var(--primary-foreground))',
+                    '--rdp-range-start-background': 'hsl(var(--destructive))',
+                    '--rdp-range-end-color': 'hsl(var(--primary-foreground))',
+                    '--rdp-range-end-background': 'hsl(var(--destructive))',
+                    '--rdp-range-middle-background-color':
+                      'hsl(var(--destructive))',
+                    '--rdp-range-middle-color': 'hsl(var(--destructive))',
+                    '--rdp-selected-border': 'none',
+                  } as React.CSSProperties
+                }
+              />
 
-                {/* Popover for day details */}
-                <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <div className="absolute" style={{ top: -1000 }} />
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80" align="center">
-                    {selectedDay && (
-                      <div className="space-y-3">
-                        <div className="space-y-1">
-                          <h4 className="font-medium">
-                            {format(selectedDay, 'PPPP')}
-                          </h4>
-                          <p className="text-sm text-muted-foreground">
-                            {selectedDayRuns.length} run
-                            {selectedDayRuns.length !== 1 ? 's' : ''} on this
-                            day
-                          </p>
-                        </div>
-                        <div className="space-y-2 max-h-60 overflow-y-auto">
-                          {selectedDayRuns.map(run => (
-                            <div
-                              key={run.id}
-                              className="p-2 bg-muted rounded-lg"
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono bg-primary/10 text-primary px-2 py-1 rounded text-xs">
-                                    {run.flightNumber}
-                                  </span>
-                                  <span className="text-sm font-medium">
-                                    {run.airline}
-                                  </span>
-                                </div>
-                                <span className="text-sm text-muted-foreground">
-                                  ${run.price}
+              {/* Popover for day details */}
+              <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <div className="absolute" style={{ top: -1000 }} />
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="center">
+                  {selectedDay && (
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <h4 className="font-medium">
+                          {format(selectedDay, 'PPPP')}
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedDayRuns.length} run
+                          {selectedDayRuns.length !== 1 ? 's' : ''} on this day
+                        </p>
+                      </div>
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {selectedDayRuns.map(run => (
+                          <div key={run.id} className="p-2 bg-muted rounded-lg">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono bg-primary/10 text-primary px-2 py-1 rounded text-xs">
+                                  {run.flightNumber}
+                                </span>
+                                <span className="text-sm font-medium">
+                                  {run.airline}
                                 </span>
                               </div>
-                              <div className="mt-1 text-sm text-muted-foreground">
-                                {run.departure} → {run.arrival} • {run.type}
-                              </div>
-                              <div className="mt-1 text-xs text-muted-foreground">
-                                {format(parseISO(run.scheduledTime), 'p')}
-                              </div>
+                              <span className="text-sm text-muted-foreground">
+                                ${run.price}
+                              </span>
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </CardContent>
-          </Card>
-
-          {!exportDisabled && (
-            <Card className="mb-3">
-              <CardHeader>
-                <CardTitle>Generate Report</CardTitle>
-                <CardDescription>
-                  Export run reports for selected timeframe
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {templateInfo.type === 'single' && (
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium">Report Template:</h4>
-                    <div className="p-3 bg-muted rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">
-                          {templateInfo.template?.name || 'Default Template'}
-                        </span>
-                        <span className="text-sm text-muted-foreground/60">
-                          {templateInfo.count} runs
-                        </span>
-                      </div>
-                      {templateInfo.template?.description && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {templateInfo.template.description}
-                        </p>
-                      )}
-                      <div className="text-xs text-muted-foreground mt-2 flex flex-wrap gap-1">
-                        Fields:{' '}
-                        {templateInfo.template?.columnConfig?.map(col => (
-                          <Badge
-                            variant="outline"
-                            className="text-xs bg-blue-400/10 text-blue-400"
-                          >
-                            {col.label}
-                          </Badge>
+                            <div className="mt-1 text-sm text-muted-foreground">
+                              {run.departure} → {run.arrival} • {run.type}
+                            </div>
+                            <div className="mt-1 text-xs text-muted-foreground">
+                              {format(parseISO(run.scheduledTime), 'p')}
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </PopoverContent>
+              </Popover>
+            </div>
+          </CardContent>
+        </Card>
 
-                {templateInfo.type === 'multiple' && (
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium">
-                      <AlertTriangle className="size-4" /> Multiple Report
-                      Templates Detected:
-                    </h4>
-                    <div className="space-y-2">
-                      {templateInfo.templates.map((templateGroup, index) => (
-                        <div key={index} className="p-3 bg-muted rounded-lg">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium">
-                              {templateGroup.template?.name ||
-                                `Unknown Template ${index + 1}`}
-                            </span>
-                            <span className="text-sm text-muted-foreground">
-                              {templateGroup.runs.length} runs
-                            </span>
-                          </div>
-                          {templateGroup.template?.description && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {templateGroup.template.description}
-                            </p>
-                          )}
-                        </div>
+        {!exportDisabled && (
+          <Card className="mb-3">
+            <CardHeader>
+              <CardTitle>Generate Report</CardTitle>
+              <CardDescription>
+                Export run reports for selected timeframe
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {templateInfo.type === 'single' && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium">Report Template:</h4>
+                  <div className="p-3 bg-muted rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">
+                        {templateInfo.template?.name || 'Default Template'}
+                      </span>
+                      <span className="text-sm text-muted-foreground/60">
+                        {templateInfo.count} runs
+                      </span>
+                    </div>
+                    {templateInfo.template?.description && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {templateInfo.template.description}
+                      </p>
+                    )}
+                    <div className="text-xs text-muted-foreground mt-2 flex flex-wrap gap-1">
+                      Fields:{' '}
+                      {templateInfo.template?.columnConfig?.map(col => (
+                        <Badge
+                          variant="outline"
+                          className="text-xs bg-blue-400/10 text-blue-400"
+                        >
+                          {col.label}
+                        </Badge>
                       ))}
                     </div>
-                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <p className="text-sm text-yellow-800">
-                        Multiple CSV files will be generated - one for each
-                        template ({templateInfo.templates.length} files total)
-                      </p>
-                    </div>
                   </div>
-                )}
+                </div>
+              )}
 
-                {templateInfo.type === 'none' && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-sm text-red-800">
-                      No report template found for the selected runs. Please
-                      select runs with valid templates.
+              {templateInfo.type === 'multiple' && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium">
+                    <AlertTriangle className="size-4" /> Multiple Report
+                    Templates Detected:
+                  </h4>
+                  <div className="space-y-2">
+                    {templateInfo.templates.map((templateGroup, index) => (
+                      <div key={index} className="p-3 bg-muted rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">
+                            {templateGroup.template?.name ||
+                              `Unknown Template ${index + 1}`}
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            {templateGroup.runs.length} runs
+                          </span>
+                        </div>
+                        {templateGroup.template?.description && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {templateGroup.template.description}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-yellow-800">
+                      Multiple CSV files will be generated - one for each
+                      template ({templateInfo.templates.length} files total)
                     </p>
                   </div>
-                )}
+                </div>
+              )}
 
-                <Button
-                  onClick={handleExportCSV}
-                  disabled={exportDisabled || templateInfo.type === 'none'}
-                  className="w-full bg-emerald-400 hover:bg-emerald-400/90 text-white"
-                >
-                  <Download className="size-4" strokeWidth={2} />
-                  {templateInfo.type === 'multiple'
-                    ? `Export ${templateInfo.templates.length} CSV Reports`
-                    : 'Export CSV Report'}
-                </Button>
-
-                {!selectedRange?.from && (
-                  <p className="text-xs text-muted-foreground text-center">
-                    Select a date range to enable export
+              {templateInfo.type === 'none' && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-800">
+                    No report template found for the selected runs. Please
+                    select runs with valid templates.
                   </p>
-                )}
+                </div>
+              )}
 
-                {selectedRuns.length === 0 && filteredRuns.length > 0 && (
-                  <p className="text-xs text-destructive text-center">
-                    Select at least one run to export
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </div>
+              <Button
+                onClick={handleExportCSV}
+                disabled={exportDisabled || templateInfo.type === 'none'}
+                className="w-full bg-emerald-400 hover:bg-emerald-400/90 text-white"
+              >
+                <Download className="size-4" strokeWidth={2} />
+                {templateInfo.type === 'multiple'
+                  ? `Export ${templateInfo.templates.length} CSV Reports`
+                  : 'Export CSV Report'}
+              </Button>
+
+              {!selectedRange?.from && (
+                <p className="text-xs text-muted-foreground text-center">
+                  Select a date range to enable export
+                </p>
+              )}
+
+              {selectedRuns.length === 0 && filteredRuns.length > 0 && (
+                <p className="text-xs text-destructive text-center">
+                  Select at least one run to export
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
-    </>
+    </PageWrapper>
   );
 }
 

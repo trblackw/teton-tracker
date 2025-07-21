@@ -43,7 +43,7 @@ import {
 } from '../components/ui/top-nav';
 import { UserProfilePopover } from '../components/user-profile-popover';
 import { AppContextProvider } from '../lib/AppContextProvider';
-import { useUserOrganization } from '../lib/auth-client';
+import { useIsSuperAdmin, useUserOrganization } from '../lib/auth-client';
 import { isDevelopment } from '../lib/environment';
 import { useCurrentRunsCount } from '../lib/hooks/use-current-runs-count';
 import { useMobile } from '../lib/hooks/use-mobile';
@@ -208,6 +208,37 @@ function AdminNavItems() {
   );
 }
 
+function SuperAdminNavItems() {
+  const { data: organization } = useUserOrganization();
+  const isSuperAdmin = useIsSuperAdmin();
+
+  if (!isSuperAdmin) {
+    return null;
+  }
+
+  return (
+    <>
+      <div className="px-3 py-2">
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Super Admin
+        </div>
+      </div>
+      <Button asChild variant="ghost" className="w-full justify-start">
+        <MobileAwareNavLink
+          to="/super-admin"
+          className="flex items-center gap-2"
+          activeProps={{
+            className: activeNavClass,
+          }}
+        >
+          <Building2 className="h-4 w-4" />
+          System Admin
+        </MobileAwareNavLink>
+      </Button>
+    </>
+  );
+}
+
 function RootComponent() {
   const routerState = useRouterState();
   const isMobile = useMobile();
@@ -289,6 +320,7 @@ function RootComponent() {
               {/* Admin section at bottom */}
               <div className="mt-auto pt-4 border-t border-border">
                 <AdminNavItems />
+                <SuperAdminNavItems />
               </div>
             </SidebarContent>
           </Sidebar>
@@ -356,6 +388,7 @@ function RootComponent() {
               {/* Admin section at bottom */}
               <div className="mt-auto pt-4 border-t border-border">
                 <AdminNavItems />
+                <SuperAdminNavItems />
               </div>
             </SidebarContent>
           </Sidebar>

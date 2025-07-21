@@ -19,6 +19,11 @@ export const { signIn, signUp, signOut, useSession, getSession } = authClient;
 // Re-export organization functions for convenience
 export const { organization } = authClient;
 
+// Super-admin check function
+export function isSuperAdmin(userEmail?: string | null): boolean {
+  return userEmail === 'tuckerblackwell.dev@gmail.com';
+}
+
 // Custom hook for user functionality (wraps BetterAuth useSession)
 export function useUser() {
   const { data: session, isPending } = useSession();
@@ -38,6 +43,12 @@ export function useAuth() {
     isSignedIn: !!session?.user,
     signOut,
   };
+}
+
+// Custom hook to check if current user is super admin
+export function useIsSuperAdmin() {
+  const { user } = useUser();
+  return isSuperAdmin(user?.email);
 }
 
 // Now use BetterAuth organization hooks instead of custom ones

@@ -48,14 +48,18 @@ async function checkAdminRole(
 export async function GET(request: Request): Promise<Response> {
   try {
     const url = new URL(request.url);
-    const userId = url.searchParams.get('userId');
+    const [user, response] = await getCurrentAuthUser(request);
 
-    if (!userId) {
-      return initJSONResponse({ error: 'User ID is required' }, 400);
+    if (response && response.status !== 200) {
+      return response;
+    }
+
+    if (!user) {
+      return initJSONResponse({ error: 'Authentication required' }, 401);
     }
 
     // Get user's organization
-    const organizationId = await getUserOrganizationId(userId);
+    const organizationId = await getUserOrganizationId(user.id);
     if (!organizationId) {
       return initJSONResponse({ error: 'User not in organization' }, 403);
     }

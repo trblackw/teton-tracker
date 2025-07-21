@@ -7,13 +7,14 @@ import {
   CardHeader,
   CardTitle,
 } from '../components/ui/card';
+import PageWrapper from '../components/ui/page-wrapper';
 import { useCurrentUserData } from '../lib/hooks/use-user';
 
 function RequestRunReportPage() {
   const { user } = useCurrentUserData();
 
   return (
-    <div className="space-y-6">
+    <PageWrapper>
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
@@ -88,7 +89,7 @@ function RequestRunReportPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageWrapper>
   );
 }
 

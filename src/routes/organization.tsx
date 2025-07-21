@@ -31,6 +31,7 @@ import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import {
   authClient,
+  useIsSuperAdmin,
   useUserOrganization,
   useUserOrganizations,
 } from '../lib/auth-client';
@@ -45,6 +46,7 @@ function OrganizationPage() {
   const { isAdmin, isLoading } = useNonAdminRedirect();
   const { data: currentOrg } = useUserOrganization();
   const { data: userOrgs } = useUserOrganizations();
+  const isSuperAdmin = useIsSuperAdmin();
 
   if (isLoading) {
     return (
@@ -71,7 +73,7 @@ function OrganizationPage() {
             Manage your organization settings and members
           </p>
         </div>
-        <CreateOrganizationDialog />
+        {isSuperAdmin && <CreateOrganizationDialog />}
       </div>
 
       {/* Current Organization */}
@@ -135,16 +137,33 @@ function CurrentOrganizationCard({ organization }: { organization: any }) {
 }
 
 function NoOrganizationCard() {
+  const isSuperAdmin = useIsSuperAdmin();
+
   return (
     <Card className="border-dashed">
       <CardContent className="flex flex-col items-center justify-center py-12">
         <Building2 className="h-12 w-12 text-muted-foreground/50 mb-4" />
-        <h3 className="text-lg font-semibold mb-2">No Organization</h3>
-        <p className="text-sm text-muted-foreground text-center mb-6 max-w-md">
-          You're not currently part of any organization. Create one to start
-          managing your team and operations.
-        </p>
-        <CreateOrganizationDialog />
+        {isSuperAdmin ? (
+          <>
+            <h3 className="text-lg font-semibold mb-2">Create Organization</h3>
+            <p className="text-sm text-muted-foreground text-center mb-6 max-w-md">
+              As a super admin, you can create new organizations to manage teams
+              and operations.
+            </p>
+            <CreateOrganizationDialog />
+          </>
+        ) : (
+          <>
+            <h3 className="text-lg font-semibold mb-2">No Organization</h3>
+            <p className="text-sm text-muted-foreground text-center mb-6 max-w-md">
+              You're not currently part of any organization. Contact your
+              administrator to be invited to an organization.
+            </p>
+            <div className="text-xs text-muted-foreground/70 italic">
+              Organization creation is restricted to system administrators.
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );

@@ -26,6 +26,7 @@ import {
 } from '../components/ui/dialog';
 import { ExpandableActionsDrawer } from '../components/ui/expandable-actions-drawer';
 import { Input } from '../components/ui/input';
+import PageWrapper from '../components/ui/page-wrapper';
 import { RunCard } from '../components/ui/run-card';
 import {
   Select,
@@ -629,7 +630,7 @@ function Runs() {
   }
 
   return (
-    <>
+    <PageWrapper>
       <StickyHeader title={title} subtitle={subtitle} />
       <div className="space-y-3 px-4 sm:px-6 lg:px-8">
         <Tabs value={activeTab} onValueChange={handleTabChange}>
@@ -830,7 +831,7 @@ function Runs() {
           </DialogContent>
         </Dialog>
       </div>
-    </>
+    </PageWrapper>
   );
 }
 
