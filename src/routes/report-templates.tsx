@@ -1,3 +1,4 @@
+import { reportTemplatesApi } from '@/lib/api/report-templates-api';
 import {
   closestCenter,
   DndContext,
@@ -71,7 +72,6 @@ import {
 } from '../components/ui/select';
 import { StickyHeader } from '../components/ui/sticky-header';
 import { Textarea } from '../components/ui/textarea';
-import { reportTemplatesApi } from '../lib/api/client';
 import { useAppContext } from '../lib/AppContextProvider';
 import { useNonAdminRedirect } from '../lib/hooks/use-non-admin-redirect';
 import {

@@ -2,15 +2,15 @@
 import { generateBillTo, generateReservationId } from '../src/api/seed';
 import { initializeDatabase } from '../src/lib/db';
 import {
-  createNotification,
+  notificationsDb,
   type NotificationForm,
-} from '../src/lib/db/notifications';
-import { createReportTemplate } from '../src/lib/db/report-templates';
-import { createRunsBatch } from '../src/lib/db/runs';
+} from '../src/lib/db/notifications-db';
+import { reportTemplatesDb } from '../src/lib/db/report-templates-db';
+import { runsDb } from '../src/lib/db/runs-db';
 import {
+  ReportType,
   type NewRunForm,
   type ReportTemplateForm,
-  ReportType,
 } from '../src/lib/schema';
 
 // Get user ID and organization ID from command line arguments
@@ -83,7 +83,8 @@ async function seedDatabase() {
       createdBy: userId,
     };
 
-    const reportTemplate = await createReportTemplate(sampleTemplate);
+    const reportTemplate =
+      await reportTemplatesDb.createReportTemplate(sampleTemplate);
     console.log(`✅ Created report template: ${reportTemplate.id}`);
 
     // Create sample runs
@@ -125,7 +126,11 @@ async function seedDatabase() {
       },
     ];
 
-    const runs = await createRunsBatch(sampleRuns, userId, organizationId);
+    const runs = await runsDb.createRunsBatch(
+      sampleRuns,
+      userId,
+      organizationId
+    );
 
     // Create sample notifications
     console.log('📢 Creating sample notifications...');
@@ -154,7 +159,7 @@ async function seedDatabase() {
     ];
 
     for (const notificationData of sampleNotifications) {
-      await createNotification(notificationData, userId);
+      await notificationsDb.createNotification(notificationData, userId);
     }
 
     console.log('✅ Database seeding completed successfully!');

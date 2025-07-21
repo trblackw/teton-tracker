@@ -1,3 +1,4 @@
+import { runsApi } from '@/lib/api/runs-api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import {
@@ -40,7 +41,6 @@ import {
   TabsList,
   TabsTrigger,
 } from '../components/ui/tabs';
-import { runsApi } from '../lib/api/client';
 import { useMultipleRunsData } from '../lib/hooks/use-api-data';
 import { useTimezoneFormatters } from '../lib/hooks/use-timezone';
 import { type Run, type RunStatus } from '../lib/schema';

@@ -1,3 +1,4 @@
+import { runsApi } from '@/lib/api/runs-api';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useRouter } from '@tanstack/react-router';
 import { differenceInSeconds, intervalToDuration } from 'date-fns';
@@ -10,7 +11,6 @@ import {
   Timer,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { runsApi } from '../lib/api/client';
 import { Button } from './ui/button';
 
 // Hook to get the currently active run

@@ -1,3 +1,5 @@
+import { organizationsApi } from '@/lib/api/organizations-api';
+import { runsApi } from '@/lib/api/runs-api';
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import {
@@ -39,7 +41,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
-import { organizationsApi, runsApi } from '../lib/api/client';
 import { useAppContext } from '../lib/AppContextProvider';
 import { useNonAdminRedirect } from '../lib/hooks/use-non-admin-redirect';
 import { type Run } from '../lib/schema';
@@ -86,24 +87,22 @@ function DriverDetailPage() {
   const { isAdmin, organization } = useNonAdminRedirect('/runs');
 
   // Fetch organization members to get driver information
-  const { data: membersData, isLoading: membersLoading } = useQuery({
+  const { data: driver, isLoading: driverLoading } = useQuery({
     queryKey: ['organization-members', organization?.id],
-    queryFn: () =>
-      organizationsApi.getOrganizationMembers(
-        organization!.id,
-        currentUser!.id
-      ),
+    queryFn: () => {
+      if (!organization?.id) {
+        throw new Error('Organization ID is required');
+      }
+      return organizationsApi.getOrganizationMemberById(
+        organization.id,
+        driverId
+      );
+    },
     enabled: !!organization?.id && !!currentUser?.id && isAdmin,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  // Find the specific driver
-  const driver = membersData?.members.find(
-    (member: any) => member.userId === driverId
-  );
-  const driverName = driver
-    ? `${driver.firstName} ${driver.lastName}`
-    : 'Unknown Driver';
+  const driverName = driver?.name ?? 'Unknown Driver';
 
   // Fetch all runs for the organization
   const {
@@ -306,7 +305,7 @@ function DriverDetailPage() {
     }
   };
 
-  if (runsLoading || membersLoading) {
+  if (runsLoading || driverLoading) {
     return (
       <div className="container mx-auto py-2 max-w-full overflow-hidden">
         <div className="flex items-center justify-center py-12">

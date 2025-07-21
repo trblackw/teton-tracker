@@ -1,9 +1,9 @@
 #!/usr/bin/env bun
 
 import { getDatabase } from '../src/lib/db/index';
-import { createNotification as createNotificationDb } from '../src/lib/db/notifications';
-import { createReportTemplate } from '../src/lib/db/report-templates';
-import { createRun } from '../src/lib/db/runs';
+import { notificationsDb } from '../src/lib/db/notifications-db';
+import { reportTemplatesDb } from '../src/lib/db/report-templates-db';
+import { runsDb } from '../src/lib/db/runs-db';
 import { type ReportTemplateForm, ReportType } from '../src/lib/schema';
 
 // Get user ID from command line arguments
@@ -219,7 +219,8 @@ async function generateMockData() {
       createdBy: userId,
     };
 
-    const reportTemplate = await createReportTemplate(sampleTemplate);
+    const reportTemplate =
+      await reportTemplatesDb.createReportTemplate(sampleTemplate);
     console.log(`✅ Created report template: ${reportTemplate.id}`);
 
     console.log('🏃 Creating mock runs...');
@@ -229,7 +230,7 @@ async function generateMockData() {
 
     for (const runData of mockRuns) {
       try {
-        const newRun = await createRun(runData, userId);
+        const newRun = await runsDb.createRun(runData, userId);
         createdRunIds.push(newRun.id);
         console.log(
           `✅ Created run: ${runData.flightNumber} (${runData.type}) - scheduled for ${new Date(runData.scheduledTime).toLocaleString()}`
@@ -338,7 +339,7 @@ async function generateMockNotifications(runIds: string[]) {
 
     for (const notificationData of mockNotifications) {
       try {
-        await createNotificationDb(notificationData, userId);
+        await notificationsDb.createNotification(notificationData, userId);
         createdCount++;
         console.log(`✅ Created notification: ${notificationData.title}`);
       } catch (error) {

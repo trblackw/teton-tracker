@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { preferencesApi } from '../api/client';
+import { preferencesApi } from '../api/preferences-api';
 import { queryKeys } from '../react-query-client';
 import { useNetworkAwareOptions } from './use-network-status';
 

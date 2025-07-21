@@ -1,20 +1,5 @@
+import type { Organization } from '../schema';
 import { getDatabase, handleDatabaseError } from './index';
-
-export interface Organization {
-  id: string;
-  name: string;
-  imageUrl?: string;
-  createdBy: string;
-  createdAt: Date;
-}
-
-export interface OrganizationMembership {
-  id: string;
-  organizationId: string;
-  userId: string;
-  role: 'admin' | 'driver';
-  createdAt: Date;
-}
 
 export interface OrganizationWithMembership extends Organization {
   userRole: 'admin' | 'driver';
@@ -22,7 +7,7 @@ export interface OrganizationWithMembership extends Organization {
 }
 
 // Get user's organization memberships
-export async function getUserOrganizations(
+async function getUserOrganizations(
   userId: string
 ): Promise<OrganizationWithMembership[]> {
   try {
@@ -58,7 +43,7 @@ export async function getUserOrganizations(
 }
 
 // Get organization members
-export async function getOrganizationMembers(organizationId: string): Promise<
+async function getOrganizationMembers(organizationId: string): Promise<
   {
     id: string;
     name: string;
@@ -97,7 +82,7 @@ export async function getOrganizationMembers(organizationId: string): Promise<
 }
 
 // Get user's role in organization
-export async function getUserRoleInOrganization(
+async function getUserRoleInOrganization(
   userId: string,
   organizationId: string
 ): Promise<'admin' | 'driver' | null> {
@@ -125,7 +110,7 @@ export async function getUserRoleInOrganization(
 }
 
 // Get organization by id
-export async function getOrganizationById(
+async function getOrganizationById(
   organizationId: string
 ): Promise<Organization | null> {
   try {
@@ -159,7 +144,7 @@ export async function getOrganizationById(
 }
 
 // Get all user IDs in an organization
-export async function getOrganizationMemberIds(
+async function getOrganizationMemberIds(
   organizationId: string
 ): Promise<string[]> {
   try {
@@ -180,3 +165,11 @@ export async function getOrganizationMemberIds(
     return [];
   }
 }
+
+export const organizationsDb = {
+  getUserOrganizations,
+  getOrganizationMembers,
+  getUserRoleInOrganization,
+  getOrganizationById,
+  getOrganizationMemberIds,
+} as const;

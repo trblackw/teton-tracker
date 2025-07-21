@@ -1,3 +1,5 @@
+import { preferencesApi } from '@/lib/api/preferences-api';
+import { seedApi } from '@/lib/api/seed-api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import {
@@ -38,9 +40,8 @@ import { TimezoneCombobox } from '../components/ui/timezone-combobox';
 import { IOSToggle } from '../components/ui/toggle';
 import airportsData from '../data/airports-comprehensive.json';
 import timezonesData from '../data/timezones.json';
-import { preferencesApi, seedApi } from '../lib/api/client';
 import { useAppContext } from '../lib/AppContextProvider';
-import { type UpdatePreferencesData } from '../lib/db/preferences';
+import { type UpdatePreferencesData } from '../lib/db/preferences-db';
 import { isDebugMode } from '../lib/debug';
 import {
   notifications,
@@ -254,12 +255,7 @@ function Settings() {
 
   // Mutation for generating seed data (debug only)
   const generateSeedDataMutation = useMutation({
-    mutationFn: () => {
-      if (!currentUser?.id) {
-        throw new Error('User ID is required');
-      }
-      return seedApi.generateData(currentUser.id);
-    },
+    mutationFn: seedApi.generateData,
     onSuccess: result => {
       // Invalidate all queries to refresh the UI
       queryClient.invalidateQueries();
@@ -279,12 +275,7 @@ function Settings() {
 
   // Mutation for clearing user data (debug only)
   const clearUserDataMutation = useMutation({
-    mutationFn: () => {
-      if (!currentUser?.id) {
-        throw new Error('User ID is required');
-      }
-      return seedApi.clearUserData(currentUser.id);
-    },
+    mutationFn: seedApi.clearUserData,
     onSuccess: result => {
       // Invalidate all queries to refresh the UI
       queryClient.invalidateQueries();

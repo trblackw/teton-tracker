@@ -1,14 +1,7 @@
 import { checkRunOwnership, createErrorResponse } from '../lib/access-control';
 import { initJSONResponse } from '../lib/api/api-tools';
 import { getDatabase } from '../lib/db/index';
-import {
-  createRun,
-  deleteRun,
-  getRunById,
-  getRuns,
-  updateRun,
-  type RunsQuery,
-} from '../lib/db/runs';
+import { runsDb, type RunsQuery } from '../lib/db/runs-db';
 import { type NewRunForm, type Run, type RunStatus } from '../lib/schema';
 import { getCurrentAuthUser } from './auth';
 
@@ -80,7 +73,7 @@ export async function getOrganizationRuns(request: Request): Promise<Response> {
 
     // Fetch runs for all organization members
     const allRuns = await Promise.all(
-      memberUserIds.map(createdById => getRuns({ createdById }))
+      memberUserIds.map(createdById => runsDb.getRuns({ createdById }))
     );
 
     // Flatten the results
@@ -152,7 +145,7 @@ export async function GET(request: Request): Promise<Response> {
       orderDirection,
     };
 
-    const runs = await getRuns(query);
+    const runs = await runsDb.getRuns(query);
 
     return initJSONResponse(runs);
   } catch (error) {
@@ -180,7 +173,7 @@ export async function POST(request: Request): Promise<Response> {
     };
 
     // Create run for the authenticated user
-    const run = await createRun(runData, user.id);
+    const run = await runsDb.createRun(runData, user.id);
 
     return initJSONResponse(run, 201);
   } catch (error) {
@@ -237,7 +230,7 @@ export async function PUT(request: Request): Promise<Response> {
 
         // Calculate actual duration if the run was previously activated
         try {
-          const currentRun = await getRunById(id, user.id);
+          const currentRun = await runsDb.getRunById(id, user.id);
           if (currentRun?.activatedAt) {
             const activatedTime = new Date(currentRun.activatedAt).getTime();
             const completedTime = updateData.completedAt.getTime();
@@ -251,7 +244,7 @@ export async function PUT(request: Request): Promise<Response> {
         }
       }
 
-      const updatedRun = await updateRun(id, updateData, user.id);
+      const updatedRun = await runsDb.updateRun(id, updateData, user.id);
       const success = updatedRun !== null;
 
       return initJSONResponse({ success, updatedRun });
@@ -293,7 +286,7 @@ export async function DELETE(request: Request): Promise<Response> {
       );
     }
 
-    const success = await deleteRun(id, user.id);
+    const success = await runsDb.deleteRun(id, user.id);
 
     return initJSONResponse({ success });
   } catch (error) {

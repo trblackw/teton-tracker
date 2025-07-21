@@ -4,8 +4,7 @@ import { getDatabase, handleDatabaseError } from './index';
 // Type for updating user preferences
 export type UpdatePreferencesData = Partial<UserPreferences>;
 
-// Get user preferences
-export async function getUserPreferences(
+async function getUserPreferences(
   userId: string
 ): Promise<UserPreferences | null> {
   if (!userId) {
@@ -41,8 +40,7 @@ export async function getUserPreferences(
   }
 }
 
-// Create or update user preferences
-export async function saveUserPreferences(
+async function saveUserPreferences(
   preferences: Partial<UserPreferences>,
   userId: string
 ): Promise<UserPreferences | null> {
@@ -172,8 +170,7 @@ export async function saveUserPreferences(
   }
 }
 
-// Update notification preferences
-export async function updateNotificationPreferences(
+async function updateNotificationPreferences(
   notificationPreferences: NotificationPreferences,
   userId: string
 ): Promise<boolean> {
@@ -204,8 +201,7 @@ export async function updateNotificationPreferences(
   }
 }
 
-// Delete user preferences
-export async function deleteUserPreferences(userId: string): Promise<boolean> {
+async function deleteUserPreferences(userId: string): Promise<boolean> {
   if (!userId) {
     throw new Error('User ID is required');
   }
@@ -229,3 +225,10 @@ export async function deleteUserPreferences(userId: string): Promise<boolean> {
     return false;
   }
 }
+
+export const preferencesDb = {
+  getUserPreferences,
+  saveUserPreferences,
+  updateNotificationPreferences,
+  deleteUserPreferences,
+} as const;

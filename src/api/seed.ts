@@ -1,12 +1,9 @@
 import { initJSONResponse } from '../lib/api/api-tools';
 import { getDatabase } from '../lib/db/index';
-import { createNotification } from '../lib/db/notifications';
-import { saveUserPreferences } from '../lib/db/preferences';
-import {
-  createReportTemplate,
-  getReportTemplates,
-} from '../lib/db/report-templates';
-import { createRun } from '../lib/db/runs';
+import { notificationsDb } from '../lib/db/notifications-db';
+import { preferencesDb } from '../lib/db/preferences-db';
+import { reportTemplatesDb } from '../lib/db/report-templates-db';
+import { runsDb } from '../lib/db/runs-db';
 import type { ReportType, RunStatus, RunType } from '../lib/schema';
 
 // Mock data arrays
@@ -286,7 +283,7 @@ async function generateReportTemplates(userId: string): Promise<number> {
         const isDefaultTemplate =
           templateData.isDefault && !defaultTemplateCreated;
 
-        await createReportTemplate({
+        await reportTemplatesDb.createReportTemplate({
           ...templateData,
           isDefault: isDefaultTemplate,
           organizationId,
@@ -390,7 +387,7 @@ export async function seedDataForUser(userId: string): Promise<{
     // Set user's home airport to JAC (Jackson Hole Airport)
     console.log('🏠 Setting home airport to JAC (Jackson Hole Airport)...');
     try {
-      await saveUserPreferences(
+      await preferencesDb.saveUserPreferences(
         {
           homeAirport: 'JAC',
         },
@@ -458,7 +455,7 @@ export async function seedDataForUser(userId: string): Promise<{
     console.log(`✅ Created ${templatesCreated} report templates`);
 
     // Now get default report template for the organization
-    const defaultTemplates = await getReportTemplates({
+    const defaultTemplates = await reportTemplatesDb.getReportTemplates({
       organizationId,
       isDefault: true,
       limit: 1,
@@ -467,7 +464,7 @@ export async function seedDataForUser(userId: string): Promise<{
     let defaultReportTemplateId: string;
     if (defaultTemplates.length === 0) {
       // If no default template exists, get any template for this organization
-      const anyTemplates = await getReportTemplates({
+      const anyTemplates = await reportTemplatesDb.getReportTemplates({
         organizationId,
         limit: 1,
       });
@@ -648,7 +645,11 @@ export async function seedDataForUser(userId: string): Promise<{
     // Create runs in database
     for (const runData of allRuns) {
       const { targetUserId, userName, ...runCreateData } = runData;
-      const run = await createRun(runCreateData, targetUserId, organizationId!);
+      const run = await runsDb.createRun(
+        runCreateData,
+        targetUserId,
+        organizationId!
+      );
       console.log(
         `✅ Created run: ${run.flightNumber} (${run.status}) for ${userName}`
       );
@@ -704,7 +705,10 @@ export async function seedDataForUser(userId: string): Promise<{
           metadata: {},
         };
 
-        await createNotification(notificationData, targetUserId);
+        await notificationsDb.createNotification(
+          notificationData,
+          targetUserId
+        );
         totalNotificationCount++;
       }
     }
@@ -741,7 +745,7 @@ export async function seedDataForUser(userId: string): Promise<{
     ];
 
     for (const notification of systemNotifications) {
-      await createNotification(notification, userId);
+      await notificationsDb.createNotification(notification, userId);
       console.log(`✅ Created system notification: ${notification.title}`);
       totalNotificationCount++;
     }

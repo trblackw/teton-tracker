@@ -1,3 +1,4 @@
+import { runsApi } from '@/lib/api/runs-api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createFileRoute,
@@ -28,7 +29,6 @@ import {
   CardTitle,
 } from '../components/ui/card';
 import { BackButton } from '../components/ui/navigation-arrow';
-import { runsApi } from '../lib/api/client';
 import { useMultipleRunsData } from '../lib/hooks/use-api-data';
 import { toasts } from '../lib/toast';
 

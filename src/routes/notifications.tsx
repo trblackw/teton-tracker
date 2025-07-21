@@ -1,3 +1,4 @@
+import { notificationsApi } from '@/lib/api/notifications-api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import {
@@ -34,7 +35,6 @@ import {
   SelectValue,
 } from '../components/ui/select';
 import { StickyHeader } from '../components/ui/sticky-header';
-import { notificationsApi } from '../lib/api/client';
 import { useTimezoneFormatters } from '../lib/hooks/use-timezone';
 import { type Notification, type NotificationType } from '../lib/schema';
 import { toasts } from '../lib/toast';

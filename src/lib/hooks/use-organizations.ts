@@ -1,9 +1,13 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { organizationsApi } from '../api/client';
+import { organizationsApi } from '../api/organizations-api';
 import { useUser } from '../auth-client';
+import type { OrganizationWithRole } from '../schema';
 
 // Hook to get single organization for the current user (new single-org model)
-export function useUserOrganization(): UseQueryResult<any, Error> {
+export function useUserOrganization(): UseQueryResult<
+  OrganizationWithRole,
+  Error
+> {
   const { user } = useUser();
 
   return useQuery({
@@ -72,13 +76,14 @@ export function useIsUserAdmin(orgId?: string) {
   if (orgId) {
     // Check specific organization
     return {
-      isAdmin: userRole?.role === 'admin',
+      isAdmin: userRole === 'admin',
       isLoading: !userRole,
     };
   }
 
   // Check if admin in any organization
-  const isAdminInAnyOrg = (userOrg as any)?.role === 'admin' || false;
+  const isAdminInAnyOrg =
+    (userOrg as OrganizationWithRole)?.role === 'admin' || false;
 
   return {
     isAdmin: isAdminInAnyOrg,

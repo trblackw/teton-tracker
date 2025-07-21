@@ -1,3 +1,5 @@
+import { getApiUrl } from '../environment';
+
 export function isBetterAuthRoute(path: string): boolean {
   return path.startsWith('/api/auth');
 }
@@ -24,4 +26,16 @@ export function initJSONResponse(
     },
     status,
   });
+} // Helper function to create fetch options with credentials
+
+export function createFetchOptions(options: RequestInit = {}): RequestInit {
+  return {
+    ...options,
+    credentials: 'include', // Always include session cookies
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  };
 }
+export const API_BASE = getApiUrl();

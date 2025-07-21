@@ -1,10 +1,5 @@
 import { initJSONResponse } from '../lib/api/api-tools';
-import {
-  getOrganizationById,
-  getOrganizationMembers as getOrgMembers,
-  getUserOrganizations,
-  getUserRoleInOrganization,
-} from '../lib/db/organizations';
+import { organizationsDb } from '../lib/db/organizations-db';
 import { getCurrentAuthUser } from './auth';
 
 console.log('✅ Organizations API initialized with BetterAuth');
@@ -56,7 +51,9 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     // Get user's organizations from our database
-    const userOrganizations = await getUserOrganizations(user.id);
+    const userOrganizations = await organizationsDb.getUserOrganizations(
+      user.id
+    );
 
     // Transform data to match expected API format
     const transformedOrganizations = userOrganizations.map(org => ({
@@ -104,7 +101,10 @@ export async function getOrganizationMembers(
     }
 
     // Check if the requesting user is a member of the organization
-    const userRole = await getUserRoleInOrganization(user.id, orgId);
+    const userRole = await organizationsDb.getUserRoleInOrganization(
+      user.id,
+      orgId
+    );
 
     if (!userRole) {
       return initJSONResponse(
@@ -117,8 +117,8 @@ export async function getOrganizationMembers(
 
     // Get organization details and all members
     const [organization, members] = await Promise.all([
-      getOrganizationById(orgId),
-      getOrgMembers(orgId),
+      organizationsDb.getOrganizationById(orgId),
+      organizationsDb.getOrganizationMembers(orgId),
     ]);
 
     if (!organization) {
@@ -180,7 +180,10 @@ export async function getUserRole(request: Request): Promise<Response> {
     }
 
     // Get user's role in the organization
-    const userRole = await getUserRoleInOrganization(user.id, orgId);
+    const userRole = await organizationsDb.getUserRoleInOrganization(
+      user.id,
+      orgId
+    );
 
     if (!userRole) {
       return initJSONResponse(
@@ -244,7 +247,10 @@ export async function checkPermissions(request: Request): Promise<Response> {
     }
 
     // Get user's role in the organization
-    const userRole = await getUserRoleInOrganization(user.id, orgId);
+    const userRole = await organizationsDb.getUserRoleInOrganization(
+      user.id,
+      orgId
+    );
 
     if (!userRole) {
       return initJSONResponse(

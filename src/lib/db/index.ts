@@ -1,11 +1,17 @@
 import { Pool } from 'pg';
+import { notificationsDb } from './notifications-db';
+import { organizationsDb } from './organizations-db';
+import { preferencesDb } from './preferences-db';
+import { reportTemplatesDb } from './report-templates-db';
+import { reportsDb } from './reports-db';
+import { runsDb } from './runs-db';
 
 // Database client instance
-let db: Pool | null = null;
+let postgres: Pool | null = null;
 
 // Initialize database connection
 export function initializeDatabase(): Pool {
-  if (db) return db;
+  if (postgres) return postgres;
 
   const databaseUrl = process.env.DATABASE_URL;
 
@@ -22,7 +28,7 @@ export function initializeDatabase(): Pool {
 
   console.log('🐘 Connecting to PostgreSQL database');
 
-  db = new Pool({
+  postgres = new Pool({
     connectionString: databaseUrl,
     ssl:
       process.env.NODE_ENV === 'production'
@@ -30,15 +36,15 @@ export function initializeDatabase(): Pool {
         : false,
   });
 
-  return db;
+  return postgres;
 }
 
 // Get database instance
 export function getDatabase(): Pool {
-  if (!db) {
+  if (!postgres) {
     return initializeDatabase();
   }
-  return db;
+  return postgres;
 }
 
 // Helper function to handle database errors gracefully
@@ -64,3 +70,12 @@ export async function cleanupExpiredCache(): Promise<void> {
     handleDatabaseError(error, 'cache cleanup');
   }
 }
+
+export const db = {
+  notifications: notificationsDb,
+  organizations: organizationsDb,
+  preferences: preferencesDb,
+  reports: reportsDb,
+  runs: runsDb,
+  reportTemplates: reportTemplatesDb,
+} as const;

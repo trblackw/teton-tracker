@@ -19,7 +19,7 @@ export interface ReportsQuery {
   templateId?: string;
   reportType?: ReportType;
   status?: Report['status'] | Report['status'][];
-  search?: string; // Search in name
+  search?: string;
   startDateFrom?: Date;
   startDateTo?: Date;
   limit?: number;
@@ -28,10 +28,7 @@ export interface ReportsQuery {
   orderDirection?: 'ASC' | 'DESC';
 }
 
-// Create a new report
-export async function createReport(
-  reportData: CreateReportData
-): Promise<Report> {
+async function createReport(reportData: CreateReportData): Promise<Report> {
   try {
     const db = getDatabase();
     const reportId = crypto.randomUUID();
@@ -73,8 +70,7 @@ export async function createReport(
   }
 }
 
-// Get reports with optional filtering
-export async function getReports(query: ReportsQuery = {}): Promise<Report[]> {
+async function getReports(query: ReportsQuery = {}): Promise<Report[]> {
   try {
     const db = getDatabase();
     const {
@@ -188,8 +184,7 @@ export async function getReports(query: ReportsQuery = {}): Promise<Report[]> {
   }
 }
 
-// Get a single report by ID
-export async function getReportById(
+async function getReportById(
   id: string,
   organizationId?: string
 ): Promise<Report | null> {
@@ -239,8 +234,7 @@ export async function getReportById(
   }
 }
 
-// Update report
-export async function updateReport(
+async function updateReport(
   id: string,
   updateData: UpdateReportData,
   organizationId: string
@@ -349,8 +343,7 @@ export async function updateReport(
   }
 }
 
-// Delete report
-export async function deleteReport(
+async function deleteReport(
   id: string,
   organizationId: string
 ): Promise<boolean> {
@@ -382,8 +375,7 @@ export async function deleteReport(
   }
 }
 
-// Get report count for organization
-export async function getReportCount(
+async function getReportCount(
   organizationId: string,
   status?: Report['status']
 ): Promise<number> {
@@ -408,8 +400,7 @@ export async function getReportCount(
   }
 }
 
-// Get reports statistics
-export async function getReportsStats(organizationId?: string): Promise<{
+async function getReportsStats(organizationId?: string): Promise<{
   total: number;
   byStatus: Record<Report['status'], number>;
   byType: Record<ReportType, number>;
@@ -462,3 +453,11 @@ export async function getReportsStats(organizationId?: string): Promise<{
     };
   }
 }
+
+export const reportsDb = {
+  createReport,
+  getReports,
+  getReportById,
+  updateReport,
+  deleteReport,
+} as const;

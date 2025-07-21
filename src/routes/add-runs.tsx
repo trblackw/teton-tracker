@@ -1,3 +1,5 @@
+import { reportTemplatesApi } from '@/lib/api/report-templates-api';
+import { runsApi } from '@/lib/api/runs-api';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, useRouter, useSearch } from '@tanstack/react-router';
@@ -37,7 +39,6 @@ import {
   SelectValue,
 } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
-import { reportTemplatesApi, runsApi } from '../lib/api/client';
 import { useNonAdminRedirect } from '../lib/hooks/use-non-admin-redirect';
 import type { ReportTemplate } from '../lib/schema';
 import { toasts } from '../lib/toast';

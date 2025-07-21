@@ -1,3 +1,5 @@
+import { reportTemplatesApi } from '@/lib/api/report-templates-api';
+import { runsApi } from '@/lib/api/runs-api';
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import {
@@ -29,7 +31,6 @@ import {
   PopoverTrigger,
 } from '../components/ui/popover';
 import { StickyHeader } from '../components/ui/sticky-header';
-import { reportTemplatesApi, runsApi } from '../lib/api/client';
 import {
   defaultReportTemplateFields,
   type DefaultReportConfigFields,

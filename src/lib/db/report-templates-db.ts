@@ -14,8 +14,7 @@ export interface ReportTemplatesQuery {
   offset?: number;
 }
 
-// Create a new report template
-export async function createReportTemplate(
+async function createReportTemplate(
   templateData: ReportTemplateForm
 ): Promise<ReportTemplate> {
   if (!templateData.organizationId) {
@@ -64,8 +63,7 @@ export async function createReportTemplate(
   }
 }
 
-// Get report templates with optional filtering
-export async function getReportTemplates(
+async function getReportTemplates(
   query: ReportTemplatesQuery = {}
 ): Promise<ReportTemplate[]> {
   try {
@@ -159,8 +157,7 @@ export async function getReportTemplates(
   }
 }
 
-// Get a single report template by ID
-export async function getReportTemplateById(
+async function getReportTemplateById(
   id: string,
   organizationId?: string
 ): Promise<ReportTemplate | null> {
@@ -207,8 +204,7 @@ export async function getReportTemplateById(
   }
 }
 
-// Update a report template
-export async function updateReportTemplate(
+async function updateReportTemplate(
   id: string,
   templateData: ReportTemplateForm,
   organizationId: string
@@ -264,8 +260,7 @@ export async function updateReportTemplate(
   }
 }
 
-// Delete a report template
-export async function deleteReportTemplate(
+async function deleteReportTemplate(
   id: string,
   organizationId: string
 ): Promise<boolean> {
@@ -303,8 +298,7 @@ export async function deleteReportTemplate(
   }
 }
 
-// Get template count for organization
-export async function getReportTemplateCount(
+async function getReportTemplateCount(
   organizationId: string,
   reportType?: ReportType
 ): Promise<number> {
@@ -329,8 +323,7 @@ export async function getReportTemplateCount(
   }
 }
 
-// Get default template for organization and report type
-export async function getDefaultReportTemplate(
+async function getDefaultReportTemplate(
   organizationId: string,
   reportType: ReportType
 ): Promise<ReportTemplate | null> {
@@ -348,3 +341,11 @@ export async function getDefaultReportTemplate(
     return null;
   }
 }
+
+export const reportTemplatesDb = {
+  createReportTemplate,
+  getReportTemplates,
+  getReportTemplateById,
+  updateReportTemplate,
+  deleteReportTemplate,
+} as const;

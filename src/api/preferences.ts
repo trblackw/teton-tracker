@@ -1,6 +1,6 @@
 import { createErrorResponse } from '../lib/access-control';
 import { initJSONResponse } from '../lib/api/api-tools';
-import { getUserPreferences, saveUserPreferences } from '../lib/db/preferences';
+import { preferencesDb } from '../lib/db/preferences-db';
 import { type UserPreferences } from '../lib/schema';
 import { getCurrentAuthUser } from './auth';
 
@@ -19,7 +19,7 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     // Get preferences (only returns user's own preferences anyway)
-    const preferences = await getUserPreferences(user.id);
+    const preferences = await preferencesDb.getUserPreferences(user.id);
 
     return initJSONResponse(preferences);
   } catch (error) {
@@ -50,7 +50,10 @@ export async function PUT(request: Request): Promise<Response> {
     };
 
     // Save preferences for the authenticated user
-    const preferences = await saveUserPreferences(preferencesData, user.id);
+    const preferences = await preferencesDb.saveUserPreferences(
+      preferencesData,
+      user.id
+    );
 
     return initJSONResponse(preferences);
   } catch (error) {

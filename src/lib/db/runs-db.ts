@@ -1,6 +1,6 @@
 import { type NewRunForm, type Run, type RunStatus } from '../schema';
 import { getDatabase, handleDatabaseError } from './index';
-import { deleteNotificationsByRunId } from './notifications';
+import { notificationsDb } from './notifications-db';
 
 export interface RunsQuery {
   createdById?: string;
@@ -11,8 +11,7 @@ export interface RunsQuery {
   orderDirection?: 'ASC' | 'DESC';
 }
 
-// Create a new run
-export async function createRun(
+async function createRun(
   runData: NewRunForm,
   createdById: string,
   organizationId?: string
@@ -86,8 +85,7 @@ export async function createRun(
   }
 }
 
-// Get runs with optional filtering
-export async function getRuns(query: RunsQuery = {}): Promise<Run[]> {
+async function getRuns(query: RunsQuery = {}): Promise<Run[]> {
   try {
     const db = getDatabase();
     const { createdById, status, limit = 50, offset = 0 } = query;
@@ -179,11 +177,7 @@ export async function getRuns(query: RunsQuery = {}): Promise<Run[]> {
   }
 }
 
-// Get a single run by ID
-export async function getRunById(
-  id: string,
-  userId?: string
-): Promise<Run | null> {
+async function getRunById(id: string, userId?: string): Promise<Run | null> {
   try {
     const db = getDatabase();
 
@@ -242,8 +236,7 @@ export async function getRunById(
   }
 }
 
-// Update run
-export async function updateRun(
+async function updateRun(
   id: string,
   updateData: Partial<Omit<Run, 'id' | 'createdAt'>>,
   userId: string
@@ -405,8 +398,7 @@ export async function updateRun(
   }
 }
 
-// Delete run
-export async function deleteRun(id: string, userId: string): Promise<boolean> {
+async function deleteRun(id: string, userId: string): Promise<boolean> {
   if (!userId) {
     throw new Error('User ID is required');
   }
@@ -419,7 +411,7 @@ export async function deleteRun(id: string, userId: string): Promise<boolean> {
     const db = getDatabase();
 
     // First delete related notifications (only those belonging to the user)
-    await deleteNotificationsByRunId(id, userId);
+    await notificationsDb.deleteNotificationsByRunId(id, userId);
 
     // Delete the run only if it belongs to the user
     const sql = 'DELETE FROM runs WHERE id = $1 AND created_by_id = $2';
@@ -437,8 +429,7 @@ export async function deleteRun(id: string, userId: string): Promise<boolean> {
   }
 }
 
-// Get runs statistics
-export async function getRunsStats(userId?: string): Promise<{
+async function getRunsStats(userId?: string): Promise<{
   total: number;
   byStatus: Record<RunStatus, number>;
   byType: Record<'pickup' | 'dropoff', number>;
@@ -493,8 +484,7 @@ export async function getRunsStats(userId?: string): Promise<{
   }
 }
 
-// Bulk create runs (for import functionality)
-export async function createRunsBatch(
+async function createRunsBatch(
   runsData: NewRunForm[],
   userId: string,
   organizationId: string
@@ -575,3 +565,13 @@ export async function createRunsBatch(
     throw new Error('Failed to create runs batch');
   }
 }
+
+export const runsDb = {
+  createRun,
+  getRuns,
+  getRunById,
+  updateRun,
+  createRunsBatch,
+  getRunsStats,
+  deleteRun,
+} as const;

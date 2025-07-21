@@ -4,15 +4,10 @@ import {
 } from '../lib/access-control';
 import { initJSONResponse } from '../lib/api/api-tools';
 import {
-  createNotification,
-  deleteNotification,
-  getNotifications,
-  getNotificationsStats,
-  markAllNotificationsAsRead,
-  markNotificationAsRead,
+  notificationsDb,
   type NotificationForm,
   type NotificationsQuery,
-} from '../lib/db/notifications';
+} from '../lib/db/notifications-db';
 import { getCurrentAuthUser } from './auth';
 
 // GET /api/notifications
@@ -64,7 +59,7 @@ export async function GET(request: Request): Promise<Response> {
       query.search = search;
     }
 
-    const notifications = await getNotifications(query);
+    const notifications = await notificationsDb.getNotifications(query);
 
     return initJSONResponse(notifications);
   } catch (error) {
@@ -93,7 +88,10 @@ export async function POST(request: Request): Promise<Response> {
     };
 
     // Create notification for the authenticated user
-    const notification = await createNotification(notificationData, user.id);
+    const notification = await notificationsDb.createNotification(
+      notificationData,
+      user.id
+    );
 
     return initJSONResponse(notification, 201);
   } catch (error) {
@@ -144,7 +142,7 @@ export async function PUT(request: Request): Promise<Response> {
         }
 
         if (isRead) {
-          success = await markNotificationAsRead(id, user.id);
+          success = await notificationsDb.markNotificationAsRead(id, user.id);
         } else {
           // For now, we only support marking as read, not unread
           success = false;
@@ -153,7 +151,7 @@ export async function PUT(request: Request): Promise<Response> {
 
       case 'mark_all_read':
         // For mark_all_read, we only mark the user's own notifications
-        success = await markAllNotificationsAsRead(user.id);
+        success = await notificationsDb.markAllNotificationsAsRead(user.id);
         break;
 
       default:
@@ -197,7 +195,7 @@ export async function DELETE(request: Request): Promise<Response> {
       );
     }
 
-    const success = await deleteNotification(id, user.id);
+    const success = await notificationsDb.deleteNotification(id, user.id);
 
     return initJSONResponse({ success });
   } catch (error) {
@@ -221,7 +219,7 @@ export async function getStats(request: Request): Promise<Response> {
     }
 
     // Stats are user-specific by design, so we don't need additional access control
-    const stats = await getNotificationsStats(user.id);
+    const stats = await notificationsDb.getNotificationsStats(user.id);
 
     return initJSONResponse(stats);
   } catch (error) {

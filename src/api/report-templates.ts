@@ -1,12 +1,9 @@
 import { initJSONResponse } from '../lib/api/api-tools';
 import { getDatabase } from '../lib/db';
 import {
-  createReportTemplate,
-  deleteReportTemplate,
-  getReportTemplates,
-  updateReportTemplate,
+  reportTemplatesDb,
   type ReportTemplatesQuery,
-} from '../lib/db/report-templates';
+} from '../lib/db/report-templates-db';
 import { type ReportTemplateForm, type ReportType } from '../lib/schema';
 import { getCurrentAuthUser } from './auth';
 
@@ -75,7 +72,7 @@ export async function GET(request: Request): Promise<Response> {
       offset: Number(url.searchParams.get('offset')) || 0,
     };
 
-    const templates = await getReportTemplates(query);
+    const templates = await reportTemplatesDb.getReportTemplates(query);
 
     return initJSONResponse(templates);
   } catch (error) {
@@ -116,7 +113,7 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     // Create the template
-    const template = await createReportTemplate({
+    const template = await reportTemplatesDb.createReportTemplate({
       ...templateData,
       organizationId,
       createdBy: user.id,
@@ -166,7 +163,7 @@ export async function PUT(request: Request): Promise<Response> {
     }
 
     // Update the template
-    const template = await updateReportTemplate(
+    const template = await reportTemplatesDb.updateReportTemplate(
       id,
       {
         ...templateData,
@@ -217,7 +214,7 @@ export async function DELETE(request: Request): Promise<Response> {
     }
 
     // Delete the template
-    await deleteReportTemplate(id, organizationId);
+    await reportTemplatesDb.deleteReportTemplate(id, organizationId);
 
     return initJSONResponse({ success: true });
   } catch (error) {

@@ -7,9 +7,6 @@ export type NotificationForm = Omit<
   'id' | 'userId' | 'isRead' | 'createdAt' | 'updatedAt'
 >;
 
-// Legacy alias for backward compatibility
-export type CreateNotificationData = NotificationForm;
-
 export interface NotificationsQuery {
   userId?: string;
   type?: string[];
@@ -23,7 +20,7 @@ export interface NotificationsQuery {
 }
 
 // Create a new notification
-export async function createNotification(
+async function createNotification(
   notificationData: NotificationForm,
   userId: string
 ): Promise<Notification> {
@@ -76,7 +73,7 @@ export async function createNotification(
 }
 
 // Get notifications with optional filtering and search
-export async function getNotifications(
+async function getNotifications(
   query: NotificationsQuery = {}
 ): Promise<Notification[]> {
   try {
@@ -169,7 +166,7 @@ export async function getNotifications(
 }
 
 // Get a single notification by ID
-export async function getNotificationById(
+async function getNotificationById(
   id: string,
   userId?: string
 ): Promise<Notification | null> {
@@ -219,8 +216,7 @@ export async function getNotificationById(
   }
 }
 
-// Mark notification as read
-export async function markNotificationAsRead(
+async function markNotificationAsRead(
   id: string,
   userId: string
 ): Promise<boolean> {
@@ -256,10 +252,7 @@ export async function markNotificationAsRead(
   }
 }
 
-// Mark all notifications as read for a user
-export async function markAllNotificationsAsRead(
-  userId: string
-): Promise<boolean> {
+async function markAllNotificationsAsRead(userId: string): Promise<boolean> {
   if (!userId) {
     throw new Error('User ID is required');
   }
@@ -290,8 +283,7 @@ export async function markAllNotificationsAsRead(
   }
 }
 
-// Delete notification
-export async function deleteNotification(
+async function deleteNotification(
   id: string,
   userId: string
 ): Promise<boolean> {
@@ -324,8 +316,7 @@ export async function deleteNotification(
   }
 }
 
-// Delete all notifications for a user
-export async function deleteAllNotifications(userId: string): Promise<boolean> {
+async function deleteAllNotifications(userId: string): Promise<boolean> {
   try {
     const db = getDatabase();
 
@@ -346,8 +337,7 @@ export async function deleteAllNotifications(userId: string): Promise<boolean> {
   }
 }
 
-// Delete notifications by run ID
-export async function deleteNotificationsByRunId(
+async function deleteNotificationsByRunId(
   runId: string,
   userId?: string
 ): Promise<boolean> {
@@ -379,8 +369,7 @@ export async function deleteNotificationsByRunId(
   }
 }
 
-// Get notification count for a user
-export async function getNotificationCount(
+async function getNotificationCount(
   userId: string,
   onlyUnread: boolean = false
 ): Promise<number> {
@@ -404,8 +393,7 @@ export async function getNotificationCount(
   }
 }
 
-// Get notifications statistics
-export async function getNotificationsStats(userId?: string): Promise<{
+async function getNotificationsStats(userId?: string): Promise<{
   total: number;
   unread: number;
   byType: Record<string, number>;
@@ -458,8 +446,7 @@ export async function getNotificationsStats(userId?: string): Promise<{
   }
 }
 
-// Bulk create notifications
-export async function createBulkNotifications(
+async function createBulkNotifications(
   notificationsData: NotificationForm[],
   userId: string
 ): Promise<Notification[]> {
@@ -527,3 +514,17 @@ export async function createBulkNotifications(
     throw new Error('Failed to create bulk notifications');
   }
 }
+
+export const notificationsDb = {
+  createNotification,
+  getNotifications,
+  getNotificationById,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  deleteNotification,
+  deleteAllNotifications,
+  deleteNotificationsByRunId,
+  getNotificationCount,
+  getNotificationsStats,
+  createBulkNotifications,
+} as const;

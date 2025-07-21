@@ -1,4 +1,4 @@
-import { smsApi } from '../api/client';
+import { smsApi } from '../api/sms-api';
 import { isDevelopment } from '../environment';
 
 /**

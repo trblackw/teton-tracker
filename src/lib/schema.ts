@@ -168,7 +168,6 @@ export const defaultReportTemplateFields: DefaultReportConfigFields[] = [
   'price',
 ];
 
-// Report Template schema
 export const ReportTemplateSchema = z.object({
   id: z.string().uuid('Invalid report template ID format'),
   name: z.string().min(1, 'Template name is required'),

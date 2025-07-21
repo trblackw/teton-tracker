@@ -1,4 +1,6 @@
-import { notificationsApi, preferencesApi, smsApi } from '../api/client';
+import { notificationsApi } from '../api/notifications-api';
+import { preferencesApi } from '../api/preferences-api';
+import { smsApi } from '../api/sms-api';
 import { isBrowser, isDevelopment } from '../environment';
 import { type NotificationType as DbNotificationType } from '../schema';
 import { toasts } from '../toast';

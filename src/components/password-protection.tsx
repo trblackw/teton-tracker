@@ -1,6 +1,6 @@
+import { authApi } from '@/lib/api/auth-api';
 import { Eye, EyeOff, Lock } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { authApi } from '../lib/api/client';
 import { isDebugMode } from '../lib/debug';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';

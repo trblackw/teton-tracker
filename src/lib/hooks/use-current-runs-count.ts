@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { runsApi } from '../api/client';
+import { runsApi } from '../api/runs-api';
 
 export function useCurrentRunsCount() {
   const { data: runs = [] } = useQuery({

@@ -1,3 +1,5 @@
+import { organizationsApi } from '@/lib/api/organizations-api';
+import { runsApi } from '@/lib/api/runs-api';
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { Car, Clock, Filter, MapPin, Search, Users } from 'lucide-react';
@@ -25,9 +27,9 @@ import {
   SelectValue,
 } from '../components/ui/select';
 import { StickyHeader } from '../components/ui/sticky-header';
-import { organizationsApi, runsApi } from '../lib/api/client';
 import { useAppContext } from '../lib/AppContextProvider';
 import { useNonAdminRedirect } from '../lib/hooks/use-non-admin-redirect';
+import type { User } from '../lib/schema';
 
 export const Route = createFileRoute('/drivers')({
   component: DriversPage,
@@ -58,11 +60,7 @@ function DriversPage() {
     error: membersError,
   } = useQuery({
     queryKey: ['organization-members', organization?.id],
-    queryFn: () =>
-      organizationsApi.getOrganizationMembers(
-        organization!.id,
-        currentUser!.id
-      ),
+    queryFn: () => organizationsApi.getOrganizationMembers(organization!.id),
     enabled: !!organization?.id && !!currentUser?.id,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
@@ -77,19 +75,12 @@ function DriversPage() {
 
   // Filter out the admin user to show only drivers
   const allDrivers = useMemo(() => {
-    return (
-      membersData?.members.filter(
-        (member: any) => member.userId !== currentUser?.id
-      ) || []
-    );
+    return membersData?.filter(member => member.id !== currentUser?.id) || [];
   }, [membersData, currentUser?.id]);
 
   // Helper function to check driver availability based on runs
-  const getDriverAvailability = (
-    driver: { userId: string },
-    filter: string
-  ) => {
-    const driverRuns = allRuns.filter(run => run.createdById === driver.userId);
+  const getDriverAvailability = (driver: User, filter: string) => {
+    const driverRuns = allRuns.filter(run => run.createdById === driver.id);
     const now = new Date();
 
     const activeRuns = driverRuns.filter(run => run.status === 'active');
@@ -150,13 +141,13 @@ function DriversPage() {
     // Apply search filter
     if (searchTerm.trim()) {
       const search = searchTerm.toLowerCase();
-      filtered = filtered.filter((driver: any) =>
-        `${driver.firstName} ${driver.lastName}`.toLowerCase().includes(search)
+      filtered = filtered.filter((driver: User) =>
+        `${driver.name}`.toLowerCase().includes(search)
       );
     }
 
     // Apply availability filter
-    filtered = filtered.filter((driver: { userId: string }) =>
+    filtered = filtered.filter((driver: User) =>
       getDriverAvailability(driver, availabilityFilter)
     );
 
@@ -263,8 +254,8 @@ function DriversPage() {
   ];
 
   // Helper function to get availability status text
-  const getAvailabilityText = (driver: { userId: string }) => {
-    const driverRuns = allRuns.filter(run => run.createdById === driver.userId);
+  const getAvailabilityText = (driver: User) => {
+    const driverRuns = allRuns.filter(run => run.createdById === driver.id);
     const activeRuns = driverRuns.filter(run => run.status === 'active');
     const scheduledRuns = driverRuns.filter(run => run.status === 'scheduled');
 
@@ -355,206 +346,187 @@ function DriversPage() {
       <div className="container mx-auto py-2 max-w-full overflow-hidden px-4 sm:px-6 lg:px-8">
         {/* Driver Cards */}
         <div className="grid gap-6">
-          {filteredDrivers.map(
-            (driver: {
-              userId: string;
-              firstName: string;
-              lastName: string;
-              imageUrl?: string;
-            }) => {
-              // Calculate stats for this driver
-              const driverRuns = allRuns.filter(
-                run => run.createdById === driver.userId
-              );
-              const activeRuns = driverRuns.filter(
-                run => run.status === 'active'
-              );
-              const scheduledRuns = driverRuns.filter(
-                run => run.status === 'scheduled'
-              );
-              const completedRuns = driverRuns.filter(
-                run => run.status === 'completed'
-              );
+          {filteredDrivers.map((driver: User) => {
+            // Calculate stats for this driver
+            const driverRuns = allRuns.filter(
+              run => run.createdById === driver.id
+            );
+            const activeRuns = driverRuns.filter(
+              run => run.status === 'active'
+            );
+            const scheduledRuns = driverRuns.filter(
+              run => run.status === 'scheduled'
+            );
+            const completedRuns = driverRuns.filter(
+              run => run.status === 'completed'
+            );
 
-              const availabilityStatus = getAvailabilityText(driver);
+            const availabilityStatus = getAvailabilityText(driver);
 
-              return (
-                <Link
-                  key={driver.userId}
-                  to="/driver/$driverId"
-                  params={{ driverId: driver.userId }}
-                  className="block hover:scale-[1.02] transition-transform duration-200"
-                >
-                  <Card className="cursor-pointer hover:shadow-lg transition-shadow">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {driver.imageUrl ? (
-                            <img
-                              src={driver.imageUrl}
-                              alt={`${driver.firstName} ${driver.lastName}`}
-                              className="h-10 w-10 rounded-full border"
-                            />
-                          ) : (
-                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                              <Users className="h-5 w-5 text-primary" />
-                            </div>
-                          )}
-                          <div>
-                            <CardTitle className="text-lg">
-                              {driver.firstName} {driver.lastName}
-                            </CardTitle>
-                            <CardDescription>
-                              Driver • {availabilityStatus.text}
-                            </CardDescription>
-                          </div>
+            return (
+              <Link
+                key={driver.id}
+                to="/driver/$driverId"
+                params={{ driverId: driver.id }}
+                className="block hover:scale-[1.02] transition-transform duration-200"
+              >
+                <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Users className="h-5 w-5 text-primary" />
                         </div>
-                        <div className="flex items-center gap-3">
-                          <Badge
-                            variant={
-                              activeRuns.length > 0
-                                ? 'default'
-                                : scheduledRuns.length > 0
-                                  ? 'secondary'
-                                  : 'outline'
-                            }
-                            className={
-                              activeRuns.length > 0
-                                ? 'bg-green-100 text-green-800'
-                                : scheduledRuns.length > 0
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-gray-100 text-gray-800'
-                            }
-                          >
-                            {activeRuns.length > 0
-                              ? `${activeRuns.length} Active Run${activeRuns.length !== 1 ? 's' : ''}`
-                              : scheduledRuns.length > 0
-                                ? `${scheduledRuns.length} Scheduled`
-                                : 'No Active Runs'}
-                          </Badge>
+                        <div>
+                          <CardTitle className="text-lg">
+                            {driver.name}
+                          </CardTitle>
+                          <CardDescription>
+                            Driver • {availabilityStatus.text}
+                          </CardDescription>
                         </div>
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      {activeRuns.length > 0 ? (
-                        <div className="space-y-4">
-                          {activeRuns.slice(0, 2).map(run => (
-                            <div
-                              key={run.id}
-                              className="border rounded-lg p-4 bg-muted/50"
-                            >
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <Car className="h-4 w-4 text-green-600" />
-                                  <span className="font-medium">
-                                    {run.flightNumber}{' '}
-                                    {run.type === 'pickup'
-                                      ? 'Pickup'
-                                      : 'Dropoff'}
-                                  </span>
-                                </div>
-                                <Badge className="bg-green-100 text-green-800">
-                                  Active
-                                </Badge>
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          variant={
+                            activeRuns.length > 0
+                              ? 'default'
+                              : scheduledRuns.length > 0
+                                ? 'secondary'
+                                : 'outline'
+                          }
+                          className={
+                            activeRuns.length > 0
+                              ? 'bg-green-100 text-green-800'
+                              : scheduledRuns.length > 0
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-gray-100 text-gray-800'
+                          }
+                        >
+                          {activeRuns.length > 0
+                            ? `${activeRuns.length} Active Run${activeRuns.length !== 1 ? 's' : ''}`
+                            : scheduledRuns.length > 0
+                              ? `${scheduledRuns.length} Scheduled`
+                              : 'No Active Runs'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {activeRuns.length > 0 ? (
+                      <div className="space-y-4">
+                        {activeRuns.slice(0, 2).map(run => (
+                          <div
+                            key={run.id}
+                            className="border rounded-lg p-4 bg-muted/50"
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <Car className="h-4 w-4 text-green-600" />
+                                <span className="font-medium">
+                                  {run.flightNumber}{' '}
+                                  {run.type === 'pickup' ? 'Pickup' : 'Dropoff'}
+                                </span>
                               </div>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-muted-foreground">
-                                <div className="flex items-center gap-2">
-                                  <MapPin className="h-3 w-3" />
-                                  <span>
-                                    {run.pickupLocation} → {run.dropoffLocation}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Clock className="h-3 w-3" />
-                                  <span>
-                                    {new Date(
-                                      run.scheduledTime
-                                    ).toLocaleDateString()}{' '}
-                                    at{' '}
-                                    {new Date(
-                                      run.scheduledTime
-                                    ).toLocaleTimeString([], {
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                    })}
-                                  </span>
-                                </div>
+                              <Badge className="bg-green-100 text-green-800">
+                                Active
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-3 w-3" />
+                                <span>
+                                  {run.pickupLocation} → {run.dropoffLocation}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-3 w-3" />
+                                <span>
+                                  {new Date(
+                                    run.scheduledTime
+                                  ).toLocaleDateString()}{' '}
+                                  at{' '}
+                                  {new Date(
+                                    run.scheduledTime
+                                  ).toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </span>
                               </div>
                             </div>
-                          ))}
-                          {activeRuns.length > 2 && (
-                            <p className="text-sm text-muted-foreground text-center">
-                              +{activeRuns.length - 2} more active runs
-                            </p>
-                          )}
-                        </div>
-                      ) : scheduledRuns.length > 0 ? (
-                        <div className="space-y-4">
-                          {scheduledRuns.slice(0, 2).map(run => (
-                            <div
-                              key={run.id}
-                              className="border rounded-lg p-4 bg-muted/50"
-                            >
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <Car className="h-4 w-4 text-blue-600" />
-                                  <span className="font-medium">
-                                    {run.flightNumber}{' '}
-                                    {run.type === 'pickup'
-                                      ? 'Pickup'
-                                      : 'Dropoff'}
-                                  </span>
-                                </div>
-                                <Badge className="bg-blue-100 text-blue-800">
-                                  Scheduled
-                                </Badge>
-                              </div>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-muted-foreground">
-                                <div className="flex items-center gap-2">
-                                  <MapPin className="h-3 w-3" />
-                                  <span>
-                                    {run.pickupLocation} → {run.dropoffLocation}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Clock className="h-3 w-3" />
-                                  <span>
-                                    {new Date(
-                                      run.scheduledTime
-                                    ).toLocaleDateString()}{' '}
-                                    at{' '}
-                                    {new Date(
-                                      run.scheduledTime
-                                    ).toLocaleTimeString([], {
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                    })}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                          {scheduledRuns.length > 2 && (
-                            <p className="text-sm text-muted-foreground text-center">
-                              +{scheduledRuns.length - 2} more scheduled runs
-                            </p>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8 text-muted-foreground">
-                          <Car className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          <p>No active runs assigned</p>
-                          <p className="text-xs mt-1">
-                            {completedRuns.length} completed runs total
+                          </div>
+                        ))}
+                        {activeRuns.length > 2 && (
+                          <p className="text-sm text-muted-foreground text-center">
+                            +{activeRuns.length - 2} more active runs
                           </p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </Link>
-              );
-            }
-          )}
+                        )}
+                      </div>
+                    ) : scheduledRuns.length > 0 ? (
+                      <div className="space-y-4">
+                        {scheduledRuns.slice(0, 2).map(run => (
+                          <div
+                            key={run.id}
+                            className="border rounded-lg p-4 bg-muted/50"
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <Car className="h-4 w-4 text-blue-600" />
+                                <span className="font-medium">
+                                  {run.flightNumber}{' '}
+                                  {run.type === 'pickup' ? 'Pickup' : 'Dropoff'}
+                                </span>
+                              </div>
+                              <Badge className="bg-blue-100 text-blue-800">
+                                Scheduled
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-3 w-3" />
+                                <span>
+                                  {run.pickupLocation} → {run.dropoffLocation}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-3 w-3" />
+                                <span>
+                                  {new Date(
+                                    run.scheduledTime
+                                  ).toLocaleDateString()}{' '}
+                                  at{' '}
+                                  {new Date(
+                                    run.scheduledTime
+                                  ).toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        {scheduledRuns.length > 2 && (
+                          <p className="text-sm text-muted-foreground text-center">
+                            +{scheduledRuns.length - 2} more scheduled runs
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Car className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p>No active runs assigned</p>
+                        <p className="text-xs mt-1">
+                          {completedRuns.length} completed runs total
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
 
           {filteredDrivers.length === 0 && allDrivers.length > 0 && (
             <Card className="border-dashed">

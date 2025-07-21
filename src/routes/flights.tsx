@@ -1,3 +1,4 @@
+import { preferencesApi } from '@/lib/api/preferences-api';
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import {
@@ -36,7 +37,6 @@ import { StickyHeader } from '../components/ui/sticky-header';
 import { TimePicker } from '../components/ui/time-picker';
 import airlinesData from '../data/airlines.json';
 import airportsData from '../data/airports-comprehensive.json';
-import { preferencesApi } from '../lib/api/client';
 import { debugLog, isDevelopment } from '../lib/environment';
 import { useTimezone, useTimezoneFormatters } from '../lib/hooks/use-timezone';
 import { getFlightServiceWithConfig } from '../lib/services/flight-service';
