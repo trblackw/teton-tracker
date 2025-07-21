@@ -9,11 +9,10 @@ export async function checkAuthRedirect(): Promise<void> {
   // Check if user has a valid session
   const { data: session } = await authClient.getSession();
 
-  console.log('🚀 ~ checkAuthRedirect ~ session:', session);
   if (session?.user) {
     // User is authenticated, redirect them to the main app
     throw redirect({
-      to: '/',
+      to: '/runs',
       replace: true, // Replace history entry so back button works correctly
     });
   }

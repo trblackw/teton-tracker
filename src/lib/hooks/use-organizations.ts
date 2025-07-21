@@ -11,9 +11,7 @@ export function useUserOrganization(): UseQueryResult<any, Error> {
     queryFn: async () => {
       if (!user?.id) throw new Error('User ID not available');
 
-      const organizations = await organizationsApi.getUserOrganizations(
-        user.id
-      );
+      const organizations = await organizationsApi.getUserOrganizations();
       return organizations[0] || null;
     },
     enabled: !!user?.id,
@@ -29,7 +27,7 @@ export function useOrganizationMembers(orgId: string) {
     queryKey: ['organizations', orgId, 'members'],
     queryFn: () => {
       if (!user?.id) throw new Error('User ID not available');
-      return organizationsApi.getOrganizationMembers(orgId, user.id);
+      return organizationsApi.getOrganizationMembers(orgId);
     },
     enabled: !!user?.id && !!orgId,
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -44,7 +42,7 @@ export function useUserRole(orgId: string) {
     queryKey: ['organizations', orgId, 'user-role', user?.id],
     queryFn: () => {
       if (!user?.id) throw new Error('User ID not available');
-      return organizationsApi.getUserRole(orgId, user.id);
+      return organizationsApi.getUserRole(orgId);
     },
     enabled: !!user?.id && !!orgId,
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -59,7 +57,7 @@ export function useUserPermissions(orgId: string, permission: string) {
     queryKey: ['organizations', orgId, 'permissions', permission, user?.id],
     queryFn: () => {
       if (!user?.id) throw new Error('User ID not available');
-      return organizationsApi.checkPermissions(orgId, user.id, permission);
+      return organizationsApi.checkPermissions(orgId, permission);
     },
     enabled: !!user?.id && !!orgId && !!permission,
     staleTime: 1000 * 60 * 5, // 5 minutes

@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { LoaderIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -141,7 +142,12 @@ function SignInPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button
+                type="submit"
+                className="w-full bg-highlight text-white hover:bg-highlight/80 flex items-center justify-center"
+                disabled={isLoading}
+              >
+                {isLoading && <LoaderIcon className="animate-spin size-3" />}
                 {isLoading ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>

@@ -25,30 +25,43 @@ function isAuthRoute(path: string) {
 export function createApp(config: ServerConfig) {
   const app = new Hono();
 
-  // BetterAuth integration - following official Hono integration guide
-  app.on(['POST', 'GET'], '/api/auth/*', c => {
-    console.log('🔐 BetterAuth handling:', c.req.path);
-    return auth.handler(c.req.raw);
-  });
+  // BetterAuth integration - with manual CORS handling
+  app.all('/api/auth/*', async c => {
+    console.log('🔐 BetterAuth handling:', c.req.method, c.req.path);
 
-  // CORS middleware for NON-auth API routes only
-  app.use('/api/*', async (c, next) => {
-    // Skip CORS middleware for auth routes (already handled above)
-    const path = c.req.path;
-
-    if (isAuthRoute(path)) {
-      console.log('Skipping CORS for auth route:', path);
-      return next();
+    // Handle CORS preflight for auth routes
+    if (c.req.method === 'OPTIONS') {
+      return c.json(null, 200, {
+        'Access-Control-Allow-Origin': 'http://localhost:3000',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
+        'Access-Control-Allow-Credentials': 'true',
+      });
     }
 
-    // Apply CORS for all other API routes
-    return cors({
-      origin: config.corsOrigin,
-      allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowHeaders: ['Content-Type', 'Authorization'],
-      credentials: true,
-    })(c, next);
+    // Process the auth request
+    const response = await auth.handler(c.req.raw);
+
+    // Add CORS headers to the response
+    response.headers.set(
+      'Access-Control-Allow-Origin',
+      'http://localhost:3000'
+    );
+    response.headers.set('Access-Control-Allow-Credentials', 'true');
+
+    return response;
   });
+
+  // Enhanced CORS configuration
+  app.use(
+    '*',
+    cors({
+      origin: 'http://localhost:3000', // Specific origin for credentials
+      credentials: true, // Allow credentials (cookies)
+      allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    })
+  );
 
   // API Routes - Clean and declarative!
   app.get('/api/config', async c => configApi.GET(c.req.raw));
@@ -123,7 +136,7 @@ export function createApp(config: ServerConfig) {
 export function createServer(config: ServerConfig) {
   const app = createApp(config);
 
-  return Bun.serve({
+  const serverOptions: any = {
     port: process.env.PORT || 3000,
     hostname: config.hostname,
     fetch: async (request: Request) => {
@@ -134,7 +147,13 @@ export function createServer(config: ServerConfig) {
         return app.fetch(request);
       }
 
-      // Serve static files and SPA routes
+      // In development: let Bun handle everything else (hot reload, compilation, etc.)
+      if (config.isDevelopment) {
+        // Don't handle non-API routes - let Bun's built-in dev server handle them
+        return new Response('Not handled by custom server', { status: 404 });
+      }
+
+      // In production: serve from built dist folder
       const filePath =
         url.pathname === '/' ? './dist/index.html' : `./dist${url.pathname}`;
 
@@ -160,5 +179,12 @@ export function createServer(config: ServerConfig) {
         );
       }
     },
-  } as any);
+  };
+
+  // In development, enable Bun's built-in dev server features
+  if (config.isDevelopment) {
+    serverOptions.development = true;
+  }
+
+  return Bun.serve(serverOptions);
 }

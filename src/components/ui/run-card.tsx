@@ -40,6 +40,7 @@ interface RunCardProps {
   refreshRunData: (run: Run) => void;
   trafficData?: TrafficData;
   flightStatus?: FlightStatus;
+  formatTime?: (time: string) => string;
 }
 
 export function RunCard({
@@ -51,6 +52,7 @@ export function RunCard({
   handleEditRun,
   refreshRunData,
   flightStatus,
+  formatTime,
 }: RunCardProps) {
   const isPastRun = isPast(run.scheduledTime) || run.status === 'completed';
 
@@ -132,7 +134,9 @@ export function RunCard({
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <span className="text-sm font-medium">
-                  {formatScheduleTime(run.scheduledTime)}
+                  {formatTime
+                    ? formatTime(run.scheduledTime)
+                    : formatScheduleTime(run.scheduledTime)}
                 </span>
               </div>
               <div className="flex items-start">

@@ -1,4 +1,3 @@
-import { requireAuth } from '../lib/access-control';
 import { initJSONResponse } from '../lib/api/api-tools';
 import { getDatabase } from '../lib/db';
 import {
@@ -9,6 +8,7 @@ import {
   type ReportTemplatesQuery,
 } from '../lib/db/report-templates';
 import { type ReportTemplateForm, type ReportType } from '../lib/schema';
+import { getCurrentAuthUser } from './auth';
 
 // Helper function to get user's organization ID from BetterAuth database
 async function getUserOrganizationId(userId: string): Promise<string | null> {
@@ -93,7 +93,15 @@ export async function POST(request: Request): Promise<Response> {
     };
 
     // Validate auth and get user from session
-    const user = await requireAuth(request);
+    const [user, response] = await getCurrentAuthUser(request);
+
+    if (response && response.status !== 200) {
+      return response;
+    }
+
+    if (!user) {
+      return initJSONResponse({ error: 'Authentication required' }, 401);
+    }
 
     // Get user's organization
     const organizationId = await getUserOrganizationId(user.id);
@@ -135,7 +143,15 @@ export async function PUT(request: Request): Promise<Response> {
     }
 
     // Validate auth and get user from session
-    const user = await requireAuth(request);
+    const [user, response] = await getCurrentAuthUser(request);
+
+    if (response && response.status !== 200) {
+      return response;
+    }
+
+    if (!user) {
+      return initJSONResponse({ error: 'Authentication required' }, 401);
+    }
 
     // Get user's organization
     const organizationId = await getUserOrganizationId(user.id);
@@ -178,7 +194,15 @@ export async function DELETE(request: Request): Promise<Response> {
     }
 
     // Validate auth and get user from session
-    const user = await requireAuth(request);
+    const [user, response] = await getCurrentAuthUser(request);
+
+    if (response && response.status !== 200) {
+      return response;
+    }
+
+    if (!user) {
+      return initJSONResponse({ error: 'Authentication required' }, 401);
+    }
 
     // Get user's organization
     const organizationId = await getUserOrganizationId(user.id);

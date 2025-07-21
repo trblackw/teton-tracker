@@ -34,7 +34,7 @@ export async function getCurrentUser(
   }
 }
 
-// Check if user is authenticated
+// Helper function to require authentication and return user
 export async function requireAuth(
   request: Request
 ): Promise<{ id: string; email: string; name: string }> {

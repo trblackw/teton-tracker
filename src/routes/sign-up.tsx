@@ -81,7 +81,7 @@ function SignUpPage() {
       toasts.success('Account created successfully! Welcome to Teton Tracker!');
 
       // Navigate to home page after successful sign-up
-      // navigate({ to: '/' });
+      navigate({ to: '/' });
     } catch (error: any) {
       // Handle network errors or other unexpected errors
       if (

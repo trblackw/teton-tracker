@@ -1,8 +1,4 @@
-import {
-  checkRunOwnership,
-  createErrorResponse,
-  requireAuth,
-} from '../lib/access-control';
+import { checkRunOwnership, createErrorResponse } from '../lib/access-control';
 import { initJSONResponse } from '../lib/api/api-tools';
 import { getDatabase } from '../lib/db/index';
 import {
@@ -14,6 +10,7 @@ import {
   type RunsQuery,
 } from '../lib/db/runs';
 import { type NewRunForm, type Run, type RunStatus } from '../lib/schema';
+import { getCurrentAuthUser } from './auth';
 
 // Helper function to get all organization member user IDs for an admin using BetterAuth tables
 async function getOrganizationMemberIds(
@@ -64,8 +61,15 @@ async function getOrganizationMemberIds(
 // GET /api/runs/organization - Admin-only endpoint to get runs for all org members
 export async function getOrganizationRuns(request: Request): Promise<Response> {
   try {
-    // Validate auth and get user from session
-    const user = await requireAuth(request);
+    const [user, response] = await getCurrentAuthUser(request);
+
+    if (response && response.status !== 200) {
+      return response;
+    }
+
+    if (!user) {
+      return initJSONResponse({ error: 'Authentication required' }, 401);
+    }
 
     // Get all organization member user IDs (includes admin check)
     const memberUserIds = await getOrganizationMemberIds(user.id);
@@ -104,8 +108,18 @@ export async function getOrganizationRuns(request: Request): Promise<Response> {
 // GET /api/runs
 export async function GET(request: Request): Promise<Response> {
   try {
-    // Validate auth and get user from session
-    const user = await requireAuth(request);
+    const [user, response] = await getCurrentAuthUser(request);
+
+    console.log('🚀 ~ GET ~ response:', response);
+    console.log('🚀 ~ GET ~ user:', user);
+
+    if (response && response.status !== 200) {
+      return response;
+    }
+
+    if (!user) {
+      return initJSONResponse({ error: 'Authentication required' }, 401);
+    }
 
     const url = new URL(request.url);
     const statusParam = url.searchParams.get('status');
@@ -150,8 +164,15 @@ export async function GET(request: Request): Promise<Response> {
 // POST /api/runs
 export async function POST(request: Request): Promise<Response> {
   try {
-    // Validate auth and get user from session
-    const user = await requireAuth(request);
+    const [user, response] = await getCurrentAuthUser(request);
+
+    if (response && response.status !== 200) {
+      return response;
+    }
+
+    if (!user) {
+      return initJSONResponse({ error: 'Authentication required' }, 401);
+    }
 
     const body = await request.json();
     const { runData } = body as {
@@ -171,9 +192,15 @@ export async function POST(request: Request): Promise<Response> {
 // PUT /api/runs
 export async function PUT(request: Request): Promise<Response> {
   try {
-    // Validate auth and get user from session
-    const user = await requireAuth(request);
+    const [user, response] = await getCurrentAuthUser(request);
 
+    if (response && response.status !== 200) {
+      return response;
+    }
+
+    if (!user) {
+      return initJSONResponse({ error: 'Authentication required' }, 401);
+    }
     const body = await request.json();
     const { action, id, status } = body as {
       action: string;
@@ -240,8 +267,15 @@ export async function PUT(request: Request): Promise<Response> {
 // DELETE /api/runs/:id
 export async function DELETE(request: Request): Promise<Response> {
   try {
-    // Validate auth and get user from session
-    const user = await requireAuth(request);
+    const [user, response] = await getCurrentAuthUser(request);
+
+    if (response && response.status !== 200) {
+      return response;
+    }
+
+    if (!user) {
+      return initJSONResponse({ error: 'Authentication required' }, 401);
+    }
 
     const url = new URL(request.url);
     const id = url.pathname.split('/').pop();

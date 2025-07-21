@@ -1,7 +1,6 @@
 import {
   checkNotificationOwnership,
   createErrorResponse,
-  requireAuth,
 } from '../lib/access-control';
 import { initJSONResponse } from '../lib/api/api-tools';
 import {
@@ -14,12 +13,21 @@ import {
   type NotificationForm,
   type NotificationsQuery,
 } from '../lib/db/notifications';
+import { getCurrentAuthUser } from './auth';
 
 // GET /api/notifications
 export async function GET(request: Request): Promise<Response> {
   try {
     // Validate auth and get user from session
-    const user = await requireAuth(request);
+    const [user, response] = await getCurrentAuthUser(request);
+
+    if (response && response.status !== 200) {
+      return response;
+    }
+
+    if (!user) {
+      return initJSONResponse({ error: 'Authentication required' }, 401);
+    }
 
     const url = new URL(request.url);
 
@@ -69,7 +77,15 @@ export async function GET(request: Request): Promise<Response> {
 export async function POST(request: Request): Promise<Response> {
   try {
     // Validate auth and get user from session
-    const user = await requireAuth(request);
+    const [user, response] = await getCurrentAuthUser(request);
+
+    if (response && response.status !== 200) {
+      return response;
+    }
+
+    if (!user) {
+      return initJSONResponse({ error: 'Authentication required' }, 401);
+    }
 
     const body = await request.json();
     const { notificationData } = body as {
@@ -90,7 +106,15 @@ export async function POST(request: Request): Promise<Response> {
 export async function PUT(request: Request): Promise<Response> {
   try {
     // Validate auth and get user from session
-    const user = await requireAuth(request);
+    const [user, response] = await getCurrentAuthUser(request);
+
+    if (response && response.status !== 200) {
+      return response;
+    }
+
+    if (!user) {
+      return initJSONResponse({ error: 'Authentication required' }, 401);
+    }
 
     const body = await request.json();
     const { action, id, isRead } = body as {
@@ -147,7 +171,15 @@ export async function PUT(request: Request): Promise<Response> {
 export async function DELETE(request: Request): Promise<Response> {
   try {
     // Validate auth and get user from session
-    const user = await requireAuth(request);
+    const [user, response] = await getCurrentAuthUser(request);
+
+    if (response && response.status !== 200) {
+      return response;
+    }
+
+    if (!user) {
+      return initJSONResponse({ error: 'Authentication required' }, 401);
+    }
 
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
@@ -178,7 +210,15 @@ export async function DELETE(request: Request): Promise<Response> {
 export async function getStats(request: Request): Promise<Response> {
   try {
     // Validate auth and get user from session
-    const user = await requireAuth(request);
+    const [user, response] = await getCurrentAuthUser(request);
+
+    if (response && response.status !== 200) {
+      return response;
+    }
+
+    if (!user) {
+      return initJSONResponse({ error: 'Authentication required' }, 401);
+    }
 
     // Stats are user-specific by design, so we don't need additional access control
     const stats = await getNotificationsStats(user.id);

@@ -3,6 +3,10 @@ import { getApiBaseUrl } from './environment';
 
 export const authClient = createAuthClient({
   baseURL: `${getApiBaseUrl()}/api/auth`, // Include the full basePath for BetterAuth
+  credentials: 'include', // Ensure cookies are sent with cross-origin requests
+  fetchOptions: {
+    credentials: 'include', // Also set on fetch options for better compatibility
+  },
 });
 
 // Re-export auth functions for convenience

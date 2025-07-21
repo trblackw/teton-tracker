@@ -5,6 +5,7 @@
  * All user authentication is now handled by BetterAuth.
  */
 
+import { getCurrentUser } from '../lib/access-control';
 import { initJSONResponse } from '../lib/api/api-tools';
 
 // Validate temporary access password (development gate)
@@ -128,3 +129,17 @@ export const logoutHandler = async (request: Request): Promise<Response> => {
     );
   }
 };
+
+export async function getCurrentAuthUser(
+  request: Request
+): Promise<
+  [{ id: string; email: string; name: string } | null, Response | null]
+> {
+  const user = await getCurrentUser(request);
+
+  if (!user) {
+    return [null, initJSONResponse({ error: 'User not found' }, 401)];
+  }
+
+  return [user, null];
+}

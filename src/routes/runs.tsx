@@ -40,19 +40,15 @@ import {
   TabsList,
   TabsTrigger,
 } from '../components/ui/tabs';
-import airlinesData from '../data/airlines.json';
 import { runsApi } from '../lib/api/client';
 import { useMultipleRunsData } from '../lib/hooks/use-api-data';
 import { useTimezoneFormatters } from '../lib/hooks/use-timezone';
 import { type Run, type RunStatus } from '../lib/schema';
 import { toasts } from '../lib/toast';
 
-// Convert the airlines data for compatibility
-const airlines = airlinesData;
-
 function Runs() {
   const queryClient = useQueryClient();
-  const { formatScheduleTime } = useTimezoneFormatters();
+  const { formatTime } = useTimezoneFormatters();
   const navigate = useNavigate();
 
   // Tab state
@@ -734,6 +730,7 @@ function Runs() {
                       handleEditRun={handleEditRun}
                       refreshRunData={refreshRunData}
                       flightStatus={flightStatus}
+                      formatTime={formatTime}
                     />
                   ))}
               </div>

@@ -8,7 +8,7 @@ export function getBetterAuthUrl(): string {
     process.env.BETTER_AUTH_URL ||
     (environment === 'production'
       ? 'https://tetontracker.com'
-      : 'http://localhost:3000')
+      : 'http://localhost:3001')
   );
 }
 

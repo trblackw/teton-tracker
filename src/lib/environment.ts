@@ -121,11 +121,11 @@ export function getBaseUrl(): string {
  */
 export function getApiBaseUrl(): string {
   if (isServer()) {
-    return process.env.API_BASE_URL || 'http://localhost:3000';
+    return process.env.API_BASE_URL || 'http://localhost:3001';
   }
 
   // Browser environment - use relative URL in production, localhost in development
-  return isDevelopment() ? 'http://localhost:3000' : '';
+  return isDevelopment() ? 'http://localhost:3001' : '';
 }
 
 /**

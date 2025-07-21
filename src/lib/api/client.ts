@@ -1,4 +1,3 @@
-import { authClient } from '../auth-client';
 import {
   type CreateNotificationData,
   type NotificationsQuery,
@@ -16,44 +15,24 @@ import {
 
 const API_BASE = getApiUrl();
 
-// Helper function to get auth token from BetterAuth
-async function getAuthToken(): Promise<string | null> {
-  try {
-    const { data: session } = await authClient.getSession();
-    if (session?.session) {
-      // BetterAuth sessions contain the session token directly
-      return session.session.token || null;
-    }
-    return null;
-  } catch (error) {
-    console.error('Error getting auth token:', error);
-    return null;
-  }
-}
-
-// Helper function to get current user ID from BetterAuth
-async function getCurrentUserId(): Promise<string | null> {
-  try {
-    const { data: session } = await authClient.getSession();
-    return session?.user?.id || null;
-  } catch (error) {
-    console.error('Error getting current user ID:', error);
-    return null;
-  }
-}
-
-// Helper function to create authenticated headers
+// Helper function to create headers with credentials for session-based auth
 async function createAuthHeaders(): Promise<HeadersInit> {
-  const headers: HeadersInit = {
+  return {
     'Content-Type': 'application/json',
+    // No Authorization header needed - BetterAuth uses session cookies
   };
+}
 
-  const token = await getAuthToken();
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  return headers;
+// Helper function to create fetch options with credentials
+function createFetchOptions(options: RequestInit = {}): RequestInit {
+  return {
+    ...options,
+    credentials: 'include', // Always include session cookies
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  };
 }
 
 // API client for authentication (legacy password protection - separate from BetterAuth)
@@ -111,16 +90,9 @@ export const authApi = {
 export const runsApi = {
   // Get all runs for the current user
   async getRuns(): Promise<Run[]> {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
-
     const response = await fetch(
-      `${API_BASE}/runs?userId=${userId}&orderDirection=DESC`,
-      {
-        headers: await createAuthHeaders(),
-      }
+      `${API_BASE}/runs?orderDirection=DESC`,
+      createFetchOptions()
     );
 
     if (!response.ok) {
@@ -132,16 +104,9 @@ export const runsApi = {
 
   // Get all runs for organization members (admin-only)
   async getOrganizationRuns(): Promise<Run[]> {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
-
     const response = await fetch(
-      `${API_BASE}/runs/organization?userId=${userId}`,
-      {
-        headers: await createAuthHeaders(),
-      }
+      `${API_BASE}/runs/organization`,
+      createFetchOptions()
     );
 
     if (!response.ok) {
@@ -154,16 +119,13 @@ export const runsApi = {
 
   // Create a new run
   async createRun(runData: NewRunForm): Promise<Run> {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
-
-    const response = await fetch(`${API_BASE}/runs`, {
-      method: 'POST',
-      headers: await createAuthHeaders(),
-      body: JSON.stringify({ runData, userId }),
-    });
+    const response = await fetch(
+      `${API_BASE}/runs`,
+      createFetchOptions({
+        method: 'POST',
+        body: JSON.stringify({ runData }),
+      })
+    );
 
     if (!response.ok) {
       throw new Error('Failed to create run');
@@ -174,16 +136,13 @@ export const runsApi = {
 
   // Update an existing run
   async updateRun(id: string, runData: NewRunForm): Promise<Run> {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
-
-    const response = await fetch(`${API_BASE}/runs/${id}`, {
-      method: 'PUT',
-      headers: await createAuthHeaders(),
-      body: JSON.stringify({ runData, userId }),
-    });
+    const response = await fetch(
+      `${API_BASE}/runs/${id}`,
+      createFetchOptions({
+        method: 'PUT',
+        body: JSON.stringify({ runData }),
+      })
+    );
 
     if (!response.ok) {
       throw new Error('Failed to update run');
@@ -194,21 +153,13 @@ export const runsApi = {
 
   // Update run status
   async updateRunStatus(id: string, status: RunStatus): Promise<Run | null> {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
-
-    const response = await fetch(`${API_BASE}/runs`, {
-      method: 'PUT',
-      headers: await createAuthHeaders(),
-      body: JSON.stringify({
-        action: 'update_status',
-        id,
-        status,
-        userId,
-      }),
-    });
+    const response = await fetch(
+      `${API_BASE}/runs/${id}/status`,
+      createFetchOptions({
+        method: 'PUT',
+        body: JSON.stringify({ status }),
+      })
+    );
 
     if (!response.ok) {
       throw new Error('Failed to update run status');
@@ -220,16 +171,12 @@ export const runsApi = {
 
   // Delete a run
   async deleteRun(id: string): Promise<void> {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
-
-    const response = await fetch(`${API_BASE}/runs/${id}`, {
-      method: 'DELETE',
-      headers: await createAuthHeaders(),
-      body: JSON.stringify({ userId }),
-    });
+    const response = await fetch(
+      `${API_BASE}/runs/${id}`,
+      createFetchOptions({
+        method: 'DELETE',
+      })
+    );
 
     if (!response.ok) {
       throw new Error('Failed to delete run');
@@ -241,14 +188,10 @@ export const runsApi = {
 export const preferencesApi = {
   // Get user preferences
   async getPreferences() {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
-
-    const response = await fetch(`${API_BASE}/preferences?userId=${userId}`, {
-      headers: await createAuthHeaders(),
-    });
+    const response = await fetch(
+      `${API_BASE}/preferences`,
+      createFetchOptions()
+    );
 
     if (!response.ok) {
       throw new Error('Failed to fetch preferences');
@@ -259,16 +202,13 @@ export const preferencesApi = {
 
   // Update user preferences
   async updatePreferences(preferencesData: UpdatePreferencesData) {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
-
-    const response = await fetch(`${API_BASE}/preferences`, {
-      method: 'PUT',
-      headers: await createAuthHeaders(),
-      body: JSON.stringify({ preferencesData, userId }),
-    });
+    const response = await fetch(
+      `${API_BASE}/preferences`,
+      createFetchOptions({
+        method: 'PUT',
+        body: JSON.stringify({ preferencesData }),
+      })
+    );
 
     if (!response.ok) {
       throw new Error('Failed to update preferences');
@@ -284,13 +224,7 @@ export const notificationsApi = {
   async getNotifications(
     query: Partial<NotificationsQuery> = {}
   ): Promise<Notification[]> {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
-
     const params = new URLSearchParams();
-    params.append('userId', userId);
 
     if (query.limit) params.append('limit', query.limit.toString());
     if (query.offset) params.append('offset', query.offset.toString());
@@ -303,9 +237,10 @@ export const notificationsApi = {
     if (query.flightNumber) params.append('flightNumber', query.flightNumber);
     if (query.search) params.append('search', query.search);
 
-    const response = await fetch(`${API_BASE}/notifications?${params}`, {
-      headers: await createAuthHeaders(),
-    });
+    const response = await fetch(
+      `${API_BASE}/notifications?${params}`,
+      createFetchOptions()
+    );
 
     if (!response.ok) {
       throw new Error('Failed to fetch notifications');
@@ -315,9 +250,10 @@ export const notificationsApi = {
   },
 
   async getNotificationStats() {
-    const response = await fetch(`${API_BASE}/notifications/stats`, {
-      headers: await createAuthHeaders(),
-    });
+    const response = await fetch(
+      `${API_BASE}/notifications/stats`,
+      createFetchOptions()
+    );
     if (!response.ok) {
       throw new Error('Failed to fetch notification stats');
     }
@@ -328,16 +264,13 @@ export const notificationsApi = {
   async createNotification(
     notificationData: CreateNotificationData
   ): Promise<Notification> {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
-
-    const response = await fetch(`${API_BASE}/notifications`, {
-      method: 'POST',
-      headers: await createAuthHeaders(),
-      body: JSON.stringify({ notificationData, userId }),
-    });
+    const response = await fetch(
+      `${API_BASE}/notifications`,
+      createFetchOptions({
+        method: 'POST',
+        body: JSON.stringify({ notificationData }),
+      })
+    );
 
     if (!response.ok) {
       throw new Error('Failed to create notification');
@@ -351,16 +284,13 @@ export const notificationsApi = {
     id: string,
     isRead: boolean = true
   ): Promise<void> {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
-
-    const response = await fetch(`${API_BASE}/notifications`, {
-      method: 'PUT',
-      headers: await createAuthHeaders(),
-      body: JSON.stringify({ action: 'mark_read', id, isRead, userId }),
-    });
+    const response = await fetch(
+      `${API_BASE}/notifications`,
+      createFetchOptions({
+        method: 'PUT',
+        body: JSON.stringify({ action: 'mark_read', id, isRead }),
+      })
+    );
 
     if (!response.ok) {
       throw new Error('Failed to update notification');
@@ -369,16 +299,13 @@ export const notificationsApi = {
 
   // Mark all notifications as read
   async markAllNotificationsAsRead(): Promise<void> {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
-
-    const response = await fetch(`${API_BASE}/notifications`, {
-      method: 'PUT',
-      headers: await createAuthHeaders(),
-      body: JSON.stringify({ action: 'mark_all_read', userId }),
-    });
+    const response = await fetch(
+      `${API_BASE}/notifications`,
+      createFetchOptions({
+        method: 'PUT',
+        body: JSON.stringify({ action: 'mark_all_read' }),
+      })
+    );
 
     if (!response.ok) {
       throw new Error('Failed to mark all notifications as read');
@@ -387,17 +314,11 @@ export const notificationsApi = {
 
   // Delete a notification
   async deleteNotification(id: string): Promise<void> {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
-
     const response = await fetch(
-      `${API_BASE}/notifications?id=${id}&userId=${userId}`,
-      {
+      `${API_BASE}/notifications?id=${id}`,
+      createFetchOptions({
         method: 'DELETE',
-        headers: await createAuthHeaders(),
-      }
+      })
     );
 
     if (!response.ok) {
@@ -408,17 +329,18 @@ export const notificationsApi = {
 
 export const seedApi = {
   // Generate seed data for the current user (development only)
-  async generateData(userId: string): Promise<{
+  async generateData(): Promise<{
     runs: number;
     notifications: number;
     templates: number;
     message: string;
   }> {
-    const response = await fetch(`${API_BASE}/seed`, {
-      method: 'POST',
-      headers: await createAuthHeaders(),
-      body: JSON.stringify({ userId }),
-    });
+    const response = await fetch(
+      `${API_BASE}/seed`,
+      createFetchOptions({
+        method: 'POST',
+      })
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -428,14 +350,13 @@ export const seedApi = {
     return response.json();
   },
 
-  async clearUserData(
-    userId: string
-  ): Promise<{ success: boolean; message: string }> {
-    const response = await fetch(`${API_BASE}/seed`, {
-      method: 'DELETE',
-      headers: await createAuthHeaders(),
-      body: JSON.stringify({ userId }),
-    });
+  async clearUserData(): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(
+      `${API_BASE}/seed`,
+      createFetchOptions({
+        method: 'DELETE',
+      })
+    );
 
     if (!response.ok) {
       throw new Error('Failed to clear user data');
@@ -456,16 +377,13 @@ export const smsApi = {
     deliveryStatus?: string;
     error?: string;
   }> {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
-
-    const response = await fetch(`${API_BASE}/sms/send`, {
-      method: 'POST',
-      headers: await createAuthHeaders(),
-      body: JSON.stringify({ phoneNumber, message, userId }),
-    });
+    const response = await fetch(
+      `${API_BASE}/sms/send`,
+      createFetchOptions({
+        method: 'POST',
+        body: JSON.stringify({ phoneNumber, message }),
+      })
+    );
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -483,16 +401,13 @@ export const smsApi = {
     type?: string;
     error?: string;
   }> {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
-
-    const response = await fetch(`${API_BASE}/sms/validate`, {
-      method: 'POST',
-      headers: await createAuthHeaders(),
-      body: JSON.stringify({ phoneNumber, userId }),
-    });
+    const response = await fetch(
+      `${API_BASE}/sms/validate`,
+      createFetchOptions({
+        method: 'POST',
+        body: JSON.stringify({ phoneNumber }),
+      })
+    );
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -509,14 +424,10 @@ export const smsApi = {
     fromNumber: string | null;
     mode: string;
   }> {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
-
-    const response = await fetch(`${API_BASE}/sms/status?userId=${userId}`, {
-      headers: await createAuthHeaders(),
-    });
+    const response = await fetch(
+      `${API_BASE}/sms/status`,
+      createFetchOptions()
+    );
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -530,11 +441,11 @@ export const smsApi = {
 // API client for organizations
 export const organizationsApi = {
   // Get all organizations for the current user
-  async getUserOrganizations(userId: string): Promise<any[]> {
-    const response = await fetch(`${API_BASE}/organizations?userId=${userId}`, {
-      method: 'GET',
-      headers: await createAuthHeaders(),
-    });
+  async getUserOrganizations(): Promise<any[]> {
+    const response = await fetch(
+      `${API_BASE}/organizations`,
+      createFetchOptions()
+    );
 
     if (!response.ok) {
       throw new Error('Failed to get user organizations');
@@ -544,13 +455,10 @@ export const organizationsApi = {
   },
 
   // Get all members of an organization
-  async getOrganizationMembers(orgId: string, userId: string): Promise<any> {
+  async getOrganizationMembers(orgId: string): Promise<any> {
     const response = await fetch(
-      `${API_BASE}/organizations/${orgId}/members?userId=${userId}`,
-      {
-        method: 'GET',
-        headers: await createAuthHeaders(),
-      }
+      `${API_BASE}/organizations/${orgId}/members`,
+      createFetchOptions()
     );
 
     if (!response.ok) {
@@ -561,13 +469,10 @@ export const organizationsApi = {
   },
 
   // Get user's role in a specific organization
-  async getUserRole(orgId: string, userId: string): Promise<any> {
+  async getUserRole(orgId: string): Promise<any> {
     const response = await fetch(
-      `${API_BASE}/organizations/${orgId}/user-role?userId=${userId}`,
-      {
-        method: 'GET',
-        headers: await createAuthHeaders(),
-      }
+      `${API_BASE}/organizations/${orgId}/user-role`,
+      createFetchOptions()
     );
 
     if (!response.ok) {
@@ -578,17 +483,10 @@ export const organizationsApi = {
   },
 
   // Check if user has specific permissions
-  async checkPermissions(
-    orgId: string,
-    userId: string,
-    permission: string
-  ): Promise<any> {
+  async checkPermissions(orgId: string, permission: string): Promise<any> {
     const response = await fetch(
-      `${API_BASE}/organizations/check-permissions?orgId=${orgId}&userId=${userId}&permission=${permission}`,
-      {
-        method: 'GET',
-        headers: await createAuthHeaders(),
-      }
+      `${API_BASE}/organizations/check-permissions?orgId=${orgId}&permission=${permission}`,
+      createFetchOptions()
     );
 
     if (!response.ok) {
@@ -603,16 +501,9 @@ export const organizationsApi = {
 export const reportTemplatesApi = {
   // Get all report templates for the organization
   async getReportTemplates(): Promise<ReportTemplate[]> {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
-
     const response = await fetch(
-      `${API_BASE}/report-templates?userId=${userId}`,
-      {
-        headers: await createAuthHeaders(),
-      }
+      `${API_BASE}/report-templates`,
+      createFetchOptions()
     );
 
     if (!response.ok) {
@@ -626,16 +517,13 @@ export const reportTemplatesApi = {
   async createReportTemplate(
     templateData: ReportTemplateForm
   ): Promise<ReportTemplate> {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
-
-    const response = await fetch(`${API_BASE}/report-templates`, {
-      method: 'POST',
-      headers: await createAuthHeaders(),
-      body: JSON.stringify({ templateData, userId }),
-    });
+    const response = await fetch(
+      `${API_BASE}/report-templates`,
+      createFetchOptions({
+        method: 'POST',
+        body: JSON.stringify({ templateData }),
+      })
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -650,16 +538,13 @@ export const reportTemplatesApi = {
     id: string,
     templateData: ReportTemplateForm
   ): Promise<ReportTemplate> {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
-
-    const response = await fetch(`${API_BASE}/report-templates`, {
-      method: 'PUT',
-      headers: await createAuthHeaders(),
-      body: JSON.stringify({ id, templateData, userId }),
-    });
+    const response = await fetch(
+      `${API_BASE}/report-templates`,
+      createFetchOptions({
+        method: 'PUT',
+        body: JSON.stringify({ id, templateData }),
+      })
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -671,17 +556,11 @@ export const reportTemplatesApi = {
 
   // Delete a report template
   async deleteReportTemplate(id: string): Promise<void> {
-    const userId = await getCurrentUserId();
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
-
     const response = await fetch(
-      `${API_BASE}/report-templates?id=${id}&userId=${userId}`,
-      {
+      `${API_BASE}/report-templates?id=${id}`,
+      createFetchOptions({
         method: 'DELETE',
-        headers: await createAuthHeaders(),
-      }
+      })
     );
 
     if (!response.ok) {
