@@ -12,20 +12,22 @@ import { Route as rootRouteImport } from './routes/__root';
 import { Route as SuperAdminRouteImport } from './routes/super-admin';
 import { Route as SignUpRouteImport } from './routes/sign-up';
 import { Route as SignInRouteImport } from './routes/sign-in';
-import { Route as SettingsRouteImport } from './routes/settings';
-import { Route as RunsRouteImport } from './routes/runs';
-import { Route as RequestRunReportRouteImport } from './routes/request-run-report';
-import { Route as ReportsRouteImport } from './routes/reports';
-import { Route as ReportTemplatesRouteImport } from './routes/report-templates';
-import { Route as OrganizationRouteImport } from './routes/organization';
-import { Route as NotificationsRouteImport } from './routes/notifications';
+import { Route as NoOrganizationRouteImport } from './routes/no-organization';
 import { Route as FlightsRouteImport } from './routes/flights';
-import { Route as DriversRouteImport } from './routes/drivers';
-import { Route as AddRunsRouteImport } from './routes/add-runs';
 import { Route as ActiveRunRouteImport } from './routes/active-run';
 import { Route as SplatRouteImport } from './routes/$';
 import { Route as IndexRouteImport } from './routes/index';
-import { Route as DriverDriverIdRouteImport } from './routes/driver.$driverId';
+import { Route as OrganizationsOrganizationIdRouteImport } from './routes/organizations/$organizationId';
+import { Route as OrganizationsOrganizationIdIndexRouteImport } from './routes/organizations/$organizationId/index';
+import { Route as OrganizationsOrganizationIdSettingsRouteImport } from './routes/organizations/$organizationId/settings';
+import { Route as OrganizationsOrganizationIdRunsRouteImport } from './routes/organizations/$organizationId/runs';
+import { Route as OrganizationsOrganizationIdRequestRunReportRouteImport } from './routes/organizations/$organizationId/request-run-report';
+import { Route as OrganizationsOrganizationIdReportsRouteImport } from './routes/organizations/$organizationId/reports';
+import { Route as OrganizationsOrganizationIdReportTemplatesRouteImport } from './routes/organizations/$organizationId/report-templates';
+import { Route as OrganizationsOrganizationIdNotificationsRouteImport } from './routes/organizations/$organizationId/notifications';
+import { Route as OrganizationsOrganizationIdDriversRouteImport } from './routes/organizations/$organizationId/drivers';
+import { Route as OrganizationsOrganizationIdAddRunsRouteImport } from './routes/organizations/$organizationId/add-runs';
+import { Route as OrganizationsOrganizationIdDriverDriverIdRouteImport } from './routes/organizations/$organizationId/driver.$driverId';
 
 const SuperAdminRoute = SuperAdminRouteImport.update({
   id: '/super-admin',
@@ -42,54 +44,14 @@ const SignInRoute = SignInRouteImport.update({
   path: '/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any);
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any);
-const RunsRoute = RunsRouteImport.update({
-  id: '/runs',
-  path: '/runs',
-  getParentRoute: () => rootRouteImport,
-} as any);
-const RequestRunReportRoute = RequestRunReportRouteImport.update({
-  id: '/request-run-report',
-  path: '/request-run-report',
-  getParentRoute: () => rootRouteImport,
-} as any);
-const ReportsRoute = ReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
-  getParentRoute: () => rootRouteImport,
-} as any);
-const ReportTemplatesRoute = ReportTemplatesRouteImport.update({
-  id: '/report-templates',
-  path: '/report-templates',
-  getParentRoute: () => rootRouteImport,
-} as any);
-const OrganizationRoute = OrganizationRouteImport.update({
-  id: '/organization',
-  path: '/organization',
-  getParentRoute: () => rootRouteImport,
-} as any);
-const NotificationsRoute = NotificationsRouteImport.update({
-  id: '/notifications',
-  path: '/notifications',
+const NoOrganizationRoute = NoOrganizationRouteImport.update({
+  id: '/no-organization',
+  path: '/no-organization',
   getParentRoute: () => rootRouteImport,
 } as any);
 const FlightsRoute = FlightsRouteImport.update({
   id: '/flights',
   path: '/flights',
-  getParentRoute: () => rootRouteImport,
-} as any);
-const DriversRoute = DriversRouteImport.update({
-  id: '/drivers',
-  path: '/drivers',
-  getParentRoute: () => rootRouteImport,
-} as any);
-const AddRunsRoute = AddRunsRouteImport.update({
-  id: '/add-runs',
-  path: '/add-runs',
   getParentRoute: () => rootRouteImport,
 } as any);
 const ActiveRunRoute = ActiveRunRouteImport.update({
@@ -107,69 +69,135 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any);
-const DriverDriverIdRoute = DriverDriverIdRouteImport.update({
-  id: '/driver/$driverId',
-  path: '/driver/$driverId',
-  getParentRoute: () => rootRouteImport,
-} as any);
+const OrganizationsOrganizationIdRoute =
+  OrganizationsOrganizationIdRouteImport.update({
+    id: '/organizations/$organizationId',
+    path: '/organizations/$organizationId',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const OrganizationsOrganizationIdIndexRoute =
+  OrganizationsOrganizationIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => OrganizationsOrganizationIdRoute,
+  } as any);
+const OrganizationsOrganizationIdSettingsRoute =
+  OrganizationsOrganizationIdSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => OrganizationsOrganizationIdRoute,
+  } as any);
+const OrganizationsOrganizationIdRunsRoute =
+  OrganizationsOrganizationIdRunsRouteImport.update({
+    id: '/runs',
+    path: '/runs',
+    getParentRoute: () => OrganizationsOrganizationIdRoute,
+  } as any);
+const OrganizationsOrganizationIdRequestRunReportRoute =
+  OrganizationsOrganizationIdRequestRunReportRouteImport.update({
+    id: '/request-run-report',
+    path: '/request-run-report',
+    getParentRoute: () => OrganizationsOrganizationIdRoute,
+  } as any);
+const OrganizationsOrganizationIdReportsRoute =
+  OrganizationsOrganizationIdReportsRouteImport.update({
+    id: '/reports',
+    path: '/reports',
+    getParentRoute: () => OrganizationsOrganizationIdRoute,
+  } as any);
+const OrganizationsOrganizationIdReportTemplatesRoute =
+  OrganizationsOrganizationIdReportTemplatesRouteImport.update({
+    id: '/report-templates',
+    path: '/report-templates',
+    getParentRoute: () => OrganizationsOrganizationIdRoute,
+  } as any);
+const OrganizationsOrganizationIdNotificationsRoute =
+  OrganizationsOrganizationIdNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => OrganizationsOrganizationIdRoute,
+  } as any);
+const OrganizationsOrganizationIdDriversRoute =
+  OrganizationsOrganizationIdDriversRouteImport.update({
+    id: '/drivers',
+    path: '/drivers',
+    getParentRoute: () => OrganizationsOrganizationIdRoute,
+  } as any);
+const OrganizationsOrganizationIdAddRunsRoute =
+  OrganizationsOrganizationIdAddRunsRouteImport.update({
+    id: '/add-runs',
+    path: '/add-runs',
+    getParentRoute: () => OrganizationsOrganizationIdRoute,
+  } as any);
+const OrganizationsOrganizationIdDriverDriverIdRoute =
+  OrganizationsOrganizationIdDriverDriverIdRouteImport.update({
+    id: '/driver/$driverId',
+    path: '/driver/$driverId',
+    getParentRoute: () => OrganizationsOrganizationIdRoute,
+  } as any);
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute;
   '/$': typeof SplatRoute;
   '/active-run': typeof ActiveRunRoute;
-  '/add-runs': typeof AddRunsRoute;
-  '/drivers': typeof DriversRoute;
   '/flights': typeof FlightsRoute;
-  '/notifications': typeof NotificationsRoute;
-  '/organization': typeof OrganizationRoute;
-  '/report-templates': typeof ReportTemplatesRoute;
-  '/reports': typeof ReportsRoute;
-  '/request-run-report': typeof RequestRunReportRoute;
-  '/runs': typeof RunsRoute;
-  '/settings': typeof SettingsRoute;
+  '/no-organization': typeof NoOrganizationRoute;
   '/sign-in': typeof SignInRoute;
   '/sign-up': typeof SignUpRoute;
   '/super-admin': typeof SuperAdminRoute;
-  '/driver/$driverId': typeof DriverDriverIdRoute;
+  '/organizations/$organizationId': typeof OrganizationsOrganizationIdRouteWithChildren;
+  '/organizations/$organizationId/add-runs': typeof OrganizationsOrganizationIdAddRunsRoute;
+  '/organizations/$organizationId/drivers': typeof OrganizationsOrganizationIdDriversRoute;
+  '/organizations/$organizationId/notifications': typeof OrganizationsOrganizationIdNotificationsRoute;
+  '/organizations/$organizationId/report-templates': typeof OrganizationsOrganizationIdReportTemplatesRoute;
+  '/organizations/$organizationId/reports': typeof OrganizationsOrganizationIdReportsRoute;
+  '/organizations/$organizationId/request-run-report': typeof OrganizationsOrganizationIdRequestRunReportRoute;
+  '/organizations/$organizationId/runs': typeof OrganizationsOrganizationIdRunsRoute;
+  '/organizations/$organizationId/settings': typeof OrganizationsOrganizationIdSettingsRoute;
+  '/organizations/$organizationId/': typeof OrganizationsOrganizationIdIndexRoute;
+  '/organizations/$organizationId/driver/$driverId': typeof OrganizationsOrganizationIdDriverDriverIdRoute;
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute;
   '/$': typeof SplatRoute;
   '/active-run': typeof ActiveRunRoute;
-  '/add-runs': typeof AddRunsRoute;
-  '/drivers': typeof DriversRoute;
   '/flights': typeof FlightsRoute;
-  '/notifications': typeof NotificationsRoute;
-  '/organization': typeof OrganizationRoute;
-  '/report-templates': typeof ReportTemplatesRoute;
-  '/reports': typeof ReportsRoute;
-  '/request-run-report': typeof RequestRunReportRoute;
-  '/runs': typeof RunsRoute;
-  '/settings': typeof SettingsRoute;
+  '/no-organization': typeof NoOrganizationRoute;
   '/sign-in': typeof SignInRoute;
   '/sign-up': typeof SignUpRoute;
   '/super-admin': typeof SuperAdminRoute;
-  '/driver/$driverId': typeof DriverDriverIdRoute;
+  '/organizations/$organizationId/add-runs': typeof OrganizationsOrganizationIdAddRunsRoute;
+  '/organizations/$organizationId/drivers': typeof OrganizationsOrganizationIdDriversRoute;
+  '/organizations/$organizationId/notifications': typeof OrganizationsOrganizationIdNotificationsRoute;
+  '/organizations/$organizationId/report-templates': typeof OrganizationsOrganizationIdReportTemplatesRoute;
+  '/organizations/$organizationId/reports': typeof OrganizationsOrganizationIdReportsRoute;
+  '/organizations/$organizationId/request-run-report': typeof OrganizationsOrganizationIdRequestRunReportRoute;
+  '/organizations/$organizationId/runs': typeof OrganizationsOrganizationIdRunsRoute;
+  '/organizations/$organizationId/settings': typeof OrganizationsOrganizationIdSettingsRoute;
+  '/organizations/$organizationId': typeof OrganizationsOrganizationIdIndexRoute;
+  '/organizations/$organizationId/driver/$driverId': typeof OrganizationsOrganizationIdDriverDriverIdRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   '/': typeof IndexRoute;
   '/$': typeof SplatRoute;
   '/active-run': typeof ActiveRunRoute;
-  '/add-runs': typeof AddRunsRoute;
-  '/drivers': typeof DriversRoute;
   '/flights': typeof FlightsRoute;
-  '/notifications': typeof NotificationsRoute;
-  '/organization': typeof OrganizationRoute;
-  '/report-templates': typeof ReportTemplatesRoute;
-  '/reports': typeof ReportsRoute;
-  '/request-run-report': typeof RequestRunReportRoute;
-  '/runs': typeof RunsRoute;
-  '/settings': typeof SettingsRoute;
+  '/no-organization': typeof NoOrganizationRoute;
   '/sign-in': typeof SignInRoute;
   '/sign-up': typeof SignUpRoute;
   '/super-admin': typeof SuperAdminRoute;
-  '/driver/$driverId': typeof DriverDriverIdRoute;
+  '/organizations/$organizationId': typeof OrganizationsOrganizationIdRouteWithChildren;
+  '/organizations/$organizationId/add-runs': typeof OrganizationsOrganizationIdAddRunsRoute;
+  '/organizations/$organizationId/drivers': typeof OrganizationsOrganizationIdDriversRoute;
+  '/organizations/$organizationId/notifications': typeof OrganizationsOrganizationIdNotificationsRoute;
+  '/organizations/$organizationId/report-templates': typeof OrganizationsOrganizationIdReportTemplatesRoute;
+  '/organizations/$organizationId/reports': typeof OrganizationsOrganizationIdReportsRoute;
+  '/organizations/$organizationId/request-run-report': typeof OrganizationsOrganizationIdRequestRunReportRoute;
+  '/organizations/$organizationId/runs': typeof OrganizationsOrganizationIdRunsRoute;
+  '/organizations/$organizationId/settings': typeof OrganizationsOrganizationIdSettingsRoute;
+  '/organizations/$organizationId/': typeof OrganizationsOrganizationIdIndexRoute;
+  '/organizations/$organizationId/driver/$driverId': typeof OrganizationsOrganizationIdDriverDriverIdRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -177,78 +205,75 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/active-run'
-    | '/add-runs'
-    | '/drivers'
     | '/flights'
-    | '/notifications'
-    | '/organization'
-    | '/report-templates'
-    | '/reports'
-    | '/request-run-report'
-    | '/runs'
-    | '/settings'
+    | '/no-organization'
     | '/sign-in'
     | '/sign-up'
     | '/super-admin'
-    | '/driver/$driverId';
+    | '/organizations/$organizationId'
+    | '/organizations/$organizationId/add-runs'
+    | '/organizations/$organizationId/drivers'
+    | '/organizations/$organizationId/notifications'
+    | '/organizations/$organizationId/report-templates'
+    | '/organizations/$organizationId/reports'
+    | '/organizations/$organizationId/request-run-report'
+    | '/organizations/$organizationId/runs'
+    | '/organizations/$organizationId/settings'
+    | '/organizations/$organizationId/'
+    | '/organizations/$organizationId/driver/$driverId';
   fileRoutesByTo: FileRoutesByTo;
   to:
     | '/'
     | '/$'
     | '/active-run'
-    | '/add-runs'
-    | '/drivers'
     | '/flights'
-    | '/notifications'
-    | '/organization'
-    | '/report-templates'
-    | '/reports'
-    | '/request-run-report'
-    | '/runs'
-    | '/settings'
+    | '/no-organization'
     | '/sign-in'
     | '/sign-up'
     | '/super-admin'
-    | '/driver/$driverId';
+    | '/organizations/$organizationId/add-runs'
+    | '/organizations/$organizationId/drivers'
+    | '/organizations/$organizationId/notifications'
+    | '/organizations/$organizationId/report-templates'
+    | '/organizations/$organizationId/reports'
+    | '/organizations/$organizationId/request-run-report'
+    | '/organizations/$organizationId/runs'
+    | '/organizations/$organizationId/settings'
+    | '/organizations/$organizationId'
+    | '/organizations/$organizationId/driver/$driverId';
   id:
     | '__root__'
     | '/'
     | '/$'
     | '/active-run'
-    | '/add-runs'
-    | '/drivers'
     | '/flights'
-    | '/notifications'
-    | '/organization'
-    | '/report-templates'
-    | '/reports'
-    | '/request-run-report'
-    | '/runs'
-    | '/settings'
+    | '/no-organization'
     | '/sign-in'
     | '/sign-up'
     | '/super-admin'
-    | '/driver/$driverId';
+    | '/organizations/$organizationId'
+    | '/organizations/$organizationId/add-runs'
+    | '/organizations/$organizationId/drivers'
+    | '/organizations/$organizationId/notifications'
+    | '/organizations/$organizationId/report-templates'
+    | '/organizations/$organizationId/reports'
+    | '/organizations/$organizationId/request-run-report'
+    | '/organizations/$organizationId/runs'
+    | '/organizations/$organizationId/settings'
+    | '/organizations/$organizationId/'
+    | '/organizations/$organizationId/driver/$driverId';
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
   SplatRoute: typeof SplatRoute;
   ActiveRunRoute: typeof ActiveRunRoute;
-  AddRunsRoute: typeof AddRunsRoute;
-  DriversRoute: typeof DriversRoute;
   FlightsRoute: typeof FlightsRoute;
-  NotificationsRoute: typeof NotificationsRoute;
-  OrganizationRoute: typeof OrganizationRoute;
-  ReportTemplatesRoute: typeof ReportTemplatesRoute;
-  ReportsRoute: typeof ReportsRoute;
-  RequestRunReportRoute: typeof RequestRunReportRoute;
-  RunsRoute: typeof RunsRoute;
-  SettingsRoute: typeof SettingsRoute;
+  NoOrganizationRoute: typeof NoOrganizationRoute;
   SignInRoute: typeof SignInRoute;
   SignUpRoute: typeof SignUpRoute;
   SuperAdminRoute: typeof SuperAdminRoute;
-  DriverDriverIdRoute: typeof DriverDriverIdRoute;
+  OrganizationsOrganizationIdRoute: typeof OrganizationsOrganizationIdRouteWithChildren;
 }
 
 declare module '@tanstack/react-router' {
@@ -274,53 +299,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignInRouteImport;
       parentRoute: typeof rootRouteImport;
     };
-    '/settings': {
-      id: '/settings';
-      path: '/settings';
-      fullPath: '/settings';
-      preLoaderRoute: typeof SettingsRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    '/runs': {
-      id: '/runs';
-      path: '/runs';
-      fullPath: '/runs';
-      preLoaderRoute: typeof RunsRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    '/request-run-report': {
-      id: '/request-run-report';
-      path: '/request-run-report';
-      fullPath: '/request-run-report';
-      preLoaderRoute: typeof RequestRunReportRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    '/reports': {
-      id: '/reports';
-      path: '/reports';
-      fullPath: '/reports';
-      preLoaderRoute: typeof ReportsRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    '/report-templates': {
-      id: '/report-templates';
-      path: '/report-templates';
-      fullPath: '/report-templates';
-      preLoaderRoute: typeof ReportTemplatesRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    '/organization': {
-      id: '/organization';
-      path: '/organization';
-      fullPath: '/organization';
-      preLoaderRoute: typeof OrganizationRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    '/notifications': {
-      id: '/notifications';
-      path: '/notifications';
-      fullPath: '/notifications';
-      preLoaderRoute: typeof NotificationsRouteImport;
+    '/no-organization': {
+      id: '/no-organization';
+      path: '/no-organization';
+      fullPath: '/no-organization';
+      preLoaderRoute: typeof NoOrganizationRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/flights': {
@@ -328,20 +311,6 @@ declare module '@tanstack/react-router' {
       path: '/flights';
       fullPath: '/flights';
       preLoaderRoute: typeof FlightsRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    '/drivers': {
-      id: '/drivers';
-      path: '/drivers';
-      fullPath: '/drivers';
-      preLoaderRoute: typeof DriversRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    '/add-runs': {
-      id: '/add-runs';
-      path: '/add-runs';
-      fullPath: '/add-runs';
-      preLoaderRoute: typeof AddRunsRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/active-run': {
@@ -365,34 +334,138 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport;
       parentRoute: typeof rootRouteImport;
     };
-    '/driver/$driverId': {
-      id: '/driver/$driverId';
-      path: '/driver/$driverId';
-      fullPath: '/driver/$driverId';
-      preLoaderRoute: typeof DriverDriverIdRouteImport;
+    '/organizations/$organizationId': {
+      id: '/organizations/$organizationId';
+      path: '/organizations/$organizationId';
+      fullPath: '/organizations/$organizationId';
+      preLoaderRoute: typeof OrganizationsOrganizationIdRouteImport;
       parentRoute: typeof rootRouteImport;
+    };
+    '/organizations/$organizationId/': {
+      id: '/organizations/$organizationId/';
+      path: '/';
+      fullPath: '/organizations/$organizationId/';
+      preLoaderRoute: typeof OrganizationsOrganizationIdIndexRouteImport;
+      parentRoute: typeof OrganizationsOrganizationIdRoute;
+    };
+    '/organizations/$organizationId/settings': {
+      id: '/organizations/$organizationId/settings';
+      path: '/settings';
+      fullPath: '/organizations/$organizationId/settings';
+      preLoaderRoute: typeof OrganizationsOrganizationIdSettingsRouteImport;
+      parentRoute: typeof OrganizationsOrganizationIdRoute;
+    };
+    '/organizations/$organizationId/runs': {
+      id: '/organizations/$organizationId/runs';
+      path: '/runs';
+      fullPath: '/organizations/$organizationId/runs';
+      preLoaderRoute: typeof OrganizationsOrganizationIdRunsRouteImport;
+      parentRoute: typeof OrganizationsOrganizationIdRoute;
+    };
+    '/organizations/$organizationId/request-run-report': {
+      id: '/organizations/$organizationId/request-run-report';
+      path: '/request-run-report';
+      fullPath: '/organizations/$organizationId/request-run-report';
+      preLoaderRoute: typeof OrganizationsOrganizationIdRequestRunReportRouteImport;
+      parentRoute: typeof OrganizationsOrganizationIdRoute;
+    };
+    '/organizations/$organizationId/reports': {
+      id: '/organizations/$organizationId/reports';
+      path: '/reports';
+      fullPath: '/organizations/$organizationId/reports';
+      preLoaderRoute: typeof OrganizationsOrganizationIdReportsRouteImport;
+      parentRoute: typeof OrganizationsOrganizationIdRoute;
+    };
+    '/organizations/$organizationId/report-templates': {
+      id: '/organizations/$organizationId/report-templates';
+      path: '/report-templates';
+      fullPath: '/organizations/$organizationId/report-templates';
+      preLoaderRoute: typeof OrganizationsOrganizationIdReportTemplatesRouteImport;
+      parentRoute: typeof OrganizationsOrganizationIdRoute;
+    };
+    '/organizations/$organizationId/notifications': {
+      id: '/organizations/$organizationId/notifications';
+      path: '/notifications';
+      fullPath: '/organizations/$organizationId/notifications';
+      preLoaderRoute: typeof OrganizationsOrganizationIdNotificationsRouteImport;
+      parentRoute: typeof OrganizationsOrganizationIdRoute;
+    };
+    '/organizations/$organizationId/drivers': {
+      id: '/organizations/$organizationId/drivers';
+      path: '/drivers';
+      fullPath: '/organizations/$organizationId/drivers';
+      preLoaderRoute: typeof OrganizationsOrganizationIdDriversRouteImport;
+      parentRoute: typeof OrganizationsOrganizationIdRoute;
+    };
+    '/organizations/$organizationId/add-runs': {
+      id: '/organizations/$organizationId/add-runs';
+      path: '/add-runs';
+      fullPath: '/organizations/$organizationId/add-runs';
+      preLoaderRoute: typeof OrganizationsOrganizationIdAddRunsRouteImport;
+      parentRoute: typeof OrganizationsOrganizationIdRoute;
+    };
+    '/organizations/$organizationId/driver/$driverId': {
+      id: '/organizations/$organizationId/driver/$driverId';
+      path: '/driver/$driverId';
+      fullPath: '/organizations/$organizationId/driver/$driverId';
+      preLoaderRoute: typeof OrganizationsOrganizationIdDriverDriverIdRouteImport;
+      parentRoute: typeof OrganizationsOrganizationIdRoute;
     };
   }
 }
+
+interface OrganizationsOrganizationIdRouteChildren {
+  OrganizationsOrganizationIdAddRunsRoute: typeof OrganizationsOrganizationIdAddRunsRoute;
+  OrganizationsOrganizationIdDriversRoute: typeof OrganizationsOrganizationIdDriversRoute;
+  OrganizationsOrganizationIdNotificationsRoute: typeof OrganizationsOrganizationIdNotificationsRoute;
+  OrganizationsOrganizationIdReportTemplatesRoute: typeof OrganizationsOrganizationIdReportTemplatesRoute;
+  OrganizationsOrganizationIdReportsRoute: typeof OrganizationsOrganizationIdReportsRoute;
+  OrganizationsOrganizationIdRequestRunReportRoute: typeof OrganizationsOrganizationIdRequestRunReportRoute;
+  OrganizationsOrganizationIdRunsRoute: typeof OrganizationsOrganizationIdRunsRoute;
+  OrganizationsOrganizationIdSettingsRoute: typeof OrganizationsOrganizationIdSettingsRoute;
+  OrganizationsOrganizationIdIndexRoute: typeof OrganizationsOrganizationIdIndexRoute;
+  OrganizationsOrganizationIdDriverDriverIdRoute: typeof OrganizationsOrganizationIdDriverDriverIdRoute;
+}
+
+const OrganizationsOrganizationIdRouteChildren: OrganizationsOrganizationIdRouteChildren =
+  {
+    OrganizationsOrganizationIdAddRunsRoute:
+      OrganizationsOrganizationIdAddRunsRoute,
+    OrganizationsOrganizationIdDriversRoute:
+      OrganizationsOrganizationIdDriversRoute,
+    OrganizationsOrganizationIdNotificationsRoute:
+      OrganizationsOrganizationIdNotificationsRoute,
+    OrganizationsOrganizationIdReportTemplatesRoute:
+      OrganizationsOrganizationIdReportTemplatesRoute,
+    OrganizationsOrganizationIdReportsRoute:
+      OrganizationsOrganizationIdReportsRoute,
+    OrganizationsOrganizationIdRequestRunReportRoute:
+      OrganizationsOrganizationIdRequestRunReportRoute,
+    OrganizationsOrganizationIdRunsRoute: OrganizationsOrganizationIdRunsRoute,
+    OrganizationsOrganizationIdSettingsRoute:
+      OrganizationsOrganizationIdSettingsRoute,
+    OrganizationsOrganizationIdIndexRoute:
+      OrganizationsOrganizationIdIndexRoute,
+    OrganizationsOrganizationIdDriverDriverIdRoute:
+      OrganizationsOrganizationIdDriverDriverIdRoute,
+  };
+
+const OrganizationsOrganizationIdRouteWithChildren =
+  OrganizationsOrganizationIdRoute._addFileChildren(
+    OrganizationsOrganizationIdRouteChildren
+  );
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
   ActiveRunRoute: ActiveRunRoute,
-  AddRunsRoute: AddRunsRoute,
-  DriversRoute: DriversRoute,
   FlightsRoute: FlightsRoute,
-  NotificationsRoute: NotificationsRoute,
-  OrganizationRoute: OrganizationRoute,
-  ReportTemplatesRoute: ReportTemplatesRoute,
-  ReportsRoute: ReportsRoute,
-  RequestRunReportRoute: RequestRunReportRoute,
-  RunsRoute: RunsRoute,
-  SettingsRoute: SettingsRoute,
+  NoOrganizationRoute: NoOrganizationRoute,
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
   SuperAdminRoute: SuperAdminRoute,
-  DriverDriverIdRoute: DriverDriverIdRoute,
+  OrganizationsOrganizationIdRoute:
+    OrganizationsOrganizationIdRouteWithChildren,
 };
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

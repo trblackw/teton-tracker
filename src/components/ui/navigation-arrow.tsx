@@ -1,4 +1,5 @@
 import { cn } from '@/lib/cn';
+import { useRouter } from '@tanstack/react-router';
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from './button';
 
@@ -71,7 +72,23 @@ export function NavigationArrow({
 export function BackButton(
   props: Omit<NavigationArrowProps, 'direction' | 'variant'>
 ) {
-  return <NavigationArrow {...props} direction="left" variant="back" />;
+  const router = useRouter();
+
+  const handleClick = () => {
+    if (props.onClick) {
+      return props.onClick();
+    }
+    router.history.back();
+  };
+
+  return (
+    <NavigationArrow
+      {...props}
+      direction="left"
+      variant="back"
+      onClick={handleClick}
+    />
+  );
 }
 
 export function NextButton(

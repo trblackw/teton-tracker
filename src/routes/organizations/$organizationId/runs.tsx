@@ -1,4 +1,3 @@
-import { runsApi } from '@/lib/api/runs-api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import {
@@ -13,44 +12,33 @@ import {
   X,
 } from 'lucide-react';
 import { useState } from 'react';
-import { Badge } from '../components/ui/badge';
-import { Button } from '../components/ui/button';
-import { Card, CardContent, CardHeader } from '../components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../components/ui/dialog';
-import { ExpandableActionsDrawer } from '../components/ui/expandable-actions-drawer';
-import { Input } from '../components/ui/input';
-import PageWrapper from '../components/ui/page-wrapper';
-import { RunCard } from '../components/ui/run-card';
+import { Badge } from '../../../components/ui/badge';
+import { Button } from '../../../components/ui/button';
+import { Card, CardContent, CardHeader } from '../../../components/ui/card';
+import { ExpandableActionsDrawer } from '../../../components/ui/expandable-actions-drawer';
+import { Input } from '../../../components/ui/input';
+import PageWrapper from '../../../components/ui/page-wrapper';
+import { RunCard } from '../../../components/ui/run-card';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../components/ui/select';
-import { StickyHeader } from '../components/ui/sticky-header';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '../components/ui/tabs';
-import { useMultipleRunsData } from '../lib/hooks/use-api-data';
-import { useTimezoneFormatters } from '../lib/hooks/use-timezone';
-import { type Run, type RunStatus } from '../lib/schema';
-import { toasts } from '../lib/toast';
+} from '../../../components/ui/select';
+import { StickyHeader } from '../../../components/ui/sticky-header';
+import { useOrgRunsApi } from '../../../lib/hooks';
+import { useMultipleRunsData } from '../../../lib/hooks/use-api-data';
+import { useTimezoneFormatters } from '../../../lib/hooks/use-timezone';
+import { queryKeys } from '../../../lib/react-query-client';
+import { type Run, type RunStatus } from '../../../lib/schema';
+import { toasts } from '../../../lib/toast';
 
 function Runs() {
   const queryClient = useQueryClient();
   const { formatTime } = useTimezoneFormatters();
   const navigate = useNavigate();
+  const runsApi = useOrgRunsApi();
 
   // Tab state
   const [activeTab, setActiveTab] = useState<'current' | 'past'>('current');
@@ -74,7 +62,7 @@ function Runs() {
     isError: runsError,
     refetch: refetchRuns,
   } = useQuery({
-    queryKey: ['runs'],
+    queryKey: queryKeys.runs(),
     queryFn: () => runsApi.getRuns(),
     staleTime: 1000 * 60 * 2, // 2 minutes
   });
@@ -102,11 +90,6 @@ function Runs() {
       );
     }
 
-    // Apply airline filter
-    if (selectedAirline) {
-      filtered = filtered.filter(run => run.airline === selectedAirline);
-    }
-
     // Apply status filter
     if (selectedStatus) {
       filtered = filtered.filter(run => run.status === selectedStatus);
@@ -115,6 +98,11 @@ function Runs() {
     // Apply type filter
     if (selectedType) {
       filtered = filtered.filter(run => run.type === selectedType);
+    }
+
+    // Apply airline filter
+    if (selectedAirline) {
+      filtered = filtered.filter(run => run.airline === selectedAirline);
     }
 
     return filtered;
@@ -186,22 +174,22 @@ function Runs() {
   const pastRuns = sortRuns(filterRuns(basePastRuns));
 
   // Get available filter options based on current tab
-  const activeRuns = activeTab === 'current' ? baseCurrentRuns : basePastRuns;
+  const activeRuns = selectedStatus === 'all' ? baseCurrentRuns : basePastRuns;
   const availableAirlines = Array.from(
     new Set(activeRuns.map(run => run.airline))
   ).sort();
   const availableStatuses = Array.from(
     new Set(activeRuns.map(run => run.status))
   ).sort();
+  const availableTypes = Array.from(
+    new Set(activeRuns.map(run => run.type))
+  ).sort();
 
   // Clear filters when switching tabs
   const handleTabChange = (value: string) => {
     const newTab = value as 'current' | 'past';
-    setActiveTab(newTab);
+    setSelectedStatus('all'); // Reset status filter when switching tabs
     setSearchTerm('');
-    setSelectedAirline('');
-    setSelectedStatus('');
-    setSelectedType('');
     setSortBy('scheduledTime');
     setSortOrder('asc');
   };
@@ -213,15 +201,18 @@ function Runs() {
     onSuccess: async (updatedRun: Run | null) => {
       if (updatedRun) {
         // Update the cache immediately with the updated run data
-        queryClient.setQueryData(['runs'], (oldData: Run[] | undefined) => {
-          if (!oldData) return oldData;
-          return oldData.map((run: Run) =>
-            run.id === updatedRun.id ? updatedRun : run
-          );
-        });
+        queryClient.setQueryData(
+          queryKeys.runs(),
+          (oldData: Run[] | undefined) => {
+            if (!oldData) return oldData;
+            return oldData.map((run: Run) =>
+              run.id === updatedRun.id ? updatedRun : run
+            );
+          }
+        );
       }
       // Also invalidate to ensure consistency
-      await queryClient.invalidateQueries({ queryKey: ['runs'] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.runs() });
     },
     onError: error => {
       console.error('Failed to update run status:', error);
@@ -232,7 +223,7 @@ function Runs() {
   const deleteRunMutation = useMutation({
     mutationFn: runsApi.deleteRun,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['runs'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.runs() });
       toasts.success('Run deleted', 'The run has been deleted successfully.');
       setDeleteDialogOpen(false);
       setRunToDelete(null);
@@ -246,7 +237,7 @@ function Runs() {
   // Data refresh handlers
   const refreshAllData = () => {
     refetchRuns();
-    queryClient.invalidateQueries({ queryKey: ['runs'] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.runs() });
   };
 
   const handleUpdateStatus = (id: string, status: RunStatus) => {
@@ -310,7 +301,7 @@ function Runs() {
     <div>
       <Input
         type="text"
-        placeholder={`Search ${activeTab === 'current' ? 'current' : 'past'} runs...`}
+        placeholder={`Search ${selectedStatus === 'all' ? 'all' : 'past'} runs...`}
         value={searchTerm}
         onChange={e => setSearchTerm(e.target.value)}
         className="w-full"
@@ -370,7 +361,9 @@ function Runs() {
                   {availableStatuses.map(status => (
                     <SelectItem key={status} value={status}>
                       <div className="flex items-center gap-2">
-                        <Badge className={`text-xs ${getStatusColor(status)}`}>
+                        <Badge
+                          className={`text-xs ${getStatusColor(status as RunStatus)}`}
+                        >
                           {status}
                         </Badge>
                       </div>
@@ -402,8 +395,11 @@ function Runs() {
                   <SelectValue placeholder="All types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pickup">Pickup</SelectItem>
-                  <SelectItem value="dropoff">Dropoff</SelectItem>
+                  {availableTypes.map(type => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -433,14 +429,14 @@ function Runs() {
                   <SelectItem value="scheduledTime">Scheduled Time</SelectItem>
                   <SelectItem value="createdAt">Created</SelectItem>
                   <SelectItem value="updatedAt">Updated</SelectItem>
-                  {activeTab === 'past' && (
+                  {selectedStatus === 'past' && (
                     <SelectItem value="completedAt">Completed</SelectItem>
                   )}
                   <SelectItem value="price">Price</SelectItem>
                   <SelectItem value="estimatedDuration">
                     Est. Duration
                   </SelectItem>
-                  {activeTab === 'past' && (
+                  {selectedStatus === 'past' && (
                     <SelectItem value="actualDuration">
                       Actual Duration
                     </SelectItem>
@@ -467,14 +463,17 @@ function Runs() {
       </div>
 
       {/* Clear All Filters Button */}
-      {(searchTerm || selectedAirline || selectedStatus || selectedType) && (
+      {(searchTerm ||
+        selectedStatus !== 'all' ||
+        selectedAirline ||
+        selectedType) && (
         <div className="pt-4 border-t">
           <Button
             variant="outline"
             onClick={() => {
               setSearchTerm('');
+              setSelectedStatus('all');
               setSelectedAirline('');
-              setSelectedStatus('');
               setSelectedType('');
             }}
             className="w-full"
@@ -488,10 +487,10 @@ function Runs() {
   );
 
   const getTabHeader = () => {
-    if (activeTab === 'current') {
+    if (selectedStatus === 'all') {
       return {
-        title: 'Current Runs',
-        subtitle: 'Manage scheduled & active runs',
+        title: 'All Runs',
+        subtitle: 'Manage all runs',
       };
     } else {
       return {
@@ -502,7 +501,7 @@ function Runs() {
   };
 
   const renderEmptyState = () => {
-    if (activeTab === 'current') {
+    if (selectedStatus === 'all') {
       return (
         <Card className="text-center py-12">
           <CardContent>
@@ -633,208 +632,125 @@ function Runs() {
     <PageWrapper>
       <StickyHeader title={title} subtitle={subtitle} />
       <div className="space-y-3 px-4 sm:px-6 lg:px-8">
-        <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="current">
-              Current{' '}
-              <span className="text-sm text-muted-foreground ml-1">
-                ({currentRuns.length})
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="past">
-              Past{' '}
-              <span className="text-sm text-muted-foreground ml-1">
-                ({pastRuns.length})
-              </span>
-            </TabsTrigger>
-          </TabsList>
+        {/* <Tabs value={activeTab} onValueChange={handleTabChange}> */}
+        {/* <TabsList className="grid w-full grid-cols-2"> */}
+        {/* <TabsTrigger value="current"> */}
+        {/* Current{' '} */}
+        {/* <span className="text-sm text-muted-foreground ml-1"> */}
+        {/* ({currentRuns.length}) */}
+        {/* </span> */}
+        {/* </TabsTrigger> */}
+        {/* <TabsTrigger value="past"> */}
+        {/* Past{' '} */}
+        {/* <span className="text-sm text-muted-foreground ml-1"> */}
+        {/* ({pastRuns.length}) */}
+        {/* </span> */}
+        {/* </TabsTrigger> */}
+        {/* </TabsList> */}
 
-          {/* Search & Filter Actions */}
-          <ExpandableActionsDrawer
-            actions={[
-              {
-                id: 'search',
-                icon: <Search className="h-4 w-4" />,
-                label: 'Search Runs',
-                content: <SearchContent />,
-                badge: searchTerm ? '1' : undefined,
-                showHeader: false, // Minimal search with no header
-              },
-              {
-                id: 'filter',
-                icon: <Filter className="h-4 w-4" />,
-                label: 'Filter & Sort',
-                content: <FilterContent />,
-                badge:
-                  [selectedAirline, selectedStatus, selectedType].filter(
-                    Boolean
-                  ).length || undefined,
-                showHeader: false, // Minimal filter with no header
-              },
-            ]}
-          />
-          <TabsContent value="current" className="space-y-4">
-            {currentRuns.length === 0 ? (
-              // Check if it's due to filtering
-              (searchTerm ||
-                selectedAirline ||
-                selectedStatus ||
-                selectedType) &&
-              baseCurrentRuns.length > 0 ? (
-                <Card className="text-center py-12">
-                  <CardContent>
-                    <div className="flex flex-col items-center justify-center space-y-4">
-                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
-                        <Search className="h-8 w-8 text-muted-foreground" />
-                      </div>
-                      <div className="space-y-2">
-                        <h3 className="text-xl font-medium text-foreground">
-                          No matching runs found
-                        </h3>
-                        <p className="text-muted-foreground max-w-md">
-                          No current runs match your search criteria. Try
-                          adjusting your filters.
-                        </p>
-                      </div>
-                      <Button
-                        onClick={() => {
-                          setSearchTerm('');
-                          setSelectedAirline('');
-                          setSelectedStatus('');
-                          setSelectedType('');
-                        }}
-                        variant="outline"
-                      >
-                        <X className="h-4 w-4 mr-2" />
-                        Clear Filters
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                renderEmptyState()
+        {/* Search & Filter Actions */}
+        <ExpandableActionsDrawer
+          actions={[
+            {
+              id: 'search',
+              icon: <Search className="h-4 w-4" />,
+              label: 'Search Runs',
+              content: <SearchContent />,
+              badge: searchTerm ? '1' : undefined,
+              showHeader: false, // Minimal search with no header
+            },
+            {
+              id: 'filter',
+              icon: <Filter className="h-4 w-4" />,
+              label: 'Filter & Sort',
+              content: <FilterContent />,
+              badge:
+                [
+                  selectedStatus !== 'all',
+                  selectedAirline,
+                  selectedType,
+                ].filter(Boolean).length || undefined,
+              showHeader: false, // Minimal filter with no header
+            },
+          ]}
+        />
+        {/* <TabsContent value="current" className="space-y-4"> */}
+        {selectedStatus === 'all' ? (
+          <div className="grid gap-4">
+            {runsApiData.data
+              .filter(({ run }) =>
+                currentRuns.some(currentRun => currentRun.id === run.id)
               )
-            ) : (
-              <div className="grid gap-4">
-                {runsApiData.data
-                  .filter(({ run }) =>
-                    currentRuns.some(currentRun => currentRun.id === run.id)
-                  )
-                  .map(({ run, flightStatus, trafficData }) => (
-                    <RunCard
-                      key={run.id}
-                      run={run}
-                      runsLoading={runsApiData.isLoading}
-                      runsError={runsApiData.isError}
-                      trafficData={trafficData}
-                      handleStopRun={handleStopRun}
-                      handleEditRun={handleEditRun}
-                      refreshRunData={refreshRunData}
-                      flightStatus={flightStatus}
-                      formatTime={formatTime}
-                    />
-                  ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="past" className="space-y-4">
-            {pastRuns.length === 0 ? (
-              // Check if it's due to filtering
-              (searchTerm ||
-                selectedAirline ||
-                selectedStatus ||
-                selectedType) &&
-              basePastRuns.length > 0 ? (
-                <Card className="text-center py-12">
-                  <CardContent>
-                    <div className="flex flex-col items-center justify-center space-y-4">
-                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
-                        <Search className="h-8 w-8 text-muted-foreground" />
-                      </div>
-                      <div className="space-y-2">
-                        <h3 className="text-xl font-medium text-foreground">
-                          No matching runs found
-                        </h3>
-                        <p className="text-muted-foreground max-w-md">
-                          No past runs match your search criteria. Try adjusting
-                          your filters.
-                        </p>
-                      </div>
-                      <Button
-                        onClick={() => {
-                          setSearchTerm('');
-                          setSelectedAirline('');
-                          setSelectedStatus('');
-                          setSelectedType('');
-                        }}
-                        variant="outline"
-                      >
-                        <X className="h-4 w-4 mr-2" />
-                        Clear Filters
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                renderEmptyState()
+              .map(({ run, flightStatus, trafficData }) => (
+                <RunCard
+                  key={run.id}
+                  run={run}
+                  runsLoading={runsApiData.isLoading}
+                  runsError={runsApiData.isError}
+                  trafficData={trafficData}
+                  handleStopRun={handleStopRun}
+                  handleEditRun={handleEditRun}
+                  refreshRunData={refreshRunData}
+                  flightStatus={flightStatus}
+                  formatTime={formatTime}
+                />
+              ))}
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {runsApiData.data
+              .filter(({ run }) =>
+                pastRuns.some(pastRun => pastRun.id === run.id)
               )
-            ) : (
-              <div className="grid gap-4">
-                {runsApiData.data
-                  .filter(({ run }) =>
-                    pastRuns.some(pastRun => pastRun.id === run.id)
-                  )
-                  .map(({ run, flightStatus, trafficData }) => (
-                    <RunCard
-                      key={run.id}
-                      run={run}
-                      runsLoading={runsApiData.isLoading}
-                      runsError={runsApiData.isError}
-                      trafficData={trafficData}
-                      handleStopRun={handleStopRun}
-                      handleEditRun={handleEditRun}
-                      refreshRunData={refreshRunData}
-                      flightStatus={flightStatus}
-                    />
-                  ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+              .map(({ run, flightStatus, trafficData }) => (
+                <RunCard
+                  key={run.id}
+                  run={run}
+                  runsLoading={runsApiData.isLoading}
+                  runsError={runsApiData.isError}
+                  trafficData={trafficData}
+                  handleStopRun={handleStopRun}
+                  handleEditRun={handleEditRun}
+                  refreshRunData={refreshRunData}
+                  flightStatus={flightStatus}
+                />
+              ))}
+          </div>
+        )}
+        {/* </TabsContent> */}
 
         {/* Delete Confirmation Dialog */}
-        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete Run</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete this run? This action cannot be
-                undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setDeleteDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={confirmDelete}
-                disabled={deleteRunMutation.isPending}
-              >
-                {deleteRunMutation.isPending ? 'Deleting...' : 'Delete'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}> */}
+        {/* <DialogContent> */}
+        {/* <DialogHeader> */}
+        {/* <DialogTitle>Delete Run</DialogTitle> */}
+        {/* <DialogDescription> */}
+        {/* Are you sure you want to delete this run? This action cannot be */}
+        {/* undone. */}
+        {/* </DialogDescription> */}
+        {/* </DialogHeader> */}
+        {/* <DialogFooter> */}
+        {/* <Button */}
+        {/* variant="outline" */}
+        {/* onClick={() => setDeleteDialogOpen(false)} */}
+        {/* > */}
+        {/* Cancel */}
+        {/* </Button> */}
+        {/* <Button */}
+        {/* variant="destructive" */}
+        {/* onClick={confirmDelete} */}
+        {/* disabled={deleteRunMutation.isPending} */}
+        {/* > */}
+        {/* {deleteRunMutation.isPending ? 'Deleting...' : 'Delete'} */}
+        {/* </Button> */}
+        {/* </DialogFooter> */}
+        {/* </DialogContent> */}
+        {/* </Dialog> */}
       </div>
     </PageWrapper>
   );
 }
 
-export const Route = createFileRoute('/runs')({
+export const Route = createFileRoute('/organizations/$organizationId/runs')({
   component: Runs,
 });

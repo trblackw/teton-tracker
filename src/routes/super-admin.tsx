@@ -7,7 +7,7 @@ import {
   Search,
   Users,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import {
@@ -36,6 +36,7 @@ import {
   useUserOrganizations,
 } from '../lib/auth-client';
 import { toasts } from '../lib/toast';
+import { slugify } from '../lib/utils/slugify';
 
 export const Route = createFileRoute('/super-admin')({
   component: SuperAdminPage,
@@ -214,6 +215,7 @@ function OrganizationCard({ organization }: { organization: any }) {
   );
 }
 
+// need react hook form
 function CreateOrganizationDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -233,20 +235,32 @@ function CreateOrganizationDialog() {
     try {
       const createData: any = {
         name: formData.name,
+        slug:
+          formData.slug.trim() ||
+          formData.name
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, ''),
       };
-
-      if (formData.slug.trim()) {
-        createData.slug = formData.slug;
-      }
 
       if (formData.description.trim()) {
         createData.metadata = { description: formData.description };
       }
 
-      await authClient.organization.create(createData);
+      const result = await authClient.organization.create(createData);
       toasts.success('Organization created successfully!');
       setIsOpen(false);
       setFormData({ name: '', slug: '', description: '' });
+
+      // Set the newly created organization as active and refresh the page
+      if (result.data?.id) {
+        await authClient.organization.setActive({
+          organizationId: result.data.id,
+        });
+        // Refresh the page to update navigation and context
+        window.location.reload();
+      }
     } catch (error) {
       toasts.error('Failed to create organization');
       console.error('Create organization error:', error);
@@ -255,11 +269,16 @@ function CreateOrganizationDialog() {
     }
   };
 
+  const handleOrgNameChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target;
+    setFormData({ ...formData, name: value, slug: slugify(value) });
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
+        <Button className="bg-highlight text-white hover:bg-highlight/90 flex items-center gap-2 w-full max-w-lg">
+          <Plus className="h-4 w-4" strokeWidth={3} />
           Create Organization
         </Button>
       </DialogTrigger>
@@ -277,7 +296,7 @@ function CreateOrganizationDialog() {
               id="name"
               placeholder="Acme Corporation"
               value={formData.name}
-              onChange={e => setFormData({ ...formData, name: e.target.value })}
+              onChange={handleOrgNameChange}
             />
           </div>
           <div className="space-y-2">
@@ -289,8 +308,16 @@ function CreateOrganizationDialog() {
               onChange={e => setFormData({ ...formData, slug: e.target.value })}
             />
             <p className="text-xs text-muted-foreground">
-              Used for URLs and identification. If not provided, one will be
-              generated.
+              Used for URLs and identification. If not provided, will be
+              generated from the name: "
+              {formData.name
+                ? formData.name
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-|-$/g, '')
+                : 'example-org'}
+              "
             </p>
           </div>
           <div className="space-y-2">

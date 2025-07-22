@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { preferencesApi } from '../api/preferences-api';
 import { queryKeys } from '../react-query-client';
+import { useOrgPreferencesApi } from './index';
 import { useNetworkAwareOptions } from './use-network-status';
+import { useCurrentOrgId } from './use-org-navigation';
 
 /**
  * Hook to get the user's timezone preference
@@ -9,11 +10,14 @@ import { useNetworkAwareOptions } from './use-network-status';
  */
 export function useTimezone() {
   const networkOptions = useNetworkAwareOptions();
+  const organizationId = useCurrentOrgId();
+  const preferencesApi = useOrgPreferencesApi();
 
   const { data: preferences } = useQuery({
-    queryKey: queryKeys.userPreferences(),
+    queryKey: queryKeys.userPreferences(organizationId),
     queryFn: () => preferencesApi.getPreferences(),
-    staleTime: 15 * 60 * 1000, // 15 minutes - timezone doesn't change often
+    enabled: !!organizationId, // Only run if we have an organization
+    staleTime: networkOptions.staleTime,
     gcTime: 60 * 60 * 1000, // 1 hour cache time
     refetchOnWindowFocus: false, // Don't refetch timezone on window focus
     refetchOnReconnect: networkOptions.refetchOnReconnect,

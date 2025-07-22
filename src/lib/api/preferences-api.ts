@@ -1,15 +1,13 @@
 import type { UpdatePreferencesData } from '../db/preferences-db';
-import { API_BASE, createFetchOptions } from './api-tools';
+import { buildOrgApiUrl, createFetchOptions } from './api-tools';
 
-// API client for preferences
+// API client for preferences - organization-scoped only!
 
 export const preferencesApi = {
   // Get user preferences
-  async getPreferences() {
-    const response = await fetch(
-      `${API_BASE}/preferences`,
-      createFetchOptions()
-    );
+  async getPreferences(organizationId: string) {
+    const url = buildOrgApiUrl(organizationId, '/preferences');
+    const response = await fetch(url, createFetchOptions());
 
     if (!response.ok) {
       throw new Error('Failed to fetch preferences');
@@ -19,9 +17,13 @@ export const preferencesApi = {
   },
 
   // Update user preferences
-  async updatePreferences(preferencesData: UpdatePreferencesData) {
+  async updatePreferences(
+    preferencesData: UpdatePreferencesData,
+    organizationId: string
+  ) {
+    const url = buildOrgApiUrl(organizationId, '/preferences');
     const response = await fetch(
-      `${API_BASE}/preferences`,
+      url,
       createFetchOptions({
         method: 'PUT',
         body: JSON.stringify({ preferencesData }),

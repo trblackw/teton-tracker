@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 import {
   Building2,
   Edit,
@@ -9,15 +9,15 @@ import {
   Users,
 } from 'lucide-react';
 import { useState } from 'react';
-import { Badge } from '../components/ui/badge';
-import { Button } from '../components/ui/button';
+import { Badge } from '../../components/ui/badge';
+import { Button } from '../../components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../components/ui/card';
+} from '../../components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -25,22 +25,18 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '../components/ui/dialog';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Textarea } from '../components/ui/textarea';
+} from '../../components/ui/dialog';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { Textarea } from '../../components/ui/textarea';
 import {
   authClient,
   useIsSuperAdmin,
   useUserOrganization,
   useUserOrganizations,
-} from '../lib/auth-client';
-import { useNonAdminRedirect } from '../lib/hooks/use-non-admin-redirect';
-import { toasts } from '../lib/toast';
-
-export const Route = createFileRoute('/organization')({
-  component: OrganizationPage,
-});
+} from '../../lib/auth-client';
+import { useNonAdminRedirect } from '../../lib/hooks';
+import { toasts } from '../../lib/toast';
 
 function OrganizationPage() {
   const { isAdmin, isLoading } = useNonAdminRedirect();
@@ -393,20 +389,32 @@ function CreateOrganizationDialog() {
     try {
       const createData: any = {
         name: formData.name,
+        slug:
+          formData.slug.trim() ||
+          formData.name
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, ''),
       };
-
-      if (formData.slug.trim()) {
-        createData.slug = formData.slug;
-      }
 
       if (formData.description.trim()) {
         createData.metadata = { description: formData.description };
       }
 
-      await authClient.organization.create(createData);
+      const result = await authClient.organization.create(createData);
       toasts.success('Organization created successfully!');
       setIsOpen(false);
       setFormData({ name: '', slug: '', description: '' });
+
+      // Set the newly created organization as active and refresh the page
+      if (result.data?.id) {
+        await authClient.organization.setActive({
+          organizationId: result.data.id,
+        });
+        // Refresh the page to update navigation and context
+        window.location.reload();
+      }
     } catch (error) {
       toasts.error('Failed to create organization');
       console.error('Create organization error:', error);
@@ -449,8 +457,16 @@ function CreateOrganizationDialog() {
               onChange={e => setFormData({ ...formData, slug: e.target.value })}
             />
             <p className="text-xs text-muted-foreground">
-              Used for URLs and identification. If not provided, one will be
-              generated.
+              Used for URLs and identification. If not provided, will be
+              generated from the name: "
+              {formData.name
+                ? formData.name
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-|-$/g, '')
+                : 'example-org'}
+              "
             </p>
           </div>
           <div className="space-y-2">
@@ -572,3 +588,55 @@ function EditOrganizationDialog({ organization }: { organization: any }) {
     </Dialog>
   );
 }
+
+interface OrganizationParams {
+  organizationId: string;
+}
+
+export const Route = createFileRoute('/organizations/$organizationId')({
+  beforeLoad: async ({ params }: { params: OrganizationParams }) => {
+    // Get the current session to check if user is authenticated
+    const sessionResponse = await authClient.getSession();
+
+    if (!sessionResponse.data?.user) {
+      throw redirect({
+        to: '/sign-in',
+      });
+    }
+
+    // Validate that the user has access to this organization
+    const organizationsResponse = await authClient.organization.list();
+
+    if (!organizationsResponse.data) {
+      throw redirect({
+        to: '/',
+      });
+    }
+
+    const hasAccess = organizationsResponse.data.some(
+      (org: any) => org.id === params.organizationId
+    );
+
+    if (!hasAccess) {
+      // If user doesn't have access to this organization, redirect to first available org or home
+      if (organizationsResponse.data.length > 0) {
+        throw redirect({
+          to: '/organizations/$organizationId',
+          params: { organizationId: organizationsResponse.data[0].id },
+        });
+      } else {
+        throw redirect({
+          to: '/',
+        });
+      }
+    }
+
+    // Set the active organization
+    await authClient.organization.setActive({
+      organizationId: params.organizationId,
+    });
+
+    return { organizationId: params.organizationId };
+  },
+  component: OrganizationPage,
+});

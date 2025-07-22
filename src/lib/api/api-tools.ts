@@ -38,4 +38,18 @@ export function createFetchOptions(options: RequestInit = {}): RequestInit {
     },
   };
 }
+
+// Helper function to build organization-scoped API URLs
+export function buildOrgApiUrl(
+  organizationId: string,
+  endpoint: string
+): string {
+  const baseUrl = getApiUrl();
+  // Ensure endpoint starts with '/'
+  const normalizedEndpoint = endpoint.startsWith('/')
+    ? endpoint
+    : `/${endpoint}`;
+  return `${baseUrl}/api/organizations/${organizationId}${normalizedEndpoint}`;
+}
+
 export const API_BASE = getApiUrl();

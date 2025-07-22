@@ -1,4 +1,3 @@
-import { runsApi } from '@/lib/api/runs-api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createFileRoute,
@@ -13,7 +12,6 @@ import {
   CheckCircle,
   Clock,
   MapPin,
-  Navigation,
   Plane,
   Timer,
   XCircle,
@@ -28,8 +26,9 @@ import {
   CardHeader,
   CardTitle,
 } from '../components/ui/card';
-import { BackButton } from '../components/ui/navigation-arrow';
-import { useMultipleRunsData } from '../lib/hooks/use-api-data';
+import { useOrgRunsApi } from '../lib/hooks';
+import { useCurrentOrgId } from '../lib/hooks/use-org-navigation';
+import { queryKeys } from '../lib/react-query-client';
 import { toasts } from '../lib/toast';
 
 export const Route = createFileRoute('/active-run')({
@@ -141,28 +140,36 @@ function ActiveRunPage() {
   const search = useSearch({ from: '/active-run' });
   const router = useRouter();
   const queryClient = useQueryClient();
+  const runsApi = useOrgRunsApi();
+  const organizationId = useCurrentOrgId();
 
   // Get the active run data
   const { data: runs = [] } = useQuery({
-    queryKey: ['runs'],
-    queryFn: runsApi.getRuns,
+    queryKey: queryKeys.runs(organizationId),
+    queryFn: () => runsApi.getRuns(),
     refetchInterval: 30000, // Refetch every 30 seconds
+    enabled: !!organizationId,
   });
 
   // Mutation for completing a run
   const completeRunMutation = useMutation({
     mutationFn: (runId: string) => runsApi.updateRunStatus(runId, 'completed'),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['runs'] });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.runs(organizationId),
+      });
       toasts.success(
         'Run Completed',
         'The run has been marked as completed successfully.'
       );
-      router.navigate({ to: '/runs' });
+      router.navigate({ to: '/' });
     },
     onError: error => {
       console.error('Failed to complete run:', error);
-      toasts.error('Error', 'Failed to complete the run. Please try again.');
+      toasts.error(
+        'Error Completing Run',
+        'Failed to mark the run as completed. Please try again.'
+      );
     },
   });
 
@@ -170,35 +177,37 @@ function ActiveRunPage() {
   const cancelRunMutation = useMutation({
     mutationFn: (runId: string) => runsApi.updateRunStatus(runId, 'cancelled'),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['runs'] });
-      toasts.info('Run Cancelled', 'The run has been cancelled successfully.');
-      router.navigate({ to: '/runs' });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.runs(organizationId),
+      });
+      toasts.success(
+        'Run Cancelled',
+        'The run has been cancelled successfully.'
+      );
+      router.navigate({ to: '/' });
     },
     onError: error => {
       console.error('Failed to cancel run:', error);
-      toasts.error('Error', 'Failed to cancel the run. Please try again.');
+      toasts.error(
+        'Error Cancelling Run',
+        'Failed to cancel the run. Please try again.'
+      );
     },
   });
 
-  const activeRun =
-    runs.find(run => run.id === search.id && run.status === 'active') ||
-    runs.find(run => run.status === 'active'); // Fallback to any active run
+  // Find the active run
+  const activeRun = runs.find((run: any) => run.status === 'active') || null;
+  const scheduledRuns = runs.filter((run: any) => run.status === 'scheduled');
 
-  // Get flight and traffic data
-  const { data: runData } = useMultipleRunsData(activeRun ? [activeRun] : []);
-  const flightStatus = runData[0]?.flightStatus;
-  const trafficStatus = runData[0]?.trafficData;
+  // Get flight and traffic data - we'll need to import this properly
+  // const { data: runData } = useMultipleRunsData(activeRun ? [activeRun] : []);
+  // const flightStatus = runData[0]?.flightStatus;
+  // const trafficStatus = runData[0]?.trafficData;
 
   // Handle case where no active run is found
   if (!activeRun) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Link to="/runs">
-            <BackButton />
-          </Link>
-        </div>
-
         <Card>
           <CardContent className="py-12 text-center">
             <div className="space-y-4">
@@ -206,20 +215,58 @@ function ActiveRunPage() {
                 <Car className="h-8 w-8 text-gray-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-foreground">
-                  No Active Run
-                </h3>
+                <h3 className="text-lg font-semibold">No Active Run</h3>
                 <p className="text-muted-foreground">
-                  There are currently no active runs. Start a run to see
-                  detailed information here.
+                  There are no active runs at the moment.
                 </p>
               </div>
-              <Link to="/runs">
+              <Link to="/">
                 <Button>View All Runs</Button>
               </Link>
             </div>
           </CardContent>
         </Card>
+
+        {/* Show scheduled runs if any */}
+        {scheduledRuns.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Scheduled Runs ({scheduledRuns.length})
+              </CardTitle>
+              <CardDescription>
+                Runs that are scheduled to start soon
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {scheduledRuns.slice(0, 3).map((run: any) => (
+                  <div
+                    key={run.id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-yellow-500 rounded-full" />
+                      <div>
+                        <p className="font-medium">{run.flight_number}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {run.pickup_location} → {run.dropoff_location}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium">
+                        {new Date(run.scheduled_time).toLocaleTimeString()}
+                      </p>
+                      <Badge variant="outline">Scheduled</Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   }
@@ -251,9 +298,6 @@ function ActiveRunPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link to="/runs">
-          <BackButton />
-        </Link>
         <Badge
           variant="outline"
           className="bg-green-50 text-green-700 border-green-200"
@@ -328,7 +372,7 @@ function ActiveRunPage() {
               </div>
             </div>
 
-            {flightStatus && (
+            {/* flightStatus && (
               <div className="pt-4 border-t">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium text-muted-foreground">
@@ -365,7 +409,7 @@ function ActiveRunPage() {
                   </div>
                 )}
               </div>
-            )}
+            ) */}
           </CardContent>
         </Card>
 
@@ -402,7 +446,7 @@ function ActiveRunPage() {
               <div className="text-lg">{activeRun.dropoffLocation}</div>
             </div>
 
-            {trafficStatus && (
+            {/* trafficStatus && (
               <div className="pt-4 border-t">
                 <div className="flex items-center gap-2 mb-2">
                   <Navigation className="h-4 w-4" />
@@ -450,7 +494,7 @@ function ActiveRunPage() {
                   </Badge>
                 </div>
               </div>
-            )}
+            ) */}
           </CardContent>
         </Card>
 

@@ -6,11 +6,11 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../components/ui/card';
-import PageWrapper from '../components/ui/page-wrapper';
-import { useCurrentUserData } from '../lib/hooks/use-user';
+} from '../../../components/ui/card';
+import PageWrapper from '../../../components/ui/page-wrapper';
+import { useCurrentUserData } from '../../../lib/hooks/use-user';
 
-function RequestRunReportPage() {
+function RequestRunReport() {
   const { user } = useCurrentUserData();
 
   return (
@@ -93,6 +93,8 @@ function RequestRunReportPage() {
   );
 }
 
-export const Route = createFileRoute('/request-run-report')({
-  component: RequestRunReportPage,
+export const Route = createFileRoute(
+  '/organizations/$organizationId/request-run-report'
+)({
+  component: RequestRunReport,
 });

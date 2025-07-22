@@ -43,15 +43,36 @@ import {
 } from '../components/ui/top-nav';
 import { UserProfilePopover } from '../components/user-profile-popover';
 import { AppContextProvider } from '../lib/AppContextProvider';
-import { useIsSuperAdmin, useUserOrganization } from '../lib/auth-client';
-import { isDevelopment } from '../lib/environment';
-import { useCurrentRunsCount } from '../lib/hooks/use-current-runs-count';
-import { useMobile } from '../lib/hooks/use-mobile';
+import {
+  useIsSuperAdmin,
+  useUser,
+  useUserOrganization,
+} from '../lib/auth-client';
+import { useCurrentRunsCount, useMobile, useOrgRoutePath } from '../lib/hooks';
 import { queryClient } from '../lib/react-query-client';
 import { toasts } from '../lib/toast';
 
 const activeNavClass = 'bg-primary/10 text-blue-500';
 
+/**
+ * Role-Based Navigation System
+ *
+ * Driver Navigation (accessible to all roles):
+ * - Current Runs: /organizations/$organizationId/runs
+ * - Flights: /flights (global)
+ * - Notifications: /organizations/$organizationId/notifications
+ * - Organization: /organizations/$organizationId
+ *
+ * Admin Navigation (admin, owner, super-admin only):
+ * - Reports: /organizations/$organizationId/reports
+ * - Drivers: /organizations/$organizationId/drivers
+ * - Add Runs: /organizations/$organizationId/add-runs
+ * - Request Run Report: /organizations/$organizationId/request-run-report
+ * - Report Templates: /organizations/$organizationId/report-templates
+ *
+ * Super-Admin Navigation (super-admin only):
+ * - System Admin: /super-admin
+ */
 // Component that automatically closes sidebar on mobile when navigation items are clicked
 function MobileAwareNavLink({
   children,
@@ -72,28 +93,214 @@ function MobileAwareNavLink({
   );
 }
 
-// Current Runs Navigation Item with Badge
-function CurrentRunsNavItem() {
+// Helper function to get user's role in current organization
+function useUserRole() {
+  const { data: organization } = useUserOrganization();
+  const { user: currentUser } = useUser();
+  const isSuperAdmin = useIsSuperAdmin();
+
+  // Super-admin has all privileges
+  if (isSuperAdmin) {
+    return 'super-admin';
+  }
+
+  if (!organization || !currentUser) {
+    return null;
+  }
+
+  // Find current user's role in organization
+  const member = organization.members?.find(
+    (member: any) => member.user?.id === currentUser.id
+  );
+
+  return member?.role || null;
+}
+
+// Driver Navigation Items (accessible to driver, admin, super-admin)
+function DriverNavItems() {
+  const { data: organization } = useUserOrganization();
+  const getOrgPath = useOrgRoutePath();
+  const userRole = useUserRole();
   const currentRunsCount = useCurrentRunsCount();
 
+  // Only show if user has driver or higher privileges and organization exists
+  if (!userRole || !organization) {
+    return null;
+  }
+
   return (
-    <Button asChild variant="ghost" className="w-full justify-start">
-      <MobileAwareNavLink
-        to="/runs"
-        className="flex items-center gap-2 w-full"
-        activeProps={{
-          className: activeNavClass,
-        }}
-      >
-        <Car className="h-4 w-4" />
-        Current Runs
-        {currentRunsCount > 0 && (
-          <span className="text-blue-400 text-xs ml-auto">
-            {currentRunsCount > 99 ? '99+' : currentRunsCount}
-          </span>
-        )}
-      </MobileAwareNavLink>
-    </Button>
+    <>
+      <Button asChild variant="ghost" className="w-full justify-start">
+        <MobileAwareNavLink
+          to={getOrgPath('/runs')}
+          className="flex items-center gap-2 w-full"
+          activeProps={{
+            className: activeNavClass,
+          }}
+        >
+          <Car className="h-4 w-4" />
+          Current Runs
+          {currentRunsCount > 0 && (
+            <span className="text-blue-400 text-xs ml-auto">
+              {currentRunsCount > 99 ? '99+' : currentRunsCount}
+            </span>
+          )}
+        </MobileAwareNavLink>
+      </Button>
+      <Button asChild variant="ghost" className="w-full justify-start">
+        <MobileAwareNavLink
+          to="/flights"
+          className="flex items-center gap-2"
+          activeProps={{
+            className: activeNavClass,
+          }}
+        >
+          <Plane className="h-4 w-4" />
+          Upcoming Flights
+        </MobileAwareNavLink>
+      </Button>
+      <Button asChild variant="ghost" className="w-full justify-start">
+        <MobileAwareNavLink
+          to={getOrgPath('/notifications')}
+          className="flex items-center gap-2"
+          activeProps={{
+            className: activeNavClass,
+          }}
+        >
+          <Bell className="h-4 w-4" />
+          Notifications
+        </MobileAwareNavLink>
+      </Button>
+      <Button asChild variant="ghost" className="w-full justify-start">
+        <MobileAwareNavLink
+          to={getOrgPath('/')}
+          className="flex items-center gap-2"
+          activeProps={{
+            className: activeNavClass,
+          }}
+        >
+          <Building2 className="h-4 w-4" />
+          Organization
+        </MobileAwareNavLink>
+      </Button>
+    </>
+  );
+}
+
+// Admin Navigation Items (accessible to admin, super-admin)
+function AdminNavItems() {
+  const { data: organization } = useUserOrganization();
+  const getOrgPath = useOrgRoutePath();
+  const userRole = useUserRole();
+
+  // Only show if user has admin or super-admin privileges
+  if (
+    !userRole ||
+    !organization ||
+    (userRole !== 'admin' && userRole !== 'owner' && userRole !== 'super-admin')
+  ) {
+    return null;
+  }
+
+  return (
+    <>
+      <div className="px-3 py-2">
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Administration
+        </div>
+      </div>
+      <Button asChild variant="ghost" className="w-full justify-start">
+        <MobileAwareNavLink
+          to={getOrgPath('/reports')}
+          className="flex items-center gap-2"
+          activeProps={{
+            className: activeNavClass,
+          }}
+        >
+          <BarChart3 className="h-4 w-4" />
+          Reports
+        </MobileAwareNavLink>
+      </Button>
+      <Button asChild variant="ghost" className="w-full justify-start">
+        <MobileAwareNavLink
+          to={getOrgPath('/drivers')}
+          className="flex items-center gap-2"
+          activeProps={{
+            className: activeNavClass,
+          }}
+        >
+          <Users className="h-4 w-4" />
+          Drivers
+        </MobileAwareNavLink>
+      </Button>
+      <Button asChild variant="ghost" className="w-full justify-start">
+        <MobileAwareNavLink
+          to={getOrgPath('/add-runs')}
+          className="flex items-center gap-2"
+          activeProps={{
+            className: activeNavClass,
+          }}
+        >
+          <Plus className="h-4 w-4" />
+          Add Runs
+        </MobileAwareNavLink>
+      </Button>
+      <Button asChild variant="ghost" className="w-full justify-start">
+        <MobileAwareNavLink
+          to={getOrgPath('/request-run-report')}
+          className="flex items-center gap-2"
+          activeProps={{
+            className: activeNavClass,
+          }}
+        >
+          <FileText className="h-4 w-4" />
+          Request Run Report
+        </MobileAwareNavLink>
+      </Button>
+      <Button asChild variant="ghost" className="w-full justify-start">
+        <MobileAwareNavLink
+          to={getOrgPath('/report-templates')}
+          className="flex items-center gap-2"
+          activeProps={{
+            className: activeNavClass,
+          }}
+        >
+          <LayoutTemplate className="h-4 w-4" />
+          Report Templates
+        </MobileAwareNavLink>
+      </Button>
+    </>
+  );
+}
+
+// Super Admin Navigation Items (accessible to super-admin only)
+function SuperAdminNavItems() {
+  const userRole = useUserRole();
+
+  if (userRole !== 'super-admin') {
+    return null;
+  }
+
+  return (
+    <>
+      <div className="px-3 py-2">
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Super Admin
+        </div>
+      </div>
+      <Button asChild variant="ghost" className="w-full justify-start">
+        <MobileAwareNavLink
+          to="/super-admin"
+          className="flex items-center gap-2"
+          activeProps={{
+            className: activeNavClass,
+          }}
+        >
+          <Building2 className="h-4 w-4" />
+          System Admin
+        </MobileAwareNavLink>
+      </Button>
+    </>
   );
 }
 
@@ -124,121 +331,6 @@ function OrganizationDisplay() {
   );
 }
 
-function AdminNavItems() {
-  const { data: organization } = useUserOrganization();
-
-  // Simple admin check based on user's role in organization
-  const isAdmin =
-    organization?.members?.some((member: any) => member.role === 'admin') ||
-    isDevelopment() ||
-    false;
-
-  if (!isAdmin) {
-    return null;
-  }
-
-  return (
-    <>
-      <div className="px-3 py-2">
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Administration
-        </div>
-      </div>
-      <Button asChild variant="ghost" className="w-full justify-start">
-        <MobileAwareNavLink
-          to="/drivers"
-          className="flex items-center gap-2"
-          activeProps={{
-            className: activeNavClass,
-          }}
-        >
-          <Users className="h-4 w-4" />
-          Drivers
-        </MobileAwareNavLink>
-      </Button>
-      <Button asChild variant="ghost" className="w-full justify-start">
-        <MobileAwareNavLink
-          to="/organization"
-          className="flex items-center gap-2"
-          activeProps={{
-            className: activeNavClass,
-          }}
-        >
-          <Building2 className="h-4 w-4" />
-          Organization
-        </MobileAwareNavLink>
-      </Button>
-      <Button asChild variant="ghost" className="w-full justify-start">
-        <MobileAwareNavLink
-          to="/add-runs"
-          className="flex items-center gap-2"
-          activeProps={{
-            className: activeNavClass,
-          }}
-        >
-          <Plus className="h-4 w-4" />
-          Add Runs
-        </MobileAwareNavLink>
-      </Button>
-      <Button asChild variant="ghost" className="w-full justify-start">
-        <MobileAwareNavLink
-          to="/request-run-report"
-          className="flex items-center gap-2"
-          activeProps={{
-            className: activeNavClass,
-          }}
-        >
-          <FileText className="h-4 w-4" />
-          Request Run Report
-        </MobileAwareNavLink>
-      </Button>
-      <Button asChild variant="ghost" className="w-full justify-start">
-        <MobileAwareNavLink
-          to="/report-templates"
-          className="flex items-center gap-2"
-          activeProps={{
-            className: activeNavClass,
-          }}
-        >
-          <LayoutTemplate className="h-4 w-4" />
-          Report Templates
-        </MobileAwareNavLink>
-      </Button>
-    </>
-  );
-}
-
-function SuperAdminNavItems() {
-  const { data: organization } = useUserOrganization();
-  const isSuperAdmin = useIsSuperAdmin();
-
-  if (!isSuperAdmin) {
-    return null;
-  }
-
-  return (
-    <>
-      <div className="px-3 py-2">
-        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Super Admin
-        </div>
-      </div>
-      <Button asChild variant="ghost" className="w-full justify-start">
-        <MobileAwareNavLink
-          to="/super-admin"
-          className="flex items-center gap-2"
-          activeProps={{
-            className: activeNavClass,
-          }}
-        >
-          <Building2 className="h-4 w-4" />
-          System Admin
-        </MobileAwareNavLink>
-      </Button>
-    </>
-  );
-}
-
 function RootComponent() {
   const routerState = useRouterState();
   const isMobile = useMobile();
@@ -266,58 +358,10 @@ function RootComponent() {
             </SidebarHeader>
             <SidebarContent className="flex flex-col">
               <SidebarNav className="flex-1">
-                <CurrentRunsNavItem />
-                <Button
-                  asChild
-                  variant="ghost"
-                  className="w-full justify-start"
-                >
-                  <MobileAwareNavLink
-                    to="/flights"
-                    className="flex items-center gap-2"
-                    activeProps={{
-                      className: activeNavClass,
-                    }}
-                  >
-                    <Plane className="h-4 w-4" />
-                    Upcoming Flights
-                  </MobileAwareNavLink>
-                </Button>
-                <Button
-                  asChild
-                  variant="ghost"
-                  className="w-full justify-start"
-                >
-                  <MobileAwareNavLink
-                    to="/reports"
-                    className="flex items-center gap-2"
-                    activeProps={{
-                      className: activeNavClass,
-                    }}
-                  >
-                    <BarChart3 className="h-4 w-4" />
-                    Reports
-                  </MobileAwareNavLink>
-                </Button>
-                <Button
-                  asChild
-                  variant="ghost"
-                  className="w-full justify-start"
-                >
-                  <MobileAwareNavLink
-                    to="/notifications"
-                    className="flex items-center gap-2"
-                    activeProps={{
-                      className: activeNavClass,
-                    }}
-                  >
-                    <Bell className="h-4 w-4" />
-                    Notifications
-                  </MobileAwareNavLink>
-                </Button>
+                <DriverNavItems />
               </SidebarNav>
 
-              {/* Admin section at bottom */}
+              {/* Admin and Super Admin sections at bottom */}
               <div className="mt-auto pt-4 border-t border-border">
                 <AdminNavItems />
                 <SuperAdminNavItems />
@@ -334,58 +378,10 @@ function RootComponent() {
             </SidebarHeader>
             <SidebarContent className="flex flex-col">
               <SidebarNav className="flex-1">
-                <CurrentRunsNavItem />
-                <Button
-                  asChild
-                  variant="ghost"
-                  className="w-full justify-start"
-                >
-                  <MobileAwareNavLink
-                    to="/flights"
-                    className="flex items-center gap-2"
-                    activeProps={{
-                      className: activeNavClass,
-                    }}
-                  >
-                    <Plane className="h-4 w-4" />
-                    Upcoming Flights
-                  </MobileAwareNavLink>
-                </Button>
-                <Button
-                  asChild
-                  variant="ghost"
-                  className="w-full justify-start"
-                >
-                  <MobileAwareNavLink
-                    to="/reports"
-                    className="flex items-center gap-2"
-                    activeProps={{
-                      className: activeNavClass,
-                    }}
-                  >
-                    <BarChart3 className="h-4 w-4" />
-                    Reports
-                  </MobileAwareNavLink>
-                </Button>
-                <Button
-                  asChild
-                  variant="ghost"
-                  className="w-full justify-start"
-                >
-                  <MobileAwareNavLink
-                    to="/notifications"
-                    className="flex items-center gap-2"
-                    activeProps={{
-                      className: activeNavClass,
-                    }}
-                  >
-                    <Bell className="h-4 w-4" />
-                    Notifications
-                  </MobileAwareNavLink>
-                </Button>
+                <DriverNavItems />
               </SidebarNav>
 
-              {/* Admin section at bottom */}
+              {/* Admin and Super Admin sections at bottom */}
               <div className="mt-auto pt-4 border-t border-border">
                 <AdminNavItems />
                 <SuperAdminNavItems />

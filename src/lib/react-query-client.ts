@@ -116,23 +116,39 @@ export const queryClient = new QueryClient({
 export const queryKeys = {
   // User data queries - longer cache for stable data
   user: (userId?: string) => ['user', userId] as const,
-  userPreferences: (userId?: string) => ['preferences', userId] as const,
 
-  // Flight status queries
+  // Organization-scoped data queries - include organizationId for proper isolation
+  userPreferences: (organizationId?: string, userId?: string) =>
+    ['preferences', organizationId, userId] as const,
+
+  runs: (organizationId?: string) => ['runs', organizationId] as const,
+  organizationRuns: (organizationId?: string) =>
+    ['organization-runs', organizationId] as const,
+
+  notifications: (organizationId?: string, params?: any) =>
+    ['notifications', organizationId, params] as const,
+  notificationStats: (organizationId?: string) =>
+    ['notification-stats', organizationId] as const,
+
+  reportTemplates: (organizationId?: string) =>
+    ['report-templates', organizationId] as const,
+
+  // Flight status queries - not organization-scoped (global data)
   flightStatus: (flightNumber: string) =>
     ['flight-status', flightNumber] as const,
 
-  // Traffic data queries
+  // Traffic data queries - not organization-scoped (global data)
   trafficData: (origin: string, destination: string) =>
     ['traffic-data', origin, destination] as const,
 
-  // Combined data for a run
-  runData: (runId: string) => ['run-data', runId] as const,
+  // Combined data for a run - include organizationId for proper isolation
+  runData: (organizationId?: string, runId?: string) =>
+    ['run-data', organizationId, runId] as const,
 
-  // All flight statuses
+  // All flight statuses - global data
   allFlightStatuses: () => ['flight-statuses'] as const,
 
-  // All traffic data
+  // All traffic data - global data
   allTrafficData: () => ['traffic-data'] as const,
 
   // Organization queries
@@ -141,13 +157,6 @@ export const queryKeys = {
     ['organization-members', orgId] as const,
   userRole: (orgId: string) => ['user-role', orgId] as const,
   userPermissions: () => ['user-permissions'] as const,
-
-  // Runs queries
-  runs: () => ['runs'] as const,
-
-  // Notifications queries
-  notifications: (params?: any) => ['notifications', params] as const,
-  notificationStats: () => ['notification-stats'] as const,
 } as const;
 
 // Helper function to invalidate all API data

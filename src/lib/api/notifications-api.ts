@@ -1,32 +1,42 @@
-import type {
-  NotificationForm,
-  NotificationsQuery,
-} from '../db/notifications-db';
-import type { Notification } from '../schema';
-import { API_BASE, createFetchOptions } from './api-tools';
+import type { NotificationForm } from '../db/notifications-db';
+import { buildOrgApiUrl, createFetchOptions } from './api-tools';
+
+export interface NotificationsQuery {
+  userId?: string;
+  limit?: number;
+  offset?: number;
+  orderBy?: 'created_at' | 'updated_at';
+  orderDirection?: 'ASC' | 'DESC';
+  type?: string[];
+  isRead?: boolean;
+  flightNumber?: string;
+  search?: string;
+}
+
+// API client for notifications - organization-scoped only!
 
 export const notificationsApi = {
-  // Get notifications with optional filtering
+  // Get all notifications
   async getNotifications(
-    query: Partial<NotificationsQuery> = {}
-  ): Promise<Notification[]> {
-    const params = new URLSearchParams();
+    query: NotificationsQuery = {},
+    organizationId: string
+  ) {
+    // Build query string
+    const searchParams = new URLSearchParams();
+    Object.entries(query).forEach(([key, value]) => {
+      if (value !== undefined) {
+        if (Array.isArray(value)) {
+          searchParams.set(key, value.join(','));
+        } else {
+          searchParams.set(key, String(value));
+        }
+      }
+    });
 
-    if (query.limit) params.append('limit', query.limit.toString());
-    if (query.offset) params.append('offset', query.offset.toString());
-    if (query.orderBy) params.append('orderBy', query.orderBy);
-    if (query.orderDirection)
-      params.append('orderDirection', query.orderDirection);
-    if (query.type) params.append('type', query.type.join(','));
-    if (query.isRead !== undefined)
-      params.append('isRead', query.isRead.toString());
-    if (query.flightNumber) params.append('flightNumber', query.flightNumber);
-    if (query.search) params.append('search', query.search);
-
-    const response = await fetch(
-      `${API_BASE}/notifications?${params}`,
-      createFetchOptions()
-    );
+    const queryString = searchParams.toString();
+    const endpoint = `/notifications${queryString ? `?${queryString}` : ''}`;
+    const url = buildOrgApiUrl(organizationId, endpoint);
+    const response = await fetch(url, createFetchOptions());
 
     if (!response.ok) {
       throw new Error('Failed to fetch notifications');
@@ -35,23 +45,14 @@ export const notificationsApi = {
     return response.json();
   },
 
-  async getNotificationStats() {
-    const response = await fetch(
-      `${API_BASE}/notifications/stats`,
-      createFetchOptions()
-    );
-    if (!response.ok) {
-      throw new Error('Failed to fetch notification stats');
-    }
-    return response.json();
-  },
-
   // Create a new notification
   async createNotification(
-    notificationData: NotificationForm
-  ): Promise<Notification> {
+    notificationData: NotificationForm,
+    organizationId: string
+  ) {
+    const url = buildOrgApiUrl(organizationId, '/notifications');
     const response = await fetch(
-      `${API_BASE}/notifications`,
+      url,
       createFetchOptions({
         method: 'POST',
         body: JSON.stringify({ notificationData }),
@@ -65,43 +66,35 @@ export const notificationsApi = {
     return response.json();
   },
 
-  // Mark notification as read/unread
-  async markNotificationAsRead(
-    id: string,
-    isRead: boolean = true
-  ): Promise<void> {
+  // Update notification (mark as read/unread)
+  async updateNotification(
+    action: 'mark_read' | 'mark_all_read',
+    organizationId: string,
+    id?: string,
+    isRead?: boolean
+  ) {
+    const url = buildOrgApiUrl(organizationId, '/notifications');
     const response = await fetch(
-      `${API_BASE}/notifications`,
+      url,
       createFetchOptions({
         method: 'PUT',
-        body: JSON.stringify({ action: 'mark_read', id, isRead }),
+        body: JSON.stringify({ action, id, isRead }),
       })
     );
 
     if (!response.ok) {
       throw new Error('Failed to update notification');
     }
-  },
 
-  // Mark all notifications as read
-  async markAllNotificationsAsRead(): Promise<void> {
-    const response = await fetch(
-      `${API_BASE}/notifications`,
-      createFetchOptions({
-        method: 'PUT',
-        body: JSON.stringify({ action: 'mark_all_read' }),
-      })
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to mark all notifications as read');
-    }
+    return response.json();
   },
 
   // Delete a notification
-  async deleteNotification(id: string): Promise<void> {
+  async deleteNotification(id: string, organizationId: string) {
+    const endpoint = `/notifications?id=${id}`;
+    const url = buildOrgApiUrl(organizationId, endpoint);
     const response = await fetch(
-      `${API_BASE}/notifications?id=${id}`,
+      url,
       createFetchOptions({
         method: 'DELETE',
       })
@@ -110,5 +103,19 @@ export const notificationsApi = {
     if (!response.ok) {
       throw new Error('Failed to delete notification');
     }
+
+    return response.json();
+  },
+
+  // Get notification statistics
+  async getNotificationStats(organizationId: string) {
+    const url = buildOrgApiUrl(organizationId, '/notifications/stats');
+    const response = await fetch(url, createFetchOptions());
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch notification stats');
+    }
+
+    return response.json();
   },
 };

@@ -1,4 +1,3 @@
-import { runsApi } from '@/lib/api/runs-api';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useRouter } from '@tanstack/react-router';
 import { differenceInSeconds, intervalToDuration } from 'date-fns';
@@ -11,14 +10,21 @@ import {
   Timer,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useOrgRunsApi } from '../lib/hooks';
+import { useCurrentOrgId } from '../lib/hooks/use-org-navigation';
+import { queryKeys } from '../lib/react-query-client';
 import { Button } from './ui/button';
 
 // Hook to get the currently active run
 function useActiveRun() {
+  const runsApi = useOrgRunsApi();
+  const organizationId = useCurrentOrgId();
+
   const { data: runs = [] } = useQuery({
-    queryKey: ['runs'],
-    queryFn: runsApi.getRuns,
+    queryKey: queryKeys.runs(organizationId),
+    queryFn: () => runsApi.getRuns(),
     refetchInterval: 30000, // Refetch every 30 seconds
+    enabled: !!organizationId, // Only fetch when we have an organization
   });
 
   const activeRun = runs.find(run => run.status === 'active');

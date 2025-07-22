@@ -80,26 +80,6 @@ export function UserProfilePopover() {
               </span>
             </div>
           </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2 text-sm">
-              <span className="text-muted-foreground">Profile:</span>
-              {currentUser.image ? (
-                <img
-                  src={currentUser.image}
-                  alt={currentUser.name}
-                  className="h-6 w-6 rounded-full"
-                />
-              ) : (
-                <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-xs font-medium">
-                    {currentUser.name.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-              )}
-              <span className="font-medium">{currentUser.name}</span>
-            </div>
-          </div>
         </div>
 
         {/* Organizations Section - Only show if user has an organization */}

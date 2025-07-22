@@ -1,6 +1,5 @@
-import { notificationsApi } from '@/lib/api/notifications-api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import {
   Bell,
   CheckCircle,
@@ -16,29 +15,32 @@ import {
   X,
 } from 'lucide-react';
 import { useState } from 'react';
-import { Badge } from '../components/ui/badge';
-import { Button } from '../components/ui/button';
+import { Badge } from '../../../components/ui/badge';
+import { Button } from '../../../components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../components/ui/card';
-import { Input } from '../components/ui/input';
-import { BackButton } from '../components/ui/navigation-arrow';
-import PageWrapper from '../components/ui/page-wrapper';
+} from '../../../components/ui/card';
+import { Input } from '../../../components/ui/input';
+import { BackButton } from '../../../components/ui/navigation-arrow';
+import PageWrapper from '../../../components/ui/page-wrapper';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../components/ui/select';
-import { StickyHeader } from '../components/ui/sticky-header';
-import { useTimezoneFormatters } from '../lib/hooks/use-timezone';
-import { type Notification, type NotificationType } from '../lib/schema';
-import { toasts } from '../lib/toast';
+} from '../../../components/ui/select';
+import { StickyHeader } from '../../../components/ui/sticky-header';
+import { useOrgNotificationsApi } from '../../../lib/hooks';
+import { useCurrentOrgId } from '../../../lib/hooks/use-org-navigation';
+import { useTimezoneFormatters } from '../../../lib/hooks/use-timezone';
+import { queryKeys } from '../../../lib/react-query-client';
+import { type Notification, type NotificationType } from '../../../lib/schema';
+import { toasts } from '../../../lib/toast';
 
 const NOTIFICATION_TYPES: {
   value: NotificationType;
@@ -52,16 +54,16 @@ const NOTIFICATION_TYPES: {
   { value: 'system', label: 'System', icon: Settings },
 ];
 
-function Notifications() {
+function NotificationsPage() {
   const queryClient = useQueryClient();
   const { formatScheduleTime } = useTimezoneFormatters();
+  const organizationId = useCurrentOrgId();
+  const notificationsApi = useOrgNotificationsApi();
 
   // State for search and filters
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<NotificationType | 'all'>('all');
-  const [filterRead, setFilterRead] = useState<'all' | 'read' | 'unread'>(
-    'all'
-  );
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterRead, setFilterRead] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'created_at' | 'updated_at'>(
     'created_at'
   );
@@ -77,14 +79,13 @@ function Notifications() {
     isError,
     refetch,
   } = useQuery({
-    queryKey: [
-      'notifications',
+    queryKey: queryKeys.notifications(organizationId, {
       searchTerm,
       filterType,
       filterRead,
       sortBy,
       sortOrder,
-    ],
+    }),
     queryFn: () =>
       notificationsApi.getNotifications({
         search: searchTerm || undefined,
@@ -95,61 +96,92 @@ function Notifications() {
         limit: 100,
       }),
     staleTime: 1000 * 60 * 1, // 1 minute
+    enabled: !!organizationId,
   });
 
   // Query for notification stats
   const { data: stats } = useQuery({
-    queryKey: ['notification-stats'],
+    queryKey: queryKeys.notificationStats(organizationId),
     queryFn: () => notificationsApi.getNotificationStats(),
     staleTime: 1000 * 60 * 2, // 2 minutes
+    enabled: !!organizationId,
   });
 
   // Mutation for marking notifications as read
   const markAsReadMutation = useMutation({
-    mutationFn: ({ id, isRead }: { id: string; isRead: boolean }) =>
-      notificationsApi.markNotificationAsRead(id, isRead),
+    mutationFn: ({ id, isRead }: { id: string; isRead: boolean }) => {
+      if (!organizationId) throw new Error('No organization selected');
+      return notificationsApi.updateNotification('mark_read', id, isRead);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['notification-stats'] });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.notifications(organizationId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.notificationStats(organizationId),
+      });
       toasts.success(
         'Notification updated',
-        'Notification status updated successfully'
+        'Notification has been updated successfully.'
       );
     },
     onError: error => {
       console.error('Failed to update notification:', error);
-      toasts.error('Failed to update notification', 'Please try again');
+      toasts.error(
+        'Error updating notification',
+        'Failed to update notification. Please try again.'
+      );
     },
   });
 
   // Mutation for marking all as read
   const markAllAsReadMutation = useMutation({
-    mutationFn: () => notificationsApi.markAllNotificationsAsRead(),
+    mutationFn: () => {
+      if (!organizationId) throw new Error('No organization selected');
+      return notificationsApi.updateNotification('mark_all_read');
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['notification-stats'] });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.notifications(organizationId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.notificationStats(organizationId),
+      });
       toasts.success(
         'All notifications marked as read',
-        'All notifications have been marked as read'
+        'All notifications have been marked as read.'
       );
     },
     onError: error => {
-      console.error('Failed to mark all notifications as read:', error);
-      toasts.error('Failed to mark all as read', 'Please try again');
+      console.error('Failed to mark all as read:', error);
+      toasts.error(
+        'Error marking all as read',
+        'Failed to mark all notifications as read. Please try again.'
+      );
     },
   });
 
   // Mutation for deleting notifications
   const deleteNotificationMutation = useMutation({
-    mutationFn: (id: string) => notificationsApi.deleteNotification(id),
+    mutationFn: (id: string) => {
+      if (!organizationId) throw new Error('No organization selected');
+      return notificationsApi.deleteNotification(id);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['notification-stats'] });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.notifications(organizationId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.notificationStats(organizationId),
+      });
       toasts.success('Notification deleted', 'Notification has been deleted');
     },
     onError: error => {
       console.error('Failed to delete notification:', error);
-      toasts.error('Failed to delete notification', 'Please try again');
+      toasts.error(
+        'Error deleting notification',
+        'Failed to delete notification. Please try again.'
+      );
     },
   });
 
@@ -272,17 +304,15 @@ function Notifications() {
           </>
         }
       >
-        <Link to="/settings" className="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-blue-600 text-blue-600 hover:bg-blue-700 hover:text-white"
-          >
-            <BackButton size="sm" />
-            <Settings className="h-4 w-4" />
-            Notification Settings
-          </Button>
-        </Link>
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-blue-600 text-blue-600 hover:bg-blue-700 hover:text-white flex items-center gap-1"
+        >
+          <BackButton size="sm" />
+          <Settings className="h-4 w-4" />
+          Notification Settings
+        </Button>
       </StickyHeader>
 
       {/* Stats - Combined into single card */}
@@ -478,7 +508,7 @@ function Notifications() {
             </CardContent>
           </Card>
         ) : (
-          notifications.map(notification => (
+          notifications.map((notification: any) => (
             <Card
               key={notification.id}
               className={`transition-colors ${!notification.isRead ? 'border-primary/30 bg-primary/5' : 'hover:bg-muted/30'}`}
@@ -598,6 +628,8 @@ function Notifications() {
   );
 }
 
-export const Route = createFileRoute('/notifications')({
-  component: Notifications,
+export const Route = createFileRoute(
+  '/organizations/$organizationId/notifications'
+)({
+  component: NotificationsPage,
 });

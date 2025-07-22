@@ -1,15 +1,13 @@
 import type { ReportTemplate, ReportTemplateForm } from '../schema';
-import { API_BASE, createFetchOptions } from './api-tools';
+import { buildOrgApiUrl, createFetchOptions } from './api-tools';
 
-// API client for report templates
+// API client for report templates - organization-scoped only!
 
 export const reportTemplatesApi = {
-  // Get all report templates for the organization
-  async getReportTemplates(): Promise<ReportTemplate[]> {
-    const response = await fetch(
-      `${API_BASE}/report-templates`,
-      createFetchOptions()
-    );
+  // Get all report templates
+  async getReportTemplates(organizationId: string): Promise<ReportTemplate[]> {
+    const url = buildOrgApiUrl(organizationId, '/report-templates');
+    const response = await fetch(url, createFetchOptions());
 
     if (!response.ok) {
       throw new Error('Failed to fetch report templates');
@@ -20,10 +18,12 @@ export const reportTemplatesApi = {
 
   // Create a new report template
   async createReportTemplate(
-    templateData: ReportTemplateForm
+    templateData: ReportTemplateForm,
+    organizationId: string
   ): Promise<ReportTemplate> {
+    const url = buildOrgApiUrl(organizationId, '/report-templates');
     const response = await fetch(
-      `${API_BASE}/report-templates`,
+      url,
       createFetchOptions({
         method: 'POST',
         body: JSON.stringify({ templateData }),
@@ -31,8 +31,7 @@ export const reportTemplatesApi = {
     );
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to create report template');
+      throw new Error('Failed to create report template');
     }
 
     return response.json();
@@ -40,37 +39,44 @@ export const reportTemplatesApi = {
 
   // Update an existing report template
   async updateReportTemplate(
-    id: string,
-    templateData: ReportTemplateForm
+    templateId: string,
+    templateData: Partial<ReportTemplateForm>,
+    organizationId: string
   ): Promise<ReportTemplate> {
+    const url = buildOrgApiUrl(organizationId, '/report-templates');
     const response = await fetch(
-      `${API_BASE}/report-templates`,
+      url,
       createFetchOptions({
         method: 'PUT',
-        body: JSON.stringify({ id, templateData }),
+        body: JSON.stringify({ templateId, templateData }),
       })
     );
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to update report template');
+      throw new Error('Failed to update report template');
     }
 
     return response.json();
   },
 
   // Delete a report template
-  async deleteReportTemplate(id: string): Promise<void> {
+  async deleteReportTemplate(
+    templateId: string,
+    organizationId: string
+  ): Promise<{ success: boolean }> {
+    const endpoint = `/report-templates?templateId=${templateId}`;
+    const url = buildOrgApiUrl(organizationId, endpoint);
     const response = await fetch(
-      `${API_BASE}/report-templates?id=${id}`,
+      url,
       createFetchOptions({
         method: 'DELETE',
       })
     );
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to delete report template');
+      throw new Error('Failed to delete report template');
     }
+
+    return response.json();
   },
 };

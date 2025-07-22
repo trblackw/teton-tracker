@@ -1,4 +1,3 @@
-import { preferencesApi } from '@/lib/api/preferences-api';
 import { seedApi } from '@/lib/api/seed-api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
@@ -18,14 +17,14 @@ import {
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
-import { Button } from '../components/ui/button';
+import { Button } from '../../../components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../components/ui/card';
+} from '../../../components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -33,22 +32,24 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../components/ui/dialog';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import PageWrapper from '../components/ui/page-wrapper';
-import { TimezoneCombobox } from '../components/ui/timezone-combobox';
-import { IOSToggle } from '../components/ui/toggle';
-import airportsData from '../data/airports-comprehensive.json';
-import timezonesData from '../data/timezones.json';
-import { useAppContext } from '../lib/AppContextProvider';
-import { type UpdatePreferencesData } from '../lib/db/preferences-db';
-import { isDebugMode } from '../lib/debug';
+} from '../../../components/ui/dialog';
+import { Input } from '../../../components/ui/input';
+import { Label } from '../../../components/ui/label';
+import PageWrapper from '../../../components/ui/page-wrapper';
+import { TimezoneCombobox } from '../../../components/ui/timezone-combobox';
+import { IOSToggle } from '../../../components/ui/toggle';
+import airportsData from '../../../data/airports-comprehensive.json';
+import timezonesData from '../../../data/timezones.json';
+import { useAppContext } from '../../../lib/AppContextProvider';
+import { isDebugMode } from '../../../lib/debug';
+import { useOrgPreferencesApi } from '../../../lib/hooks';
+import { useCurrentOrgId } from '../../../lib/hooks/use-org-navigation';
+import { queryKeys } from '../../../lib/react-query-client';
 import {
   notifications,
   type NotificationPermissionState,
-} from '../lib/services/notification-service';
-import { toasts } from '../lib/toast';
+} from '../../../lib/services/notification-service';
+import { toasts } from '../../../lib/toast';
 
 // Convert airport data from object to array format expected by AirportCombobox
 const airports = Object.entries(airportsData)
@@ -68,28 +69,38 @@ const airports = Object.entries(airportsData)
 // Get timezones from data file
 const timezones = timezonesData.timezones;
 
-function Settings() {
-  const { theme, setTheme } = useTheme();
-  const queryClient = useQueryClient();
+function SettingsPage() {
   const { currentUser } = useAppContext();
+  const queryClient = useQueryClient();
+  const { setTheme, theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [notificationPermission, setNotificationPermission] =
-    useState<NotificationPermissionState>({
-      permission: 'default',
-      supported: false,
-      enabled: false,
-    });
+    useState<NotificationPermissionState | null>(null);
+  const [showSeedDebugOptions, setShowSeedDebugOptions] = useState(false);
+  const [isDatabasePopulationLoading, setIsDatabasePopulationLoading] =
+    useState(false);
+  const [isDatabaseClearLoading, setIsDatabaseClearLoading] = useState(false);
   const [showClearDataDialog, setShowClearDataDialog] = useState(false);
 
-  // Query for user preferences from API
+  const organizationId = useCurrentOrgId();
+  const preferencesApi = useOrgPreferencesApi();
+
+  // Prevent hydration mismatch for theme switching
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Fetch user preferences
   const {
     data: preferences,
     isLoading,
     isError,
     refetch,
   } = useQuery({
-    queryKey: ['preferences'],
+    queryKey: queryKeys.userPreferences(organizationId, currentUser?.id),
     queryFn: () => preferencesApi.getPreferences(),
     staleTime: 1000 * 60 * 5, // 5 minutes
+    enabled: !!organizationId && !!currentUser?.id,
   });
 
   // Load notification permission state on mount
@@ -103,7 +114,7 @@ function Settings() {
 
   // Mutation for updating preferences
   const updatePreferencesMutation = useMutation({
-    mutationFn: (data: UpdatePreferencesData) => {
+    mutationFn: (data: any) => {
       if (!currentUser?.id) {
         throw new Error('User ID is required');
       }
@@ -112,70 +123,15 @@ function Settings() {
         userId: currentUser.id,
       });
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['preferences'] });
-
-      // Show success toast based on what was updated
-      if (variables.homeAirport !== undefined) {
-        if (variables.homeAirport === '') {
-          toasts.success(
-            'Home airport cleared',
-            'Your home airport has been removed from your preferences.'
-          );
-        } else {
-          const selectedAirport = airports.find(
-            a => a.iata === variables.homeAirport
-          );
-          toasts.success(
-            'Home airport updated',
-            selectedAirport
-              ? `Set to ${selectedAirport.name} (${selectedAirport.iata})`
-              : `Set to ${variables.homeAirport}`
-          );
-        }
-      }
-
-      if (variables.timezone !== undefined) {
-        const selectedTimezone = timezones.find(
-          tz => tz.id === variables.timezone
-        );
-        toasts.success(
-          'Timezone updated',
-          selectedTimezone
-            ? `Set to ${selectedTimezone.label}`
-            : `Set to ${variables.timezone}`
-        );
-      }
-
-      if (variables.theme !== undefined) {
-        toasts.settingsUpdated('Theme', variables.theme);
-      }
-
-      if (variables.notificationPreferences !== undefined) {
-        // Check if SMS notifications were specifically toggled
-        if (
-          variables.notificationPreferences.smsNotificationsEnabled !==
-          undefined
-        ) {
-          const isEnabled =
-            variables.notificationPreferences.smsNotificationsEnabled;
-          toasts.success(
-            `SMS notifications ${isEnabled ? 'enabled' : 'disabled'}`,
-            isEnabled
-              ? 'You will now receive flight updates via text message'
-              : 'SMS notifications have been turned off'
-          );
-        } else {
-          toasts.settingsUpdated('Notification preferences');
-        }
-      }
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.userPreferences(organizationId, currentUser?.id),
+      });
+      toasts.success('Settings updated', 'Your preferences have been saved.');
     },
-    onError: error => {
+    onError: (error: any) => {
       console.error('Failed to update preferences:', error);
-      toasts.error(
-        'Failed to update settings',
-        'Please try again or contact support if the problem persists.'
-      );
+      toasts.error('Failed to save settings', 'Please try again.');
     },
   });
 
@@ -222,7 +178,7 @@ function Settings() {
   const handlePushNotificationsToggle = async (value: boolean) => {
     if (value) {
       // If enabling, request permission first
-      if (!notificationPermission.enabled) {
+      if (!notificationPermission?.enabled) {
         const permissionResult =
           await requestNotificationPermission.mutateAsync();
         if (!permissionResult.enabled) {
@@ -658,12 +614,12 @@ function Settings() {
                     <p className="text-sm text-muted-foreground">
                       Enable browser notifications for flight updates and alerts
                     </p>
-                    {!notificationPermission.supported && (
+                    {!notificationPermission?.supported && (
                       <p className="text-sm text-amber-600 mt-1">
                         Not supported in this browser
                       </p>
                     )}
-                    {notificationPermission.permission === 'denied' && (
+                    {notificationPermission?.permission === 'denied' && (
                       <p className="text-sm text-red-600 mt-1">
                         Blocked - please enable in browser settings
                       </p>
@@ -672,15 +628,15 @@ function Settings() {
                   <div className="flex items-center gap-2 shrink-0">
                     <IOSToggle
                       pressed={
-                        notificationPermission.enabled &&
+                        notificationPermission?.enabled &&
                         (preferences?.notificationPreferences
                           ?.pushNotificationsEnabled ??
                           true)
                       }
                       onPressedChange={handlePushNotificationsToggle}
                       disabled={
-                        !notificationPermission.supported ||
-                        notificationPermission.permission === 'denied' ||
+                        !notificationPermission?.supported ||
+                        notificationPermission?.permission === 'denied' ||
                         requestNotificationPermission.isPending ||
                         updatePreferencesMutation.isPending
                       }
@@ -919,6 +875,8 @@ function Settings() {
   );
 }
 
-export const Route = createFileRoute('/settings')({
-  component: Settings,
-});
+export const Route = createFileRoute('/organizations/$organizationId/settings')(
+  {
+    component: SettingsPage,
+  }
+);

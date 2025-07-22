@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { createMiddleware } from 'hono/factory';
 import * as configApi from './api/config';
 import * as notificationsApi from './api/notifications';
 import * as preferencesApi from './api/preferences';
@@ -16,13 +17,50 @@ export interface ServerConfig {
   hostname?: string;
 }
 
-function isAuthRoute(path: string) {
-  return path.startsWith('/api/auth/');
+// Type definitions for context variables
+type Variables = {
+  organizationId: string;
+};
+
+// Custom middleware to extract and validate organizationId from route parameters
+const organizationMiddleware = createMiddleware<{ Variables: Variables }>(
+  async (c, next) => {
+    const organizationId = c.req.param('organizationId');
+
+    if (!organizationId) {
+      return c.json({ error: 'Organization ID is required' }, 400);
+    }
+
+    // Set organizationId in context for downstream handlers
+    c.set('organizationId', organizationId);
+
+    await next();
+  }
+);
+
+// Helper function to create request with organizationId and additional params
+function createRequestWithOrgContext(
+  c: any,
+  additionalParams: Record<string, string> = {}
+) {
+  const request = new Request(c.req.raw.url, {
+    method: c.req.raw.method,
+    headers: c.req.raw.headers,
+    body: c.req.raw.body,
+  });
+
+  // Add organizationId and any additional params for compatibility with existing API handlers
+  (request as any).params = {
+    organizationId: c.get('organizationId'),
+    ...additionalParams,
+  };
+
+  return request;
 }
 
 // Create and configure Hono app
 export function createApp(config: ServerConfig) {
-  const app = new Hono();
+  const app = new Hono<{ Variables: Variables }>();
 
   // BetterAuth integration - with manual CORS handling
   app.all('/api/auth/*', async c => {
@@ -62,50 +100,76 @@ export function createApp(config: ServerConfig) {
     })
   );
 
-  // API Routes - Clean and declarative!
+  // Global API Routes (not organization-scoped)
   app.get('/api/config', async c => configApi.GET(c.req.raw));
 
-  app.get('/api/runs', async c => runsApi.GET(c.req.raw));
-  app.post('/api/runs', async c => runsApi.POST(c.req.raw));
-  app.delete('/api/runs/:id', async c => {
-    const request = c.req.raw;
-    (request as any).params = { id: c.req.param('id') };
-    return runsApi.DELETE(request);
+  // Apply organization middleware to all organization-scoped routes
+  app.use('/api/organizations/:organizationId/*', organizationMiddleware);
+
+  // Organization-scoped API Routes - now using context instead of manual param injection
+  app.get('/api/organizations/:organizationId/runs', async c => {
+    return runsApi.GET(createRequestWithOrgContext(c));
   });
-  app.put('/api/runs/:id/status', async c => {
-    const request = c.req.raw;
-    (request as any).params = { id: c.req.param('id') };
-    return runsApi.PUT(request);
+
+  app.post('/api/organizations/:organizationId/runs', async c => {
+    return runsApi.POST(createRequestWithOrgContext(c));
   });
-  app.get('/api/runs/organization', async c =>
-    runsApi.getOrganizationRuns(c.req.raw)
-  );
 
-  app.get('/api/preferences', async c => preferencesApi.GET(c.req.raw));
-  app.put('/api/preferences', async c => preferencesApi.PUT(c.req.raw));
+  app.delete('/api/organizations/:organizationId/runs/:id', async c => {
+    return runsApi.DELETE(
+      createRequestWithOrgContext(c, { id: c.req.param('id') })
+    );
+  });
 
-  app.get('/api/report-templates', async c =>
-    reportTemplatesApi.GET(c.req.raw)
-  );
-  app.post('/api/report-templates', async c =>
-    reportTemplatesApi.POST(c.req.raw)
-  );
-  app.put('/api/report-templates', async c =>
-    reportTemplatesApi.PUT(c.req.raw)
-  );
-  app.delete('/api/report-templates', async c =>
-    reportTemplatesApi.DELETE(c.req.raw)
-  );
+  app.put('/api/organizations/:organizationId/runs/:id/status', async c => {
+    return runsApi.PUT(
+      createRequestWithOrgContext(c, { id: c.req.param('id') })
+    );
+  });
 
-  app.get('/api/notifications', async c => notificationsApi.GET(c.req.raw));
-  app.post('/api/notifications', async c => notificationsApi.POST(c.req.raw));
-  app.put('/api/notifications', async c => notificationsApi.PUT(c.req.raw));
-  app.delete('/api/notifications', async c =>
-    notificationsApi.DELETE(c.req.raw)
-  );
-  app.get('/api/notifications/stats', async c =>
-    notificationsApi.getStats(c.req.raw)
-  );
+  app.get('/api/organizations/:organizationId/preferences', async c => {
+    return preferencesApi.GET(createRequestWithOrgContext(c));
+  });
+
+  app.put('/api/organizations/:organizationId/preferences', async c => {
+    return preferencesApi.PUT(createRequestWithOrgContext(c));
+  });
+
+  app.get('/api/organizations/:organizationId/report-templates', async c => {
+    return reportTemplatesApi.GET(createRequestWithOrgContext(c));
+  });
+
+  app.post('/api/organizations/:organizationId/report-templates', async c => {
+    return reportTemplatesApi.POST(createRequestWithOrgContext(c));
+  });
+
+  app.put('/api/organizations/:organizationId/report-templates', async c => {
+    return reportTemplatesApi.PUT(createRequestWithOrgContext(c));
+  });
+
+  app.delete('/api/organizations/:organizationId/report-templates', async c => {
+    return reportTemplatesApi.DELETE(createRequestWithOrgContext(c));
+  });
+
+  app.get('/api/organizations/:organizationId/notifications', async c => {
+    return notificationsApi.GET(createRequestWithOrgContext(c));
+  });
+
+  app.post('/api/organizations/:organizationId/notifications', async c => {
+    return notificationsApi.POST(createRequestWithOrgContext(c));
+  });
+
+  app.put('/api/organizations/:organizationId/notifications', async c => {
+    return notificationsApi.PUT(createRequestWithOrgContext(c));
+  });
+
+  app.delete('/api/organizations/:organizationId/notifications', async c => {
+    return notificationsApi.DELETE(createRequestWithOrgContext(c));
+  });
+
+  app.get('/api/organizations/:organizationId/notifications/stats', async c => {
+    return notificationsApi.getStats(createRequestWithOrgContext(c));
+  });
 
   // Development-only routes
   if (config.isDevelopment) {

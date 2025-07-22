@@ -1,4 +1,3 @@
-import { reportTemplatesApi } from '@/lib/api/report-templates-api';
 import {
   closestCenter,
   DndContext,
@@ -20,6 +19,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import {
   Asterisk,
+  Command,
   Edit3,
   Ellipsis,
   Eye,
@@ -31,8 +31,21 @@ import {
 } from 'lucide-react';
 import { type CSSProperties, useMemo, useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
-import { Badge } from '../components/ui/badge';
-import { Button } from '../components/ui/button';
+
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@radix-ui/react-popover';
+import {
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@radix-ui/react-select';
+import { CommandEmpty, CommandGroup, CommandInput, CommandItem } from 'cmdk';
+import { Badge } from '../../../components/ui/badge';
+import { Button } from '../../../components/ui/button';
 import {
   Card,
   CardContent,
@@ -40,14 +53,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '../components/ui/card';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from '../components/ui/command';
+} from '../../../components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -55,38 +61,26 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '../components/ui/dialog';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import PageWrapper from '../components/ui/page-wrapper';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '../components/ui/popover';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../components/ui/select';
-import { StickyHeader } from '../components/ui/sticky-header';
-import { Textarea } from '../components/ui/textarea';
-import { useAppContext } from '../lib/AppContextProvider';
-import { useNonAdminRedirect } from '../lib/hooks/use-non-admin-redirect';
+} from '../../../components/ui/dialog';
+import { Input } from '../../../components/ui/input';
+import { Label } from '../../../components/ui/label';
+import PageWrapper from '../../../components/ui/page-wrapper';
+import { Select } from '../../../components/ui/select';
+import { StickyHeader } from '../../../components/ui/sticky-header';
+import { Textarea } from '../../../components/ui/textarea';
+import { useAppContext } from '../../../lib/AppContextProvider';
+import { useOrgReportTemplatesApi } from '../../../lib/hooks';
+import { useNonAdminRedirect } from '../../../lib/hooks/use-non-admin-redirect';
+import { useCurrentOrgId } from '../../../lib/hooks/use-org-navigation';
+import { queryKeys } from '../../../lib/react-query-client';
 import {
   type ReportColumnConfig,
   type ReportTemplate,
   type ReportTemplateForm,
   ReportType,
   validateReportTemplateForm,
-} from '../lib/schema';
-import { toasts } from '../lib/toast';
-
-export const Route = createFileRoute('/report-templates')({
-  component: ReportTemplatesPage,
-});
+} from '../../../lib/schema';
+import { toasts } from '../../../lib/toast';
 
 const runTypeToBadgeColor: { [key in ReportType]: string } = {
   [ReportType.run]: 'bg-cyan-300/10 text-cyan-300 border-cyan-300',
@@ -95,24 +89,27 @@ const runTypeToBadgeColor: { [key in ReportType]: string } = {
 };
 
 function ReportTemplatesPage() {
-  const { isAdmin, organization } = useNonAdminRedirect('/runs');
+  const { isAdmin, organization } = useNonAdminRedirect();
+  const organizationId = useCurrentOrgId();
+  const reportTemplatesApi = useOrgReportTemplatesApi();
   const [selectedTemplate, setSelectedTemplate] =
     useState<ReportTemplate | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-
   const queryClient = useQueryClient();
 
   // Fetch templates using the API client
   const { data: templates = [], isLoading: isLoadingTemplates } = useQuery({
-    queryKey: ['report-templates'],
+    queryKey: queryKeys.reportTemplates(organizationId),
     queryFn: () => reportTemplatesApi.getReportTemplates(),
-    enabled: !!isAdmin,
+    enabled: !!isAdmin && !!organizationId,
   });
 
   // Get all existing column configurations from organization templates
   const existingColumnConfigs = useMemo(() => {
-    const allColumns = templates.flatMap(template => template.columnConfig);
+    const allColumns = templates.flatMap(
+      (template: any) => template.columnConfig
+    );
 
     // Deduplicate by field name and create a map with the most descriptive label
     const uniqueColumns = new Map<
@@ -120,11 +117,11 @@ function ReportTemplatesPage() {
       { field: string; label: string; usageCount: number }
     >();
 
-    allColumns.forEach(col => {
+    allColumns.forEach((col: any) => {
       if (uniqueColumns.has(col.field)) {
         const existing = uniqueColumns.get(col.field)!;
-        existing.usageCount++;
-        // Keep the longer/more descriptive label
+        existing.usageCount += 1;
+        // Keep the longer, more descriptive label
         if (col.label.length > existing.label.length) {
           existing.label = col.label;
         }
@@ -137,8 +134,8 @@ function ReportTemplatesPage() {
       }
     });
 
+    // Convert to array and sort by usage frequency and then alphabetically
     return Array.from(uniqueColumns.values()).sort((a, b) => {
-      // Sort by usage count (most used first), then alphabetically
       if (a.usageCount !== b.usageCount) {
         return b.usageCount - a.usageCount;
       }
@@ -146,24 +143,27 @@ function ReportTemplatesPage() {
     });
   }, [templates]);
 
-  // Mutations for CRUD operations
+  // Create template mutation
   const createTemplateMutation = useMutation({
     mutationFn: (templateData: ReportTemplateForm) =>
       reportTemplatesApi.createReportTemplate(templateData),
-    onSuccess: createdTemplate => {
-      queryClient.invalidateQueries({ queryKey: ['report-templates'] });
+    onSuccess: (createdTemplate: any) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.reportTemplates(organizationId),
+      });
       setIsCreateDialogOpen(false);
       toasts.success(
         'Template created successfully',
-        `${createdTemplate.name} has been added to your report templates.`
+        `"${createdTemplate.name}" has been created and is ready to use.`
       );
     },
-    onError: error => {
+    onError: (error: any) => {
       console.error('Failed to create template:', error);
-      toasts.error('Failed to create template', error.message);
+      toasts.error('Error creating template', 'Please try again.');
     },
   });
 
+  // Update template mutation
   const updateTemplateMutation = useMutation({
     mutationFn: ({
       id,
@@ -172,34 +172,39 @@ function ReportTemplatesPage() {
       id: string;
       templateData: ReportTemplateForm;
     }) => reportTemplatesApi.updateReportTemplate(id, templateData),
-    onSuccess: updatedTemplate => {
-      queryClient.invalidateQueries({ queryKey: ['report-templates'] });
+    onSuccess: (updatedTemplate: any) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.reportTemplates(organizationId),
+      });
       setIsEditDialogOpen(false);
       setSelectedTemplate(null);
       toasts.success(
         'Template updated successfully',
-        `${updatedTemplate.name} has been updated with your changes.`
+        `"${updatedTemplate.name}" has been updated.`
       );
     },
-    onError: error => {
+    onError: (error: any) => {
       console.error('Failed to update template:', error);
-      toasts.error('Failed to update template', error.message);
+      toasts.error('Error updating template', 'Please try again.');
     },
   });
 
+  // Delete template mutation
   const deleteTemplateMutation = useMutation({
     mutationFn: (templateId: string) =>
       reportTemplatesApi.deleteReportTemplate(templateId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['report-templates'] });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.reportTemplates(organizationId),
+      });
       toasts.success(
         'Template deleted successfully',
-        'The report template has been removed from your organization.'
+        'The template has been permanently removed.'
       );
     },
-    onError: error => {
+    onError: (error: any) => {
       console.error('Failed to delete template:', error);
-      toasts.error('Failed to delete template', error.message);
+      toasts.error('Error deleting template', 'Please try again.');
     },
   });
 
@@ -1025,3 +1030,9 @@ function AddColumnCombobox({
     </Popover>
   );
 }
+
+export const Route = createFileRoute(
+  '/organizations/$organizationId/report-templates'
+)({
+  component: ReportTemplatesPage,
+});

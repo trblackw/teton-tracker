@@ -1,5 +1,3 @@
-import { reportTemplatesApi } from '@/lib/api/report-templates-api';
-import { runsApi } from '@/lib/api/runs-api';
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import {
@@ -14,9 +12,9 @@ import {
 import { AlertTriangle, Download } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
-import { Badge } from '../components/ui/badge';
-import { Button } from '../components/ui/button';
-import { Calendar as CalendarComponent } from '../components/ui/calendar';
+import { Badge } from '../../../components/ui/badge';
+import { Button } from '../../../components/ui/button';
+import { Calendar as CalendarComponent } from '../../../components/ui/calendar';
 import {
   Card,
   CardContent,
@@ -24,21 +22,24 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '../components/ui/card';
-import PageWrapper from '../components/ui/page-wrapper';
+} from '../../../components/ui/card';
+import PageWrapper from '../../../components/ui/page-wrapper';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '../components/ui/popover';
-import { StickyHeader } from '../components/ui/sticky-header';
+} from '../../../components/ui/popover';
+import { StickyHeader } from '../../../components/ui/sticky-header';
+import { useOrgReportTemplatesApi, useOrgRunsApi } from '../../../lib/hooks';
+import { useCurrentOrgId } from '../../../lib/hooks/use-org-navigation';
+import { queryKeys } from '../../../lib/react-query-client';
 import {
-  defaultReportTemplateFields,
   type DefaultReportConfigFields,
   type ReportTemplate,
   type Run,
-} from '../lib/schema';
-import { toasts } from '../lib/toast';
+  defaultReportTemplateFields,
+} from '../../../lib/schema';
+import { toasts } from '../../../lib/toast';
 
 // Helper function to group runs by date
 function groupRunsByDate(runs: Run[]): Record<string, Run[]> {
@@ -105,11 +106,17 @@ function downloadCSV(content: string, filename: string) {
   document.body.removeChild(link);
 }
 
-function Reports() {
-  const [selectedRange, setSelectedRange] = useState<DateRange | undefined>();
-  const [popoverOpen, setPopoverOpen] = useState(false);
-  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+function ReportsPage() {
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [downloadingReport, setDownloadingReport] = useState(false);
   const [selectedRunIds, setSelectedRunIds] = useState<Set<string>>(new Set());
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+
+  const runsApi = useOrgRunsApi();
+  const reportTemplatesApi = useOrgReportTemplatesApi();
+  const organizationId = useCurrentOrgId();
 
   // Fetch all runs
   const {
@@ -117,8 +124,9 @@ function Reports() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['runs'],
-    queryFn: runsApi.getRuns,
+    queryKey: queryKeys.runs(organizationId),
+    queryFn: () => runsApi.getRuns(),
+    enabled: !!organizationId,
   });
 
   // Fetch report templates
@@ -127,15 +135,17 @@ function Reports() {
     isLoading: templatesLoading,
     error: templatesError,
   } = useQuery({
-    queryKey: ['report-templates'],
-    queryFn: reportTemplatesApi.getReportTemplates,
+    queryKey: queryKeys.reportTemplates(organizationId),
+    queryFn: () => reportTemplatesApi.getReportTemplates(),
+    enabled: !!organizationId,
   });
 
   // Filter to only past runs (before today)
   const pastRuns = useMemo(() => {
     const today = startOfToday();
-    return allRuns.filter(run => {
-      const runDate = parseISO(run.scheduledTime);
+    return allRuns.filter((run: any) => {
+      if (!run.scheduled_time) return false;
+      const runDate = parseISO(run.scheduled_time);
       return isBefore(runDate, today);
     });
   }, [allRuns]);
@@ -143,25 +153,22 @@ function Reports() {
   // Group past runs by date for calendar indicators
   const runsByDate = useMemo(() => groupRunsByDate(pastRuns), [pastRuns]);
 
-  // Get runs within selected date range
+  // Apply date range filter
   const filteredRuns = useMemo(() => {
-    if (!selectedRange?.from) return [];
+    if (!dateRange?.from) return pastRuns;
 
-    const fromDate = startOfDay(selectedRange.from);
-    const toDate = selectedRange?.to
-      ? endOfDay(selectedRange.to)
-      : endOfDay(selectedRange.from);
+    const fromDate = startOfDay(dateRange.from!);
+    const toDate = dateRange.to
+      ? endOfDay(dateRange.to)
+      : endOfDay(dateRange.from!);
 
-    const runsInRange = pastRuns.filter(run => {
-      const runDate = parseISO(run.scheduledTime);
+    return pastRuns.filter((run: any) => {
+      if (!run.scheduled_time) return false;
+      const runDate = parseISO(run.scheduled_time);
+
       return isWithinInterval(runDate, { start: fromDate, end: toDate });
     });
-
-    // Auto-select all runs when date range changes
-    setSelectedRunIds(new Set(runsInRange.map(run => run.id)));
-
-    return runsInRange;
-  }, [pastRuns, selectedRange]);
+  }, [pastRuns, dateRange]);
 
   // Get only the runs that are selected for export
   const selectedRuns = useMemo(() => {
@@ -212,7 +219,7 @@ function Reports() {
   }, [runsByTemplate, selectedRuns.length]);
 
   // Calculate stats - use filtered runs when date range is selected, otherwise all past runs
-  const statsRuns = selectedRange?.from ? filteredRuns : pastRuns;
+  const statsRuns = dateRange?.from ? filteredRuns : pastRuns;
   const totalRuns = statsRuns.length;
 
   const completedRuns = statsRuns.filter(run => run.status === 'completed');
@@ -270,11 +277,11 @@ function Reports() {
       return;
     }
 
-    const fromDate = selectedRange?.from
-      ? format(selectedRange.from, 'yyyy-MM-dd')
+    const fromDate = dateRange?.from
+      ? format(dateRange.from, 'yyyy-MM-dd')
       : 'unknown';
-    const toDate = selectedRange?.to
-      ? format(selectedRange.to, 'yyyy-MM-dd')
+    const toDate = dateRange?.to
+      ? format(dateRange.to, 'yyyy-MM-dd')
       : fromDate;
 
     if (templateInfo.type === 'single') {
@@ -380,12 +387,12 @@ function Reports() {
 
   const exportDisabled = useMemo(() => {
     return (
-      !selectedRange?.from ||
+      !dateRange?.from ||
       selectedRuns.length === 0 ||
       isLoading ||
       templatesLoading
     );
-  }, [selectedRange, selectedRuns, isLoading, templatesLoading]);
+  }, [dateRange, selectedRuns, isLoading, templatesLoading]);
 
   if (error || templatesError) {
     return (
@@ -433,10 +440,10 @@ function Reports() {
             </div>
           </CardContent>
           <CardFooter className="text-xs text-blue-400 flex justify-center items-center">
-            {selectedRange?.from
-              ? `${format(selectedRange.from, 'MMM d, yyyy')}${
-                  selectedRange.to
-                    ? ` - ${format(selectedRange.to, 'MMM d, yyyy')}`
+            {dateRange?.from
+              ? `${format(dateRange.from, 'MMM d, yyyy')}${
+                  dateRange.to
+                    ? ` - ${format(dateRange.to, 'MMM d, yyyy')}`
                     : ''
                 }`
               : pastRuns.length > 0
@@ -469,8 +476,8 @@ function Reports() {
             <div className="flex justify-center relative">
               <CalendarComponent
                 mode="range"
-                selected={selectedRange}
-                onSelect={setSelectedRange}
+                selected={dateRange}
+                onSelect={setDateRange}
                 onDayClick={handleDayClick}
                 numberOfMonths={1}
                 className="rounded-md border bg-accent"
@@ -642,7 +649,7 @@ function Reports() {
                   : 'Export CSV Report'}
               </Button>
 
-              {!selectedRange?.from && (
+              {!dateRange?.from && (
                 <p className="text-xs text-muted-foreground text-center">
                   Select a date range to enable export
                 </p>
@@ -661,6 +668,6 @@ function Reports() {
   );
 }
 
-export const Route = createFileRoute('/reports')({
-  component: Reports,
+export const Route = createFileRoute('/organizations/$organizationId/reports')({
+  component: ReportsPage,
 });

@@ -1,39 +1,30 @@
-import { runsApi } from '@/lib/api/runs-api';
-import { useQuery } from '@tanstack/react-query';
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { createFileRoute } from '@tanstack/react-router';
 import { Car, Clock, Filter, MapPin, Search, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Badge } from '../components/ui/badge';
-import { Button } from '../components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '../components/ui/card';
+import { Badge } from '../../../components/ui/badge';
+import { Button } from '../../../components/ui/button';
+import { Card, CardContent } from '../../../components/ui/card';
 import {
   ExpandableActionsDrawer,
   type DrawerAction,
-} from '../components/ui/expandable-actions-drawer';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import PageWrapper from '../components/ui/page-wrapper';
+} from '../../../components/ui/expandable-actions-drawer';
+import { Input } from '../../../components/ui/input';
+import { Label } from '../../../components/ui/label';
+import PageWrapper from '../../../components/ui/page-wrapper';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../components/ui/select';
-import { StickyHeader } from '../components/ui/sticky-header';
-import { useAppContext } from '../lib/AppContextProvider';
-import type { User } from '../lib/auth';
-import { useNonAdminRedirect } from '../lib/hooks/use-non-admin-redirect';
-
-export const Route = createFileRoute('/drivers')({
-  component: DriversPage,
-});
+} from '../../../components/ui/select';
+import { StickyHeader } from '../../../components/ui/sticky-header';
+import { useUser, useUserOrganization } from '../../../lib/auth-client';
+import { useOrgRunsApi } from '../../../lib/hooks';
+import { useNonAdminRedirect } from '../../../lib/hooks/use-non-admin-redirect';
+import { useCurrentOrgId } from '../../../lib/hooks/use-org-navigation';
+import { queryKeys } from '../../../lib/react-query-client';
 
 // Availability filter options
 const AVAILABILITY_FILTERS = [
@@ -48,17 +39,21 @@ const AVAILABILITY_FILTERS = [
 ];
 
 function DriversPage() {
-  const { currentUser } = useAppContext();
-  const { isAdmin, organization, isLoading } = useNonAdminRedirect();
-  const [availabilityFilter, setAvailabilityFilter] = useState('all');
+  const queryClient = useQueryClient();
+  const { data: organization } = useUserOrganization();
+  const { user: currentUser } = useUser();
+  const { isAdmin, isLoading } = useNonAdminRedirect();
+  const runsApi = useOrgRunsApi();
+  const organizationId = useCurrentOrgId();
+
+  // Search and filter state
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
 
-  // Use organization members from BetterAuth instead of separate API call
-  const membersData = organization?.members || [];
-  const membersLoading = isLoading;
-  const membersError = null;
+  // Use organization members instead of separate API call
+  const membersData = organization?.members;
 
-  // Filter out current user from drivers list
+  // Filter out current user from drivers list (admin shouldn't drive)
   const drivers = useMemo(() => {
     return (
       membersData?.filter((member: any) => member.userId !== currentUser?.id) ||
@@ -68,92 +63,36 @@ function DriversPage() {
 
   // Fetch all runs to calculate driver stats
   const { data: allRuns = [], isLoading: runsLoading } = useQuery({
-    queryKey: ['organization-runs'],
-    queryFn: runsApi.getOrganizationRuns,
+    queryKey: queryKeys.organizationRuns(organizationId),
+    queryFn: () => runsApi.getOrganizationRuns(),
     staleTime: 1000 * 60 * 2, // 2 minutes
-    enabled: !!organization?.id && !!currentUser?.id && isAdmin,
+    enabled: !!organizationId && !!currentUser?.id && isAdmin,
   });
 
-  // Helper function to check driver availability based on runs
-  const getDriverAvailability = (driver: User, filter: string) => {
-    const driverRuns = allRuns.filter(run => run.createdById === driver.id);
-    const now = new Date();
-
-    const activeRuns = driverRuns.filter(run => run.status === 'active');
-    const scheduledRuns = driverRuns.filter(run => run.status === 'scheduled');
-
-    // Get the next scheduled run
-    const upcomingRuns = scheduledRuns
-      .map(run => ({ ...run, scheduledDate: new Date(run.scheduledTime) }))
-      .filter(run => run.scheduledDate > now)
-      .sort((a, b) => a.scheduledDate.getTime() - b.scheduledDate.getTime());
-
-    const nextRun = upcomingRuns[0];
-
-    switch (filter) {
-      case 'available':
-        return activeRuns.length === 0;
-      case 'available-1h':
-        return (
-          activeRuns.length === 0 &&
-          (!nextRun ||
-            nextRun.scheduledDate.getTime() - now.getTime() > 60 * 60 * 1000)
-        );
-      case 'available-2h':
-        return (
-          activeRuns.length === 0 &&
-          (!nextRun ||
-            nextRun.scheduledDate.getTime() - now.getTime() >
-              2 * 60 * 60 * 1000)
-        );
-      case 'available-4h':
-        return (
-          activeRuns.length === 0 &&
-          (!nextRun ||
-            nextRun.scheduledDate.getTime() - now.getTime() >
-              4 * 60 * 60 * 1000)
-        );
-      case 'available-today':
-        const endOfDay = new Date(now);
-        endOfDay.setHours(23, 59, 59, 999);
-        return (
-          activeRuns.length === 0 &&
-          (!nextRun || nextRun.scheduledDate > endOfDay)
-        );
-      case 'active':
-        return activeRuns.length > 0;
-      case 'scheduled':
-        return scheduledRuns.length > 0;
-      case 'all':
-      default:
-        return true;
-    }
-  };
-
-  // Filter drivers based on search and availability
+  // Filter and search drivers
   const filteredDrivers = useMemo(() => {
     let filtered = drivers;
 
     // Apply search filter
     if (searchTerm.trim()) {
       const search = searchTerm.toLowerCase();
-      filtered = filtered.filter((driver: User) =>
-        `${driver.name}`.toLowerCase().includes(search)
+      filtered = filtered.filter((member: any) =>
+        `${member.user?.name || ''}`.toLowerCase().includes(search)
       );
     }
 
     // Apply availability filter
-    filtered = filtered.filter((driver: User) =>
-      getDriverAvailability(driver, availabilityFilter)
+    filtered = filtered.filter((member: any) =>
+      getDriverAvailability(member, filterStatus)
     );
 
     return filtered;
-  }, [drivers, searchTerm, availabilityFilter, allRuns]);
+  }, [drivers, searchTerm, filterStatus, allRuns]);
 
   // Clear all filters
   const clearFilters = () => {
     setSearchTerm('');
-    setAvailabilityFilter('all');
+    setFilterStatus('all');
   };
 
   // Create drawer actions
@@ -203,7 +142,7 @@ function DriversPage() {
       id: 'filter-availability',
       icon: <Filter className="h-4 w-4" />,
       label: 'Filter by Availability',
-      badge: availabilityFilter !== 'all' ? '●' : undefined,
+      badge: filterStatus !== 'all' ? '●' : undefined,
       showHeader: false,
       content: (
         <div className="space-y-3">
@@ -211,10 +150,7 @@ function DriversPage() {
             <Label className="text-sm font-medium mb-2 block">
               Filter by driver availability
             </Label>
-            <Select
-              value={availabilityFilter}
-              onValueChange={setAvailabilityFilter}
-            >
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -227,18 +163,18 @@ function DriversPage() {
               </SelectContent>
             </Select>
           </div>
-          {availabilityFilter !== 'all' && (
+          {filterStatus !== 'all' && (
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">
                 Filtering by{' '}
                 {AVAILABILITY_FILTERS.find(
-                  f => f.value === availabilityFilter
+                  f => f.value === filterStatus
                 )?.label.toLowerCase()}
               </span>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setAvailabilityFilter('all')}
+                onClick={() => setFilterStatus('all')}
               >
                 Clear
               </Button>
@@ -249,47 +185,74 @@ function DriversPage() {
     },
   ];
 
-  // Helper function to get availability status text
-  const getAvailabilityText = (driver: User) => {
-    const driverRuns = allRuns.filter(run => run.createdById === driver.id);
-    const activeRuns = driverRuns.filter(run => run.status === 'active');
-    const scheduledRuns = driverRuns.filter(run => run.status === 'scheduled');
+  // Helper function to get driver availability info for display
+  const getDriverAvailabilityInfo = (member: any) => {
+    const isAvailable = getDriverAvailability(member, 'available');
+    const isBusy = getDriverAvailability(member, 'busy');
 
-    if (activeRuns.length > 0) {
-      return { text: 'Active', variant: 'default' as const };
+    if (isBusy) {
+      return { text: 'Busy', variant: 'destructive' as const };
+    } else if (isAvailable) {
+      return { text: 'Available', variant: 'default' as const };
+    } else {
+      return { text: 'Scheduled', variant: 'secondary' as const };
     }
-
-    if (scheduledRuns.length > 0) {
-      const now = new Date();
-      const upcomingRuns = scheduledRuns
-        .map(run => ({ ...run, scheduledDate: new Date(run.scheduledTime) }))
-        .filter(run => run.scheduledDate > now)
-        .sort((a, b) => a.scheduledDate.getTime() - b.scheduledDate.getTime());
-
-      if (upcomingRuns.length > 0) {
-        const nextRun = upcomingRuns[0];
-        const hoursUntil = Math.round(
-          (nextRun.scheduledDate.getTime() - now.getTime()) / (1000 * 60 * 60)
-        );
-
-        if (hoursUntil < 1) {
-          return {
-            text: 'Available (runs soon)',
-            variant: 'secondary' as const,
-          };
-        } else if (hoursUntil < 4) {
-          return {
-            text: `Available (${hoursUntil}h)`,
-            variant: 'secondary' as const,
-          };
-        }
-      }
-    }
-
-    return { text: 'Available', variant: 'outline' as const };
   };
 
-  if (membersLoading || runsLoading) {
+  // Helper function to check driver availability based on runs
+  const getDriverAvailability = (member: any, filter: string) => {
+    const driverRuns = allRuns.filter(
+      (run: any) => run.createdById === member.user?.id
+    );
+    const now = new Date();
+
+    const activeRuns = driverRuns.filter((run: any) => run.status === 'active');
+    const scheduledRuns = driverRuns.filter(
+      (run: any) => run.status === 'scheduled'
+    );
+
+    // Get the next scheduled run
+    const upcomingRuns = scheduledRuns
+      .map((run: any) => ({
+        ...run,
+        scheduledDate: new Date(run.scheduledTime),
+      }))
+      .filter((run: any) => run.scheduledDate > now)
+      .sort(
+        (a: any, b: any) =>
+          a.scheduledDate.getTime() - b.scheduledDate.getTime()
+      );
+
+    const nextRun = upcomingRuns[0];
+
+    switch (filter) {
+      case 'available':
+        return activeRuns.length === 0;
+      case 'available-1h':
+        return (
+          activeRuns.length === 0 &&
+          (!nextRun ||
+            nextRun.scheduledDate.getTime() - now.getTime() > 60 * 60 * 1000)
+        );
+      case 'available-2h':
+        return (
+          activeRuns.length === 0 &&
+          (!nextRun ||
+            nextRun.scheduledDate.getTime() - now.getTime() > 120 * 60 * 1000)
+        );
+      case 'busy':
+        return activeRuns.length > 0;
+      case 'upcoming':
+        return (
+          nextRun &&
+          nextRun.scheduledDate.getTime() - now.getTime() <= 60 * 60 * 1000
+        );
+      default:
+        return true;
+    }
+  };
+
+  if (isLoading) {
     return (
       <PageWrapper>
         <div className="flex items-center justify-center py-12">
@@ -302,21 +265,37 @@ function DriversPage() {
     );
   }
 
-  if (membersError) {
+  if (!organization) {
     return (
       <PageWrapper>
         <div className="text-center py-12">
           <Users className="h-12 w-12 text-destructive mx-auto mb-4" />
-          <h1 className="text-2xl font-bold mb-4">Error Loading Drivers</h1>
+          <h1 className="text-2xl font-bold mb-4">
+            Error Loading Organization
+          </h1>
           <p className="text-muted-foreground">
-            Failed to load organization members. Please try again.
+            Failed to load organization details. Please try again.
           </p>
         </div>
       </PageWrapper>
     );
   }
 
-  const filtersApplied = searchTerm || availabilityFilter !== 'all';
+  if (!currentUser) {
+    return (
+      <PageWrapper>
+        <div className="text-center py-12">
+          <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+          <h1 className="text-2xl font-bold mb-4">Unauthorized</h1>
+          <p className="text-muted-foreground">
+            You must be logged in to view drivers.
+          </p>
+        </div>
+      </PageWrapper>
+    );
+  }
+
+  const filtersApplied = searchTerm || filterStatus !== 'all';
 
   return (
     <PageWrapper>
@@ -341,77 +320,99 @@ function DriversPage() {
 
       {/* Driver Cards */}
       <div className="grid gap-6">
-        {filteredDrivers.map((driver: User) => {
+        {filteredDrivers.map((member: any) => {
+          const driver = member.user; // Extract the user object from the member
+
           // Calculate stats for this driver
           const driverRuns = allRuns.filter(
-            run => run.createdById === driver.id
+            (run: any) => run.createdById === driver?.id
           );
-          const activeRuns = driverRuns.filter(run => run.status === 'active');
+          const activeRuns = driverRuns.filter(
+            (run: any) => run.status === 'active'
+          );
           const scheduledRuns = driverRuns.filter(
-            run => run.status === 'scheduled'
+            (run: any) => run.status === 'scheduled'
           );
           const completedRuns = driverRuns.filter(
-            run => run.status === 'completed'
+            (run: any) => run.status === 'completed'
           );
 
-          const availabilityStatus = getAvailabilityText(driver);
+          // Get next upcoming run
+          const upcomingRuns = scheduledRuns
+            .map((run: any) => ({
+              ...run,
+              scheduledDate: new Date(run.scheduledTime),
+            }))
+            .filter((run: any) => run.scheduledDate > new Date())
+            .sort(
+              (a: any, b: any) =>
+                a.scheduledDate.getTime() - b.scheduledDate.getTime()
+            );
+
+          const nextRun = upcomingRuns[0];
+          const availabilityInfo = getDriverAvailabilityInfo(member);
 
           return (
-            <Link
-              key={driver.id}
-              to="/driver/$driverId"
-              params={{ driverId: driver.id }}
-              className="block hover:scale-[1.02] transition-transform duration-200"
-            >
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Users className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg">{driver.name}</CardTitle>
-                        <CardDescription>
-                          Driver • {availabilityStatus.text}
-                        </CardDescription>
-                      </div>
+            <Card key={member.id} className="overflow-hidden">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  {/* Driver Info */}
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Users className="h-6 w-6 text-primary" />
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Badge
-                        variant={
-                          activeRuns.length > 0
-                            ? 'default'
-                            : scheduledRuns.length > 0
-                              ? 'secondary'
-                              : 'outline'
-                        }
-                        className={
-                          activeRuns.length > 0
-                            ? 'bg-green-100 text-green-800'
-                            : scheduledRuns.length > 0
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-gray-100 text-gray-800'
-                        }
-                      >
-                        {activeRuns.length > 0
-                          ? `${activeRuns.length} Active Run${activeRuns.length !== 1 ? 's' : ''}`
-                          : scheduledRuns.length > 0
-                            ? `${scheduledRuns.length} Scheduled`
-                            : 'No Active Runs'}
-                      </Badge>
+                    <div>
+                      <h3 className="font-semibold text-lg">
+                        {driver?.name || 'Unknown Driver'}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {driver?.email || 'No email'}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="text-xs">
+                          {member.role}
+                        </Badge>
+                        <Badge
+                          variant={availabilityInfo.variant}
+                          className="text-xs"
+                        >
+                          {availabilityInfo.text}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent>
+                  {/* Stats */}
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        {activeRuns.length} Active
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        {scheduledRuns.length} Scheduled
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Car className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        {completedRuns.length} Completed
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                {/* Runs */}
+                <div className="mt-4">
                   {activeRuns.length > 0 ? (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       {activeRuns.slice(0, 2).map(run => (
                         <div
                           key={run.id}
-                          className="border rounded-lg p-4 bg-muted/50"
+                          className="border rounded-lg p-3 bg-muted/50"
                         >
-                          <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
                               <Car className="h-4 w-4 text-green-600" />
                               <span className="font-medium">
@@ -423,7 +424,7 @@ function DriversPage() {
                               Active
                             </Badge>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-muted-foreground">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-muted-foreground">
                             <div className="flex items-center gap-2">
                               <MapPin className="h-3 w-3" />
                               <span>
@@ -456,13 +457,13 @@ function DriversPage() {
                       )}
                     </div>
                   ) : scheduledRuns.length > 0 ? (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       {scheduledRuns.slice(0, 2).map(run => (
                         <div
                           key={run.id}
-                          className="border rounded-lg p-4 bg-muted/50"
+                          className="border rounded-lg p-3 bg-muted/50"
                         >
-                          <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
                               <Car className="h-4 w-4 text-blue-600" />
                               <span className="font-medium">
@@ -474,7 +475,7 @@ function DriversPage() {
                               Scheduled
                             </Badge>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-muted-foreground">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-muted-foreground">
                             <div className="flex items-center gap-2">
                               <MapPin className="h-3 w-3" />
                               <span>
@@ -507,17 +508,17 @@ function DriversPage() {
                       )}
                     </div>
                   ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Car className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <div className="text-center py-4 text-muted-foreground">
+                      <Car className="h-6 w-6 mx-auto mb-1 opacity-50" />
                       <p>No active runs assigned</p>
                       <p className="text-xs mt-1">
                         {completedRuns.length} completed runs total
                       </p>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            </Link>
+                </div>
+              </CardContent>
+            </Card>
           );
         })}
 
@@ -556,3 +557,7 @@ function DriversPage() {
     </PageWrapper>
   );
 }
+
+export const Route = createFileRoute('/organizations/$organizationId/drivers')({
+  component: DriversPage,
+});

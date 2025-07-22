@@ -18,38 +18,34 @@ import {
   Users,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Badge } from '../components/ui/badge';
-import { Button } from '../components/ui/button';
+import { Badge } from '../../../components/ui/badge';
+import { Button } from '../../../components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../components/ui/card';
+} from '../../../components/ui/card';
 import {
   ExpandableActionsDrawer,
   type DrawerAction,
-} from '../components/ui/expandable-actions-drawer';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { MultiSelect } from '../components/ui/multi-select';
-import PageWrapper from '../components/ui/page-wrapper';
+} from '../../../components/ui/expandable-actions-drawer';
+import { Input } from '../../../components/ui/input';
+import { Label } from '../../../components/ui/label';
+import { MultiSelect } from '../../../components/ui/multi-select';
+import PageWrapper from '../../../components/ui/page-wrapper';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../components/ui/select';
-import { useAppContext } from '../lib/AppContextProvider';
-import { useNonAdminRedirect } from '../lib/hooks/use-non-admin-redirect';
-import { type Run } from '../lib/schema';
-import { toasts } from '../lib/toast';
-
-export const Route = createFileRoute('/driver/$driverId')({
-  component: DriverDetailPage,
-});
+} from '../../../components/ui/select';
+import { useNonAdminRedirect } from '../../../lib/hooks/use-non-admin-redirect';
+import { queryKeys } from '../../../lib/react-query-client';
+import { type Run } from '../../../lib/schema';
+import { toasts } from '../../../lib/toast';
 
 // Placeholder function for sending status request SMS
 async function sendStatusRequestSMS(
@@ -77,7 +73,6 @@ async function sendStatusRequestSMS(
 
 function DriverDetailPage() {
   const { driverId } = Route.useParams();
-  const { currentUser } = useAppContext();
   const { data: organization, isPending } = useUserOrganization();
   const [selectedRunId, setSelectedRunId] = useState<string>('');
   const [sendingStatus, setSendingStatus] = useState(false);
@@ -100,8 +95,8 @@ function DriverDetailPage() {
     isLoading: runsLoading,
     isError: runsError,
   } = useQuery({
-    queryKey: ['organization-runs'],
-    queryFn: () => runsApi.getOrganizationRuns(),
+    queryKey: queryKeys.organizationRuns(organization?.id),
+    queryFn: () => runsApi.getOrganizationRuns(organization?.id),
     staleTime: 1000 * 60 * 2, // 2 minutes
     enabled: !!organization?.id && isAdmin,
   });
@@ -559,3 +554,9 @@ function DriverDetailPage() {
     </PageWrapper>
   );
 }
+
+export const Route = createFileRoute(
+  '/organizations/$organizationId/driver/$driverId'
+)({
+  component: DriverDetailPage,
+});

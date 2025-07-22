@@ -1,6 +1,3 @@
-import { notificationsApi } from '../api/notifications-api';
-import { preferencesApi } from '../api/preferences-api';
-import { smsApi } from '../api/sms-api';
 import { isBrowser, isDevelopment } from '../environment';
 import { type NotificationType as DbNotificationType } from '../schema';
 import { toasts } from '../toast';
@@ -504,36 +501,48 @@ export class NotificationService {
     notification: AppNotification
   ): Promise<void> {
     try {
-      // Map notification type to database type
-      const dbType = this.mapNotificationTypeToDbType(notification.type);
-
-      // Extract common fields
-      const { flightNumber, pickupLocation, dropoffLocation, runId } =
-        this.extractNotificationFields(notification);
-
-      // Create notification data for database
-      const notificationData = {
-        type: dbType,
-        title: notification.title,
-        message: notification.body,
-        flightNumber,
-        pickupLocation,
-        dropoffLocation,
-        runId,
-        metadata: {
-          originalType: notification.type,
-          timestamp: notification.timestamp,
-          icon: notification.icon,
-          badge: notification.badge,
-          actions: notification.actions,
-          data: notification.data,
-        },
-      };
-
-      await notificationsApi.createNotification(notificationData);
+      // TODO: Temporarily disabled - service needs organization context to use organization-aware APIs
+      // The notification service architecture needs to be updated to handle organization-scoped APIs
 
       if (this.debug) {
-        console.log('💾 Notification saved to database:', notification.title);
+        console.log(
+          '💾 Notification database save temporarily disabled - service needs organization context'
+        );
+      }
+
+      // Map notification type to database type
+      // const dbType = this.mapNotificationTypeToDbType(notification.type);
+
+      // Extract common fields
+      // const { flightNumber, pickupLocation, dropoffLocation, runId } =
+      //   this.extractNotificationFields(notification);
+
+      // Create notification data for database
+      // const notificationData = {
+      //   type: dbType,
+      //   title: notification.title,
+      //   message: notification.body,
+      //   flightNumber,
+      //   pickupLocation,
+      //   dropoffLocation,
+      //   runId,
+      //   metadata: {
+      //     originalType: notification.type,
+      //     timestamp: notification.timestamp,
+      //     icon: notification.icon,
+      //     badge: notification.badge,
+      //     actions: notification.actions,
+      //     data: notification.data,
+      //   },
+      // };
+
+      // await notificationsApi.createNotification(notificationData);
+
+      if (this.debug) {
+        console.log(
+          '💾 Notification would be saved to database:',
+          notification.title
+        );
       }
     } catch (error) {
       console.error('❌ Failed to save notification to database:', error);
@@ -604,89 +613,93 @@ export class NotificationService {
     notification: AppNotification
   ): Promise<boolean> {
     try {
-      const preferences = await preferencesApi.getPreferences();
+      // TODO: Temporarily disabled - service needs organization context to access preferences
+      // return true to allow notifications until service is redesigned
 
-      if (!preferences?.notificationPreferences) {
-        return true; // Default to enabled if no preferences
+      if (this.debug) {
+        console.log(
+          '🔍 Notification preference check temporarily disabled - allowing all notifications'
+        );
       }
 
-      const { notificationPreferences } = preferences;
+      return true; // Allow all notifications for now
 
-      // Check global push notifications enabled setting first
-      if (notificationPreferences.pushNotificationsEnabled === false) {
-        return false;
-      }
+      // const preferences = await preferencesApi.getPreferences();
 
-      switch (notification.type) {
-        case 'flight-status-change':
-        case 'flight-departure-reminder':
-        case 'flight-arrival-reminder':
-          return notificationPreferences.flightUpdates ?? true;
+      // if (!preferences?.notificationPreferences) {
+      //   return true; // Default to enabled if no preferences
+      // }
 
-        case 'traffic-alert':
-          return notificationPreferences.trafficAlerts ?? true;
+      // const { notificationPreferences } = preferences;
 
-        case 'run-reminder':
-          return notificationPreferences.runReminders ?? true;
+      // // Check global notification toggle
+      // if (!notificationPreferences.pushNotificationsEnabled) {
+      //   return false;
+      // }
 
-        default:
-          return true;
-      }
+      // // Check specific notification type preferences
+      // switch (notification.type) {
+      //   case 'flight-status-change':
+      //     return notificationPreferences.flightUpdates;
+      //   case 'flight-departure-reminder':
+      //   case 'flight-arrival-reminder':
+      //     return notificationPreferences.flightReminders;
+      //   case 'traffic-alert':
+      //     return notificationPreferences.trafficAlerts;
+      //   case 'run-reminder':
+      //     return notificationPreferences.runReminders;
+      //   case 'system-update':
+      //     return notificationPreferences.systemUpdates;
+      //   default:
+      //     return true; // Default to enabled for unknown types
+      // }
     } catch (error) {
       console.error('❌ Failed to check notification preferences:', error);
-      return true; // Default to enabled on error
+      return true; // Default to enabled if error occurs
     }
   }
 
   /**
-   * Send SMS notification if enabled and configured
+   * Send SMS notification if enabled
    */
   private async sendSMSNotification(
     notification: AppNotification
   ): Promise<void> {
     try {
-      const preferences = await preferencesApi.getPreferences();
+      // TODO: Temporarily disabled - service needs organization context to access preferences
 
-      // Check if SMS notifications are enabled globally
-      if (!preferences?.notificationPreferences?.smsNotificationsEnabled) {
-        return;
+      if (this.debug) {
+        console.log(
+          '📱 SMS notification temporarily disabled - service needs organization context'
+        );
       }
 
-      // Check if this specific type of SMS notification is enabled
-      const shouldSendSMS = this.shouldSendSMSForType(
-        notification.type,
-        preferences.notificationPreferences
-      );
-      if (!shouldSendSMS) {
-        return;
-      }
+      return; // Skip SMS notifications for now
 
-      // Check if user has a phone number configured
-      if (!preferences.phoneNumber) {
-        if (this.debug) {
-          console.warn(
-            '📱 SMS notification requested but no phone number configured'
-          );
-        }
-        return;
-      }
+      // const preferences = await preferencesApi.getPreferences();
 
-      // Format SMS message
-      const smsMessage = this.formatSMSMessage(notification);
+      // // Check if SMS notifications are enabled globally
+      // if (!preferences?.notificationPreferences?.smsNotificationsEnabled) {
+      //   return;
+      // }
 
-      // Send SMS via API
-      const result = await smsApi.sendSMS(preferences.phoneNumber, smsMessage);
+      // // Check if user has a phone number
+      // if (!preferences.phoneNumber) {
+      //   if (this.debug) {
+      //     console.log('📱 No phone number configured for SMS notifications');
+      //   }
+      //   return;
+      // }
 
-      if (result.success) {
-        if (this.debug) {
-          console.log(
-            '📱 SMS notification sent successfully:',
-            result.messageId
-          );
-        }
-      } else {
-        console.error('❌ Failed to send SMS notification:', result.error);
-      }
+      // // Create SMS message
+      // const message = `${notification.title}: ${notification.body}`;
+
+      // // Send SMS
+      // await smsApi.sendSMS(preferences.phoneNumber, message);
+
+      // if (this.debug) {
+      //   console.log('📱 SMS notification sent:', notification.title);
+      // }
     } catch (error) {
       console.error('❌ Failed to send SMS notification:', error);
     }

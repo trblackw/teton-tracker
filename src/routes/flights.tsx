@@ -1,4 +1,3 @@
-import { preferencesApi } from '@/lib/api/preferences-api';
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import {
@@ -39,7 +38,9 @@ import { TimePicker } from '../components/ui/time-picker';
 import airlinesData from '../data/airlines.json';
 import airportsData from '../data/airports-comprehensive.json';
 import { debugLog, isDevelopment } from '../lib/environment';
+import { useOrgPreferencesApi } from '../lib/hooks';
 import { useTimezone, useTimezoneFormatters } from '../lib/hooks/use-timezone';
+import { queryKeys } from '../lib/react-query-client';
 import { getFlightServiceWithConfig } from '../lib/services/flight-service';
 
 interface Airline {
@@ -85,6 +86,7 @@ function UpcomingFlights() {
 
   const { formatDateTime } = useTimezoneFormatters();
   const userTimezone = useTimezone();
+  const preferencesApi = useOrgPreferencesApi();
 
   // Initialize debug mode state
   useEffect(() => {
@@ -321,7 +323,7 @@ function UpcomingFlights() {
 
   // Query for user preferences to get home airport
   const { data: preferences, isLoading: isLoadingPreferences } = useQuery({
-    queryKey: ['preferences'],
+    queryKey: queryKeys.userPreferences(),
     queryFn: () => preferencesApi.getPreferences(),
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
