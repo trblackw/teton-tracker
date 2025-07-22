@@ -1,7 +1,6 @@
-import { useNavigate } from '@tanstack/react-router';
 import { AlertTriangle, Home, RefreshCw } from 'lucide-react';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { useOrgRoutePath } from '../lib/hooks';
+import { useOrgNavigate } from '../lib/hooks';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
@@ -57,15 +56,14 @@ function ErrorFallback({
   error?: Error;
   errorInfo?: ErrorInfo;
 }) {
-  const navigate = useNavigate();
-  const orgPath = useOrgRoutePath();
+  const orgNavigate = useOrgNavigate();
 
   const handleReload = () => {
     window.location.reload();
   };
 
   const handleGoHome = () => {
-    navigate({ to: orgPath('/runs') });
+    orgNavigate('/runs');
     setTimeout(() => {
       handleReload();
     }, 100);

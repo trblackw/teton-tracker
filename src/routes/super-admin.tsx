@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import {
   Building2,
   Edit,
@@ -148,12 +148,39 @@ function SuperAdminPage() {
 }
 
 function OrganizationCard({ organization }: { organization: any }) {
+  const navigate = useNavigate();
   const memberCount = organization.members?.length || 0;
   const adminCount =
     organization.members?.filter((m: any) => m.role === 'admin').length || 0;
 
+  const handleCardClick = () => {
+    navigate({
+      to: '/organizations/$organizationId',
+      params: { organizationId: organization.id },
+    });
+  };
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    navigate({
+      to: '/organizations/$organizationId',
+      params: { organizationId: organization.id },
+    });
+  };
+
+  const handleMembersClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    navigate({
+      to: '/organizations/$organizationId/members',
+      params: { organizationId: organization.id },
+    });
+  };
+
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card
+      className="hover:shadow-md transition-shadow cursor-pointer"
+      onClick={handleCardClick}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
@@ -201,11 +228,21 @@ function OrganizationCard({ organization }: { organization: any }) {
           </span>
         </div>
         <div className="flex gap-2 pt-2">
-          <Button variant="outline" size="sm" className="flex-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={handleEditClick}
+          >
             <Edit className="h-4 w-4 mr-1" />
             Edit
           </Button>
-          <Button variant="outline" size="sm" className="flex-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={handleMembersClick}
+          >
             <Users className="h-4 w-4 mr-1" />
             Members
           </Button>

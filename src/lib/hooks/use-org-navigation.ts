@@ -27,11 +27,11 @@ export function useOrgRoutePath() {
  * Similar to useNavigate but automatically includes the organization ID
  *
  * @example
- * const navigateToOrg = useOrgNavigateTo();
+ * const navigateToOrg = useOrgNavigate();
  * navigateToOrg('/runs'); // navigates to /organizations/123/runs
  * navigateToOrg('/settings', { replace: true }); // with options
  */
-export function useOrgNavigateTo() {
+export function useOrgNavigate() {
   const navigate = useNavigate();
   const { data: organization } = useUserOrganization();
 
