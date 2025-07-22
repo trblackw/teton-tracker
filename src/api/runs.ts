@@ -1,17 +1,42 @@
 import { checkRunOwnership, createErrorResponse } from '../lib/access-control';
+import type { OrganizationRequest } from '../lib/api/api-tools';
 import { initJSONResponse } from '../lib/api/api-tools';
 import { getDatabase } from '../lib/db/index';
 import { runsDb, type RunsQuery } from '../lib/db/runs-db';
 import { type NewRunForm, type Run, type RunStatus } from '../lib/schema';
 import { getCurrentAuthUser } from './auth';
 
-// Helper function to get all organization member user IDs for an admin using BetterAuth tables
+// Helper function to get organization member user IDs for admin operations
 async function getOrganizationMemberIds(
-  adminUserId: string
+  adminUserId: string,
+  request: OrganizationRequest
 ): Promise<string[]> {
   try {
     const db = getDatabase();
 
+    // Check if user is super-admin (set by organization middleware)
+    const isSuperAdmin = request.params.isSuperAdmin;
+
+    if (isSuperAdmin) {
+      // For super-admins, get organizationId from request params and return all members
+      const organizationId = request.params.organizationId;
+      if (!organizationId) {
+        throw new Error('Organization ID not found in request params');
+      }
+
+      // Get all organization members from our database
+      const orgMembers = await db.query(
+        `SELECT user_id 
+         FROM organization_memberships 
+         WHERE organization_id = $1`,
+        [organizationId]
+      );
+
+      // Return all member user IDs
+      return orgMembers.rows.map(row => row.user_id);
+    }
+
+    // For regular users, use existing membership-based logic
     // Get admin's organization memberships from our database
     const adminMemberships = await db.query(
       `SELECT organization_id, role 
@@ -65,7 +90,10 @@ export async function getOrganizationRuns(request: Request): Promise<Response> {
     }
 
     // Get all organization member user IDs (includes admin check)
-    const memberUserIds = await getOrganizationMemberIds(user.id);
+    const memberUserIds = await getOrganizationMemberIds(
+      user.id,
+      request as OrganizationRequest
+    );
 
     if (memberUserIds.length === 0) {
       return initJSONResponse([]);

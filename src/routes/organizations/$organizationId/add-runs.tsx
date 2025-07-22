@@ -28,6 +28,7 @@ import {
   FormMessage,
 } from '../../../components/ui/form';
 import { Input } from '../../../components/ui/input';
+import { OrganizationLink } from '../../../components/ui/organization-link';
 import {
   Select,
   SelectContent,
@@ -342,12 +343,10 @@ function AddRunsPage() {
                 No report templates found for your organization. Create a
                 template first to add runs.
               </p>
-              <Button
-                onClick={() => router.navigate({ to: '/report-templates' })}
-              >
+              <OrganizationLink to="/report-templates" variant="button">
                 <Settings className="h-4 w-4 mr-2" />
                 Manage Templates
-              </Button>
+              </OrganizationLink>
             </div>
           </CardContent>
         </Card>

@@ -128,6 +128,8 @@ export function getApiBaseUrl(): string {
   return isDevelopment() ? 'http://localhost:3001' : '';
 }
 
+export const SUPER_ADMIN_EMAIL = 'tuckerblackwell.dev@gmail.com';
+
 /**
  * Get the full API URL with /api path
  */

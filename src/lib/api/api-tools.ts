@@ -1,5 +1,17 @@
 import { getApiUrl } from '../environment';
 
+/**
+ * Extended Request interface for organization-scoped API handlers
+ * Includes organizationId and isSuperAdmin context from middleware
+ */
+export interface OrganizationRequest extends Request {
+  params: {
+    organizationId: string;
+    isSuperAdmin: boolean;
+    [key: string]: any; // for additional params like runId, etc.
+  };
+}
+
 export function isBetterAuthRoute(path: string): boolean {
   return path.startsWith('/api/auth');
 }

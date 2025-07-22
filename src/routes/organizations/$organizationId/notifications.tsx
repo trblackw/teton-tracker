@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import {
+  ArrowUpLeft,
   Bell,
   CheckCircle,
   ChevronDown,
@@ -25,7 +26,7 @@ import {
   CardTitle,
 } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
-import { BackButton } from '../../../components/ui/navigation-arrow';
+import { OrganizationLink } from '../../../components/ui/organization-link';
 import PageWrapper from '../../../components/ui/page-wrapper';
 import {
   Select,
@@ -287,37 +288,17 @@ function NotificationsPage() {
     <PageWrapper>
       <StickyHeader
         title="Notifications"
-        subtitle="Manage your notifications and alerts"
-        actions={
-          <>
-            {stats && stats.unread > 0 && (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleMarkAllAsRead}
-                disabled={markAllAsReadMutation.isPending}
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Mark All Read
-              </Button>
-            )}
-          </>
+        subtitle={
+          <OrganizationLink to="/settings" className="mx-0 -ml-2">
+            <ArrowUpLeft className="h-4 w-4" />
+            Settings
+          </OrganizationLink>
         }
-      >
-        <Button
-          variant="outline"
-          size="sm"
-          className="border-blue-600 text-blue-600 hover:bg-blue-700 hover:text-white flex items-center gap-1"
-        >
-          <BackButton size="sm" />
-          <Settings className="h-4 w-4" />
-          Notification Settings
-        </Button>
-      </StickyHeader>
+      />
 
       {/* Stats - Combined into single card */}
       {stats && (
-        <Card>
+        <Card className="mb-4">
           <CardContent className="px-2">
             <div className="flex items-center justify-between gap-4">
               <div className="flex flex-col items-center justify-start gap-1">
@@ -351,143 +332,147 @@ function NotificationsPage() {
       )}
 
       {/* Collapsible Search and Filters */}
-      <Card className="pb-2 pt-3">
-        <CardHeader
-          className="cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => setIsFilterExpanded(!isFilterExpanded)}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 mb-1">
-                <Filter className="h-5 w-5" />
-                Search & Filter
-                {(searchTerm ||
-                  filterType !== 'all' ||
-                  filterRead !== 'all') && (
-                  <span className="text-sm font-normal text-muted-foreground">
-                    (
-                    {[
-                      searchTerm && `"${searchTerm}"`,
-                      filterType !== 'all' &&
-                        NOTIFICATION_TYPES.find(t => t.value === filterType)
-                          ?.label,
-                      filterRead !== 'all' && filterRead,
-                    ]
-                      .filter(Boolean)
-                      .join(', ')}
-                    )
-                  </span>
-                )}
-              </CardTitle>
-              <CardDescription>
-                Search and filter notifications by type, status, or content
-              </CardDescription>
+      {notifications.length > 0 && (
+        <Card className="pb-2 pt-3 mb-4">
+          <CardHeader
+            className="cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2 mb-1">
+                  <Filter className="h-5 w-5" />
+                  Search & Filter
+                  {(searchTerm ||
+                    filterType !== 'all' ||
+                    filterRead !== 'all') && (
+                    <span className="text-sm font-normal text-muted-foreground">
+                      (
+                      {[
+                        searchTerm && `"${searchTerm}"`,
+                        filterType !== 'all' &&
+                          NOTIFICATION_TYPES.find(t => t.value === filterType)
+                            ?.label,
+                        filterRead !== 'all' && filterRead,
+                      ]
+                        .filter(Boolean)
+                        .join(', ')}
+                      )
+                    </span>
+                  )}
+                </CardTitle>
+                <CardDescription>
+                  Search and filter notifications by type, status, or content
+                </CardDescription>
+              </div>
+              {isFilterExpanded ? (
+                <ChevronUp className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              )}
             </div>
-            {isFilterExpanded ? (
-              <ChevronUp className="h-5 w-5 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
-            )}
-          </div>
-        </CardHeader>
-        {isFilterExpanded && (
-          <div className="animate-in slide-in-from-top-2 duration-300">
-            <CardContent className="pt-0 space-y-4">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search notifications..."
-                      value={searchTerm}
-                      onChange={e => setSearchTerm(e.target.value)}
-                      className="pl-9"
-                    />
+          </CardHeader>
+          {isFilterExpanded && (
+            <div className="animate-in slide-in-from-top-2 duration-300">
+              <CardContent className="pt-0 space-y-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search notifications..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
                   </div>
+                  <Select
+                    value={filterType}
+                    onValueChange={value =>
+                      setFilterType(value as NotificationType | 'all')
+                    }
+                  >
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="Filter by type" />
+                    </SelectTrigger>
+                    <SelectContent
+                      position="popper"
+                      side="bottom"
+                      align="start"
+                      className="min-w-0 w-auto max-w-[200px]"
+                      sideOffset={4}
+                    >
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="flight_update">
+                        Flight Updates
+                      </SelectItem>
+                      <SelectItem value="traffic_alert">
+                        Traffic Alerts
+                      </SelectItem>
+                      <SelectItem value="run_reminder">
+                        Run Reminders
+                      </SelectItem>
+                      <SelectItem value="status_change">
+                        Status Changes
+                      </SelectItem>
+                      <SelectItem value="system">System</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={filterRead}
+                    onValueChange={value =>
+                      setFilterRead(value as 'all' | 'read' | 'unread')
+                    }
+                  >
+                    <SelectTrigger className="w-full sm:w-[140px]">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent
+                      position="popper"
+                      side="bottom"
+                      align="start"
+                      className="min-w-0 w-auto max-w-[150px]"
+                      sideOffset={4}
+                    >
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="unread">Unread</SelectItem>
+                      <SelectItem value="read">Read</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Select
-                  value={filterType}
-                  onValueChange={value =>
-                    setFilterType(value as NotificationType | 'all')
-                  }
-                >
-                  <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Filter by type" />
-                  </SelectTrigger>
-                  <SelectContent
-                    position="popper"
-                    side="bottom"
-                    align="start"
-                    className="min-w-0 w-auto max-w-[200px]"
-                    sideOffset={4}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setSortBy(
+                        sortBy === 'created_at' ? 'updated_at' : 'created_at'
+                      )
+                    }
+                    className="w-full sm:w-auto"
                   >
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="flight_update">
-                      Flight Updates
-                    </SelectItem>
-                    <SelectItem value="traffic_alert">
-                      Traffic Alerts
-                    </SelectItem>
-                    <SelectItem value="run_reminder">Run Reminders</SelectItem>
-                    <SelectItem value="status_change">
-                      Status Changes
-                    </SelectItem>
-                    <SelectItem value="system">System</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={filterRead}
-                  onValueChange={value =>
-                    setFilterRead(value as 'all' | 'read' | 'unread')
-                  }
-                >
-                  <SelectTrigger className="w-full sm:w-[140px]">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent
-                    position="popper"
-                    side="bottom"
-                    align="start"
-                    className="min-w-0 w-auto max-w-[150px]"
-                    sideOffset={4}
+                    <Clock className="h-4 w-4 mr-2" />
+                    <span className="sm:hidden">Sort</span>
+                    <span className="hidden sm:inline">
+                      Sort by {sortBy === 'created_at' ? 'Created' : 'Updated'}
+                    </span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearFilters}
+                    className="w-full sm:w-auto text-muted-foreground"
                   >
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="unread">Unread</SelectItem>
-                    <SelectItem value="read">Read</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setSortBy(
-                      sortBy === 'created_at' ? 'updated_at' : 'created_at'
-                    )
-                  }
-                  className="w-full sm:w-auto"
-                >
-                  <Clock className="h-4 w-4 mr-2" />
-                  <span className="sm:hidden">Sort</span>
-                  <span className="hidden sm:inline">
-                    Sort by {sortBy === 'created_at' ? 'Created' : 'Updated'}
-                  </span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="w-full sm:w-auto text-muted-foreground"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Clear Filters
-                </Button>
-              </div>
-            </CardContent>
-          </div>
-        )}
-      </Card>
+                    <X className="h-4 w-4 mr-2" />
+                    Clear Filters
+                  </Button>
+                </div>
+              </CardContent>
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* Notifications List */}
       <div className="space-y-3">

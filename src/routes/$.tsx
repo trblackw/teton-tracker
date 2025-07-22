@@ -6,9 +6,11 @@ import {
   CardHeader,
   CardTitle,
 } from '../components/ui/card';
+import { useOrgRoutePath } from '../lib/hooks';
 
 function NotFoundPage() {
   const navigate = useNavigate();
+  const orgPath = useOrgRoutePath();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -28,7 +30,7 @@ function NotFoundPage() {
         <CardContent className="space-y-3 flex justify-center items-center">
           <Button
             variant="link"
-            onClick={() => navigate({ to: '/runs' })}
+            onClick={() => navigate({ to: orgPath('/runs') })}
             className="text-highlight hover:text-highlight/80 underline"
           >
             Go to Runs

@@ -2,8 +2,8 @@ import { cn } from '@/lib/cn';
 import type { ReactNode } from 'react';
 
 interface StickyHeaderProps {
-  title: string;
-  subtitle?: string;
+  title: ReactNode;
+  subtitle?: ReactNode;
   actions?: ReactNode;
   children?: ReactNode;
   className?: string;
@@ -40,7 +40,7 @@ export function StickyHeader({
                   {title}
                 </h1>
                 {subtitle && (
-                  <p className="text-sm text-muted-foreground mt-1 truncate">
+                  <p className="text-sm text-muted-foreground mt-1 truncate text-wrap">
                     {subtitle}
                   </p>
                 )}
@@ -48,7 +48,7 @@ export function StickyHeader({
             </div>
           </div>
           {actions && (
-            <div className="flex-shrink-0 ml-4">
+            <div className="flex-shrink-0 ml-1">
               <div className="flex items-center gap-2">{actions}</div>
             </div>
           )}

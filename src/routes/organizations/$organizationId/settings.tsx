@@ -36,6 +36,7 @@ import {
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
 import PageWrapper from '../../../components/ui/page-wrapper';
+import { StickyHeader } from '../../../components/ui/sticky-header';
 import { TimezoneCombobox } from '../../../components/ui/timezone-combobox';
 import { IOSToggle } from '../../../components/ui/toggle';
 import airportsData from '../../../data/airports-comprehensive.json';
@@ -310,12 +311,10 @@ function SettingsPage() {
 
   return (
     <PageWrapper>
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">Settings</h2>
-        <p className="text-muted-foreground mt-1">
-          Configure your preferences & settings
-        </p>
-      </div>
+      <StickyHeader
+        title="Settings"
+        subtitle="Manage your account & preferences"
+      />
 
       {/* Account Settings Section */}
       <Card>

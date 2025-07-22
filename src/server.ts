@@ -8,7 +8,9 @@ import * as preferencesApi from './api/preferences';
 import * as reportTemplatesApi from './api/report-templates';
 import * as runsApi from './api/runs';
 import * as seedApi from './api/seed';
+import type { OrganizationRequest } from './lib/api/api-tools';
 import { auth } from './lib/auth';
+import { SUPER_ADMIN_EMAIL } from './lib/environment';
 
 // Server configuration interface
 export interface ServerConfig {
@@ -18,9 +20,10 @@ export interface ServerConfig {
 }
 
 // Type definitions for context variables
-type Variables = {
+interface Variables {
   organizationId: string;
-};
+  isSuperAdmin?: boolean;
+}
 
 // Custom middleware to extract and validate organizationId from route parameters
 const organizationMiddleware = createMiddleware<{ Variables: Variables }>(
@@ -31,8 +34,25 @@ const organizationMiddleware = createMiddleware<{ Variables: Variables }>(
       return c.json({ error: 'Organization ID is required' }, 400);
     }
 
-    // Set organizationId in context for downstream handlers
+    // Get current user from BetterAuth session to check super-admin status
+    let isSuperAdmin = false;
+    try {
+      const session = await auth.api.getSession({
+        headers: c.req.raw.headers,
+      });
+
+      if (session?.user?.email) {
+        // Check if user is super-admin
+        isSuperAdmin = session.user.email === SUPER_ADMIN_EMAIL;
+      }
+    } catch (error) {
+      console.error('Error checking user session in middleware:', error);
+      // Continue without super-admin privileges if session check fails
+    }
+
+    // Set organizationId and isSuperAdmin in context for downstream handlers
     c.set('organizationId', organizationId);
+    c.set('isSuperAdmin', isSuperAdmin);
 
     await next();
   }
@@ -41,17 +61,18 @@ const organizationMiddleware = createMiddleware<{ Variables: Variables }>(
 // Helper function to create request with organizationId and additional params
 function createRequestWithOrgContext(
   c: any,
-  additionalParams: Record<string, string> = {}
-) {
+  additionalParams: Record<string, any> = {}
+): OrganizationRequest {
   const request = new Request(c.req.raw.url, {
     method: c.req.raw.method,
     headers: c.req.raw.headers,
     body: c.req.raw.body,
-  });
+  }) as OrganizationRequest;
 
-  // Add organizationId and any additional params for compatibility with existing API handlers
-  (request as any).params = {
+  // Add organizationId, isSuperAdmin, and any additional params for compatibility with existing API handlers
+  request.params = {
     organizationId: c.get('organizationId'),
+    isSuperAdmin: c.get('isSuperAdmin'),
     ...additionalParams,
   };
 

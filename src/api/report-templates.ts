@@ -1,4 +1,6 @@
+import type { OrganizationRequest } from '../lib/api/api-tools';
 import { initJSONResponse } from '../lib/api/api-tools';
+import { getUserOrganizationId } from '../lib/api/server-utils';
 import { getDatabase } from '../lib/db';
 import {
   reportTemplatesDb,
@@ -6,23 +8,6 @@ import {
 } from '../lib/db/report-templates-db';
 import { type ReportTemplateForm, type ReportType } from '../lib/schema';
 import { getCurrentAuthUser } from './auth';
-
-// Helper function to get user's organization ID from BetterAuth database
-async function getUserOrganizationId(userId: string): Promise<string | null> {
-  try {
-    const db = getDatabase();
-
-    const result = await db.query(
-      'SELECT organization_id FROM organization_memberships WHERE user_id = $1 LIMIT 1',
-      [userId]
-    );
-
-    return result.rows.length > 0 ? result.rows[0].organization_id : null;
-  } catch (error) {
-    console.error('Error fetching user organization:', error);
-    return null;
-  }
-}
 
 // Helper function to check if user is admin using BetterAuth database
 async function checkAdminRole(
@@ -59,7 +44,10 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     // Get user's organization
-    const organizationId = await getUserOrganizationId(user.id);
+    const organizationId = await getUserOrganizationId(
+      user.id,
+      request as OrganizationRequest
+    );
     if (!organizationId) {
       return initJSONResponse({ error: 'User not in organization' }, 403);
     }
@@ -105,7 +93,10 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     // Get user's organization
-    const organizationId = await getUserOrganizationId(user.id);
+    const organizationId = await getUserOrganizationId(
+      user.id,
+      request as OrganizationRequest
+    );
     if (!organizationId) {
       return initJSONResponse({ error: 'User not in organization' }, 403);
     }
@@ -155,7 +146,10 @@ export async function PUT(request: Request): Promise<Response> {
     }
 
     // Get user's organization
-    const organizationId = await getUserOrganizationId(user.id);
+    const organizationId = await getUserOrganizationId(
+      user.id,
+      request as OrganizationRequest
+    );
     if (!organizationId) {
       return initJSONResponse({ error: 'User not in organization' }, 403);
     }
@@ -206,7 +200,10 @@ export async function DELETE(request: Request): Promise<Response> {
     }
 
     // Get user's organization
-    const organizationId = await getUserOrganizationId(user.id);
+    const organizationId = await getUserOrganizationId(
+      user.id,
+      request as OrganizationRequest
+    );
     if (!organizationId) {
       return initJSONResponse({ error: 'User not in organization' }, 403);
     }

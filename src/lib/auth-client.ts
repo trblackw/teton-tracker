@@ -1,6 +1,6 @@
 import { organizationClient } from 'better-auth/client/plugins';
 import { createAuthClient } from 'better-auth/react';
-import { getApiBaseUrl } from './environment';
+import { getApiBaseUrl, SUPER_ADMIN_EMAIL } from './environment';
 
 export const authClient = createAuthClient({
   baseURL: `${getApiBaseUrl()}/api/auth`, // Include the full basePath for BetterAuth
@@ -21,7 +21,7 @@ export const { organization } = authClient;
 
 // Super-admin check function
 export function isSuperAdmin(userEmail?: string | null): boolean {
-  return userEmail === 'tuckerblackwell.dev@gmail.com';
+  return userEmail === SUPER_ADMIN_EMAIL;
 }
 
 // Custom hook for user functionality (wraps BetterAuth useSession)
