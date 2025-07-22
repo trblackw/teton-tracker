@@ -27,6 +27,12 @@ import {
   SelectValue,
 } from '../../../components/ui/select';
 import { StickyHeader } from '../../../components/ui/sticky-header';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '../../../components/ui/tabs';
 import { useOrgRunsApi } from '../../../lib/hooks';
 import { useMultipleRunsData } from '../../../lib/hooks/use-api-data';
 import { useTimezoneFormatters } from '../../../lib/hooks/use-timezone';
@@ -188,7 +194,8 @@ function Runs() {
   // Clear filters when switching tabs
   const handleTabChange = (value: string) => {
     const newTab = value as 'current' | 'past';
-    setSelectedStatus('all'); // Reset status filter when switching tabs
+    setActiveTab(newTab);
+    setSelectedStatus('');
     setSearchTerm('');
     setSortBy('scheduledTime');
     setSortOrder('asc');
@@ -500,8 +507,8 @@ function Runs() {
     }
   };
 
-  const renderEmptyState = () => {
-    if (selectedStatus === 'all') {
+  const renderEmptyState = (tab: 'current' | 'past') => {
+    if (tab === 'current') {
       return (
         <Card className="text-center py-12">
           <CardContent>
@@ -513,13 +520,9 @@ function Runs() {
                 <h3 className="text-xl font-medium text-foreground">
                   No current runs
                 </h3>
-                <p className="text-muted-foreground max-w-md">
-                  Schedule your first run to get started tracking flights and
-                  managing your transportation services.
-                </p>
               </div>
               <Link to="/add">
-                <Button className="bg-blue-400 hover:bg-blue-500/90 text-white">
+                <Button className="bg-highlight hover:bg-highlight/90 text-white">
                   <Plus className="mr-2 h-4 w-4" strokeWidth={3} />
                   Schedule Run
                 </Button>
@@ -540,9 +543,6 @@ function Runs() {
                 <h3 className="text-xl font-medium text-foreground">
                   No past runs
                 </h3>
-                <p className="text-muted-foreground max-w-md">
-                  Completed and cancelled runs will appear here.
-                </p>
               </div>
             </div>
           </CardContent>
@@ -632,120 +632,175 @@ function Runs() {
     <PageWrapper>
       <StickyHeader title={title} subtitle={subtitle} />
       <div className="space-y-3 px-4 sm:px-6 lg:px-8">
-        {/* <Tabs value={activeTab} onValueChange={handleTabChange}> */}
-        {/* <TabsList className="grid w-full grid-cols-2"> */}
-        {/* <TabsTrigger value="current"> */}
-        {/* Current{' '} */}
-        {/* <span className="text-sm text-muted-foreground ml-1"> */}
-        {/* ({currentRuns.length}) */}
-        {/* </span> */}
-        {/* </TabsTrigger> */}
-        {/* <TabsTrigger value="past"> */}
-        {/* Past{' '} */}
-        {/* <span className="text-sm text-muted-foreground ml-1"> */}
-        {/* ({pastRuns.length}) */}
-        {/* </span> */}
-        {/* </TabsTrigger> */}
-        {/* </TabsList> */}
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="current">
+              Current{' '}
+              <span className="text-sm text-muted-foreground ml-1">
+                ({currentRuns.length})
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="past">
+              Past{' '}
+              <span className="text-sm text-muted-foreground ml-1">
+                ({pastRuns.length})
+              </span>
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Search & Filter Actions */}
-        <ExpandableActionsDrawer
-          actions={[
-            {
-              id: 'search',
-              icon: <Search className="h-4 w-4" />,
-              label: 'Search Runs',
-              content: <SearchContent />,
-              badge: searchTerm ? '1' : undefined,
-              showHeader: false, // Minimal search with no header
-            },
-            {
-              id: 'filter',
-              icon: <Filter className="h-4 w-4" />,
-              label: 'Filter & Sort',
-              content: <FilterContent />,
-              badge:
-                [
-                  selectedStatus !== 'all',
-                  selectedAirline,
-                  selectedType,
-                ].filter(Boolean).length || undefined,
-              showHeader: false, // Minimal filter with no header
-            },
-          ]}
-        />
-        {/* <TabsContent value="current" className="space-y-4"> */}
-        {selectedStatus === 'all' ? (
-          <div className="grid gap-4">
-            {runsApiData.data
-              .filter(({ run }) =>
-                currentRuns.some(currentRun => currentRun.id === run.id)
+          {/* Search & Filter Actions */}
+          <ExpandableActionsDrawer
+            actions={[
+              {
+                id: 'search',
+                icon: <Search className="h-4 w-4" />,
+                label: 'Search Runs',
+                content: <SearchContent />,
+                badge: searchTerm ? '1' : undefined,
+                showHeader: false, // Minimal search with no header
+              },
+              {
+                id: 'filter',
+                icon: <Filter className="h-4 w-4" />,
+                label: 'Filter & Sort',
+                content: <FilterContent />,
+                badge:
+                  [selectedAirline, selectedStatus, selectedType].filter(
+                    Boolean
+                  ).length || undefined,
+                showHeader: false, // Minimal filter with no header
+              },
+            ]}
+          />
+          <TabsContent value="current" className="space-y-4">
+            {currentRuns.length === 0 ? (
+              // Check if it's due to filtering
+              (searchTerm ||
+                selectedAirline ||
+                selectedStatus ||
+                selectedType) &&
+              baseCurrentRuns.length > 0 ? (
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <div className="flex flex-col items-center justify-center space-y-4">
+                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+                        <Search className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="text-xl font-medium text-foreground">
+                          No matching runs found
+                        </h3>
+                        <p className="text-muted-foreground max-w-md">
+                          No current runs match your search criteria. Try
+                          adjusting your filters.
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          setSearchTerm('');
+                          setSelectedAirline('');
+                          setSelectedStatus('');
+                          setSelectedType('');
+                        }}
+                        variant="outline"
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Clear Filters
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                renderEmptyState('current')
               )
-              .map(({ run, flightStatus, trafficData }) => (
-                <RunCard
-                  key={run.id}
-                  run={run}
-                  runsLoading={runsApiData.isLoading}
-                  runsError={runsApiData.isError}
-                  trafficData={trafficData}
-                  handleStopRun={handleStopRun}
-                  handleEditRun={handleEditRun}
-                  refreshRunData={refreshRunData}
-                  flightStatus={flightStatus}
-                  formatTime={formatTime}
-                />
-              ))}
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {runsApiData.data
-              .filter(({ run }) =>
-                pastRuns.some(pastRun => pastRun.id === run.id)
-              )
-              .map(({ run, flightStatus, trafficData }) => (
-                <RunCard
-                  key={run.id}
-                  run={run}
-                  runsLoading={runsApiData.isLoading}
-                  runsError={runsApiData.isError}
-                  trafficData={trafficData}
-                  handleStopRun={handleStopRun}
-                  handleEditRun={handleEditRun}
-                  refreshRunData={refreshRunData}
-                  flightStatus={flightStatus}
-                />
-              ))}
-          </div>
-        )}
-        {/* </TabsContent> */}
+            ) : (
+              <div className="grid gap-4">
+                {runsApiData.data
+                  .filter(({ run }) =>
+                    currentRuns.some(currentRun => currentRun.id === run.id)
+                  )
+                  .map(({ run, flightStatus, trafficData }) => (
+                    <RunCard
+                      key={run.id}
+                      run={run}
+                      runsLoading={runsApiData.isLoading}
+                      runsError={runsApiData.isError}
+                      trafficData={trafficData}
+                      handleStopRun={handleStopRun}
+                      handleEditRun={handleEditRun}
+                      refreshRunData={refreshRunData}
+                      flightStatus={flightStatus}
+                      formatTime={formatTime}
+                    />
+                  ))}
+              </div>
+            )}
+          </TabsContent>
 
-        {/* Delete Confirmation Dialog */}
-        {/* <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}> */}
-        {/* <DialogContent> */}
-        {/* <DialogHeader> */}
-        {/* <DialogTitle>Delete Run</DialogTitle> */}
-        {/* <DialogDescription> */}
-        {/* Are you sure you want to delete this run? This action cannot be */}
-        {/* undone. */}
-        {/* </DialogDescription> */}
-        {/* </DialogHeader> */}
-        {/* <DialogFooter> */}
-        {/* <Button */}
-        {/* variant="outline" */}
-        {/* onClick={() => setDeleteDialogOpen(false)} */}
-        {/* > */}
-        {/* Cancel */}
-        {/* </Button> */}
-        {/* <Button */}
-        {/* variant="destructive" */}
-        {/* onClick={confirmDelete} */}
-        {/* disabled={deleteRunMutation.isPending} */}
-        {/* > */}
-        {/* {deleteRunMutation.isPending ? 'Deleting...' : 'Delete'} */}
-        {/* </Button> */}
-        {/* </DialogFooter> */}
-        {/* </DialogContent> */}
-        {/* </Dialog> */}
+          <TabsContent value="past" className="space-y-4">
+            {pastRuns.length === 0 ? (
+              // Check if it's due to filtering
+              (searchTerm ||
+                selectedAirline ||
+                selectedStatus ||
+                selectedType) &&
+              basePastRuns.length > 0 ? (
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <div className="flex flex-col items-center justify-center space-y-4">
+                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+                        <Search className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="text-xl font-medium text-foreground">
+                          No matching runs found
+                        </h3>
+                        <p className="text-muted-foreground max-w-md">
+                          No past runs match your search criteria. Try adjusting
+                          your filters.
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          setSearchTerm('');
+                          setSelectedAirline('');
+                          setSelectedStatus('');
+                          setSelectedType('');
+                        }}
+                        variant="outline"
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Clear Filters
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                renderEmptyState('past')
+              )
+            ) : (
+              <div className="grid gap-4">
+                {runsApiData.data
+                  .filter(({ run }) =>
+                    pastRuns.some(pastRun => pastRun.id === run.id)
+                  )
+                  .map(({ run, flightStatus, trafficData }) => (
+                    <RunCard
+                      key={run.id}
+                      run={run}
+                      runsLoading={runsApiData.isLoading}
+                      runsError={runsApiData.isError}
+                      trafficData={trafficData}
+                      handleStopRun={handleStopRun}
+                      handleEditRun={handleEditRun}
+                      refreshRunData={refreshRunData}
+                      flightStatus={flightStatus}
+                    />
+                  ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </PageWrapper>
   );

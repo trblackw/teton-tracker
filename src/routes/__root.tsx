@@ -52,7 +52,7 @@ import { useCurrentRunsCount, useMobile, useOrgRoutePath } from '../lib/hooks';
 import { queryClient } from '../lib/react-query-client';
 import { toasts } from '../lib/toast';
 
-const activeNavClass = 'bg-primary/10 text-blue-500';
+const activeNavClass = 'bg-primary/10 text-highlight';
 
 /**
  * Role-Based Navigation System
@@ -137,6 +137,9 @@ function DriverNavItems() {
           activeProps={{
             className: activeNavClass,
           }}
+          activeOptions={{
+            exact: true, // Only active on exact /runs path
+          }}
         >
           <Car className="h-4 w-4" />
           Current Runs
@@ -166,6 +169,9 @@ function DriverNavItems() {
           activeProps={{
             className: activeNavClass,
           }}
+          activeOptions={{
+            exact: true, // Only active on exact /notifications path
+          }}
         >
           <Bell className="h-4 w-4" />
           Notifications
@@ -177,6 +183,9 @@ function DriverNavItems() {
           className="flex items-center gap-2"
           activeProps={{
             className: activeNavClass,
+          }}
+          activeOptions={{
+            exact: true, // Only active on exact org index path
           }}
         >
           <Building2 className="h-4 w-4" />
@@ -216,6 +225,9 @@ function AdminNavItems() {
           activeProps={{
             className: activeNavClass,
           }}
+          activeOptions={{
+            exact: true,
+          }}
         >
           <BarChart3 className="h-4 w-4" />
           Reports
@@ -227,6 +239,9 @@ function AdminNavItems() {
           className="flex items-center gap-2"
           activeProps={{
             className: activeNavClass,
+          }}
+          activeOptions={{
+            exact: true,
           }}
         >
           <Users className="h-4 w-4" />
@@ -240,6 +255,9 @@ function AdminNavItems() {
           activeProps={{
             className: activeNavClass,
           }}
+          activeOptions={{
+            exact: true,
+          }}
         >
           <Plus className="h-4 w-4" />
           Add Runs
@@ -252,6 +270,9 @@ function AdminNavItems() {
           activeProps={{
             className: activeNavClass,
           }}
+          activeOptions={{
+            exact: true,
+          }}
         >
           <FileText className="h-4 w-4" />
           Request Run Report
@@ -263,6 +284,9 @@ function AdminNavItems() {
           className="flex items-center gap-2"
           activeProps={{
             className: activeNavClass,
+          }}
+          activeOptions={{
+            exact: true,
           }}
         >
           <LayoutTemplate className="h-4 w-4" />
@@ -294,6 +318,9 @@ function SuperAdminNavItems() {
           className="flex items-center gap-2"
           activeProps={{
             className: activeNavClass,
+          }}
+          activeOptions={{
+            exact: true,
           }}
         >
           <Building2 className="h-4 w-4" />

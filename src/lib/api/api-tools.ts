@@ -49,7 +49,7 @@ export function buildOrgApiUrl(
   const normalizedEndpoint = endpoint.startsWith('/')
     ? endpoint
     : `/${endpoint}`;
-  return `${baseUrl}/api/organizations/${organizationId}${normalizedEndpoint}`;
+  return `${baseUrl}/organizations/${organizationId}${normalizedEndpoint}`;
 }
 
 export const API_BASE = getApiUrl();
