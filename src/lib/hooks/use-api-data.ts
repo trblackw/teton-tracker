@@ -300,3 +300,39 @@ export function useCachedApiData(
     hasCachedTrafficData: !!trafficQuery.data,
   };
 }
+
+// Hook for fetching organization invitations with network awareness
+export function useOrganizationInvitations(
+  organizationId: string,
+  enabled: boolean = true
+) {
+  const networkOptions = useNetworkAwareOptions();
+  const { isOffline } = useNetworkStatus();
+
+  return useQuery({
+    queryKey: queryKeys.organizationInvitations(organizationId),
+    queryFn: async () => {
+      const { authClient } = await import('../auth-client');
+      const { data, error } = await authClient.organization.listInvitations({
+        query: { organizationId },
+      });
+
+      if (error) {
+        throw new Error(
+          `Failed to load invitations: ${error.message || 'Unknown error'}`
+        );
+      }
+
+      return data || [];
+    },
+    enabled: enabled && !!organizationId && !isOffline,
+    staleTime: networkOptions.staleTime,
+    gcTime: networkOptions.gcTime,
+    refetchOnWindowFocus: networkOptions.refetchOnWindowFocus,
+    refetchOnReconnect: networkOptions.refetchOnReconnect,
+    retry: networkOptions.retry,
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+    // Return cached data even when query is disabled (offline)
+    placeholderData: previousData => previousData,
+  });
+}

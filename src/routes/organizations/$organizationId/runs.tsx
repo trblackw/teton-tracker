@@ -510,7 +510,7 @@ function Runs() {
   const renderEmptyState = (tab: 'current' | 'past') => {
     if (tab === 'current') {
       return (
-        <Card className="text-center py-12">
+        <Card className="text-center">
           <CardContent>
             <div className="flex flex-col items-center justify-center space-y-4">
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
@@ -533,7 +533,7 @@ function Runs() {
       );
     } else {
       return (
-        <Card className="text-center py-12">
+        <Card className="text-center ">
           <CardContent>
             <div className="flex flex-col items-center justify-center space-y-4">
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
@@ -592,7 +592,7 @@ function Runs() {
 
   if (runsError) {
     return (
-      <Card className="text-center py-12">
+      <Card className="text-center ">
         <CardContent>
           <div className="flex flex-col items-center justify-center space-y-4">
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
@@ -631,7 +631,7 @@ function Runs() {
   return (
     <PageWrapper>
       <StickyHeader title={title} subtitle={subtitle} />
-      <div className="space-y-3 px-4 sm:px-6 lg:px-8">
+      <div className="space-y-3">
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="current">
@@ -650,6 +650,11 @@ function Runs() {
 
           {/* Search & Filter Actions */}
           <ExpandableActionsDrawer
+            disabled={
+              runsApiData.isLoading ||
+              (activeTab === 'current' && !currentRuns.length) ||
+              (activeTab === 'past' && !pastRuns.length)
+            }
             actions={[
               {
                 id: 'search',
@@ -680,7 +685,7 @@ function Runs() {
                 selectedStatus ||
                 selectedType) &&
               baseCurrentRuns.length > 0 ? (
-                <Card className="text-center py-12">
+                <Card className="text-center ">
                   <CardContent>
                     <div className="flex flex-col items-center justify-center space-y-4">
                       <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
@@ -745,7 +750,7 @@ function Runs() {
                 selectedStatus ||
                 selectedType) &&
               basePastRuns.length > 0 ? (
-                <Card className="text-center py-12">
+                <Card className="text-center ">
                   <CardContent>
                     <div className="flex flex-col items-center justify-center space-y-4">
                       <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">

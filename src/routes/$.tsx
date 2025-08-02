@@ -13,7 +13,7 @@ function NotFoundPage() {
   const orgPath = useOrgRoutePath();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="min-h-full flex items-start justify-center bg-background pt-16 px-4">
       <Card className="w-full max-w-2xl">
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center">
@@ -21,11 +21,7 @@ function NotFoundPage() {
               404
             </span>
           </div>
-          <CardTitle className="text-3xl font-bold">Page Not Found</CardTitle>
-          <p className="text-muted-foreground text-lg">
-            Sorry, we couldn't find the page you're looking for. It might have
-            been moved, deleted, or you entered the wrong URL.
-          </p>
+          <CardTitle className="text-2xl font-bold">Page Not Found</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 flex justify-center items-center">
           <Button

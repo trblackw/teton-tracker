@@ -141,7 +141,7 @@ function MembersPage() {
       {/* Empty State */}
       {filteredMembers.length === 0 && members.length > 0 && (
         <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12">
+          <CardContent className="flex flex-col items-center justify-center ">
             <Search className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <h3 className="text-lg font-semibold mb-2">No members found</h3>
             <p className="text-sm text-muted-foreground text-center">
@@ -154,7 +154,7 @@ function MembersPage() {
       {/* No Members */}
       {members.length === 0 && (
         <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12">
+          <CardContent className="flex flex-col items-center justify-center ">
             <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <h3 className="text-lg font-semibold mb-2">No members yet</h3>
             <p className="text-sm text-muted-foreground text-center mb-6">

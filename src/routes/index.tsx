@@ -1,5 +1,6 @@
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { authClient } from '../lib/auth-client';
+import { getPostSignInNavigationPath } from '../lib/hooks/use-org-navigation';
 
 export const Route = createFileRoute('/')({
   beforeLoad: async () => {
@@ -12,21 +13,9 @@ export const Route = createFileRoute('/')({
       });
     }
 
-    // Get user's organizations
-    const organizationsResponse = await authClient.organization.list();
-
-    if (organizationsResponse.data && organizationsResponse.data.length > 0) {
-      // Redirect to the first organization's runs page
-      throw redirect({
-        to: '/organizations/$organizationId/runs',
-        params: { organizationId: organizationsResponse.data[0].id },
-      });
-    }
-
-    // If no organizations, redirect to no-organization page
-    throw redirect({
-      to: '/no-organization',
-    });
+    // Get the appropriate navigation path for this user
+    const navigationPath = await getPostSignInNavigationPath();
+    throw redirect(navigationPath);
   },
   component: () => <div>Redirecting...</div>,
 });

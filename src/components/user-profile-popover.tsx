@@ -16,6 +16,7 @@ import {
   useUserOrganization,
   useUserOrganizations,
 } from '../lib/auth-client';
+import { useOrgRoutePath } from '../lib/hooks';
 import { useCurrentUserData } from '../lib/hooks/use-user';
 import { toasts } from '../lib/toast';
 import { Button } from './ui/button';
@@ -205,6 +206,7 @@ export function UserProfilePopover() {
   const { user: currentUser, isLoading: userLoading } = useCurrentUserData();
   const { data: organization } = useUserOrganization();
   const isSuperAdmin = useIsSuperAdmin();
+  const orgPath = useOrgRoutePath();
 
   if (userLoading || !currentUser) {
     return null;
@@ -288,7 +290,7 @@ export function UserProfilePopover() {
             className="w-full justify-start h-8 px-2 text-sm"
           >
             <Link
-              to="/settings"
+              to={orgPath('/settings')}
               className="flex items-center gap-2"
               onClick={handleNavClick}
             >

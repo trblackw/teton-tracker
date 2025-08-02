@@ -255,7 +255,7 @@ function DriversPage() {
   if (isLoading) {
     return (
       <PageWrapper>
-        <div className="flex items-center justify-center py-12">
+        <div className="flex items-center justify-center ">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground">Loading drivers...</p>
@@ -268,7 +268,7 @@ function DriversPage() {
   if (!organization) {
     return (
       <PageWrapper>
-        <div className="text-center py-12">
+        <div className="text-center ">
           <Users className="h-12 w-12 text-destructive mx-auto mb-4" />
           <h1 className="text-2xl font-bold mb-4">
             Error Loading Organization
@@ -284,7 +284,7 @@ function DriversPage() {
   if (!currentUser) {
     return (
       <PageWrapper>
-        <div className="text-center py-12">
+        <div className="text-center">
           <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
           <h1 className="text-2xl font-bold mb-4">Unauthorized</h1>
           <p className="text-muted-foreground">
@@ -302,6 +302,7 @@ function DriversPage() {
       <StickyHeader title="Drivers" subtitle="View & manage active runs">
         <ExpandableActionsDrawer
           actions={drawerActions}
+          disabled={!drivers.length}
           onClearAll={filtersApplied ? clearFilters : undefined}
           rightContent={
             filtersApplied ? (
@@ -524,7 +525,7 @@ function DriversPage() {
 
         {filteredDrivers.length === 0 && drivers.length > 0 && (
           <Card className="border-dashed">
-            <CardContent className="text-center py-12">
+            <CardContent className="text-center ">
               <Filter className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
               <h3 className="text-lg font-medium mb-2">
                 No Drivers Match Criteria
@@ -541,14 +542,11 @@ function DriversPage() {
 
         {drivers.length === 0 && (
           <Card className="border-dashed">
-            <CardContent className="text-center py-12">
+            <CardContent className="text-center">
               <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
               <h3 className="text-lg font-medium mb-2">No Drivers Found</h3>
               <p className="text-muted-foreground text-sm mb-4">
                 No other organization members found to display as drivers
-              </p>
-              <p className="text-muted-foreground text-xs">
-                Add more members to your organization to see them here.
               </p>
             </CardContent>
           </Card>

@@ -118,7 +118,7 @@ function SuperAdminPage() {
       {/* Empty State */}
       {filteredOrgs.length === 0 && organizations.length > 0 && (
         <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12">
+          <CardContent className="flex flex-col items-center justify-center">
             <Search className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <h3 className="text-lg font-semibold mb-2">
               No organizations found
@@ -133,7 +133,7 @@ function SuperAdminPage() {
       {/* No Organizations */}
       {organizations.length === 0 && (
         <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12">
+          <CardContent className="flex flex-col items-center justify-center ">
             <Building2 className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <h3 className="text-lg font-semibold mb-2">No organizations yet</h3>
             <p className="text-sm text-muted-foreground text-center mb-6">

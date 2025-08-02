@@ -19,6 +19,7 @@ import {
   FormLabel,
   FormMessage,
 } from '../components/ui/form';
+import { FullScreenLoader } from '../components/ui/full-screen-loader';
 import { Input } from '../components/ui/input';
 import { authClient, signUp } from '../lib/auth-client';
 import { checkAuthRedirect } from '../lib/hooks/use-auth-redirect';
@@ -52,6 +53,7 @@ type SignUpForm = z.infer<typeof signUpSchema>;
 
 function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const navigate = useNavigate();
   const { redirect, email, org } = Route.useSearch();
   const acceptingInvitation = redirect?.startsWith('/accept-invitation/');
@@ -158,32 +160,71 @@ function SignUpPage() {
         } else {
           toasts.error(errorMessage);
         }
+        setIsLoading(false);
         return;
       }
 
       // Success - account created and user should be signed in
       if (isInvitationSignUp) {
-        toasts.success(
-          'Account created successfully! Completing invitation...'
-        );
+        // Auto-accept the invitation for new signups
+        const invitationId = getInvitationId();
+        if (invitationId) {
+          try {
+            const { error: acceptError } =
+              await authClient.organization.acceptInvitation({
+                invitationId,
+              });
 
-        // For invitation signups, redirect to accept invitation to complete the flow
-        setTimeout(() => {
-          if (redirect) {
-            window.location.href = redirect; // Complete the invitation acceptance
-          } else {
-            navigate({ to: '/' });
+            if (acceptError) {
+              console.error('Failed to auto-accept invitation:', acceptError);
+              toasts.error(
+                'Account created but failed to join organization. Please contact support.'
+              );
+              setIsLoading(false);
+              return;
+            }
+
+            toasts.success(
+              `Account created successfully! Welcome to ${organizationName || 'the organization'}!`
+            );
+
+            // Set authenticating state first to prevent form flicker
+            setIsAuthenticating(true);
+            setIsLoading(false);
+
+            // Redirect directly to the organization
+            const organizationCallbackUrl = await getOrganizationCallbackUrl();
+            setTimeout(() => {
+              if (organizationCallbackUrl !== '/') {
+                window.location.href = organizationCallbackUrl;
+              } else {
+                navigate({ to: '/' });
+              }
+            }, 800);
+          } catch (err) {
+            console.error('Failed to auto-accept invitation:', err);
+            toasts.error(
+              'Account created but failed to join organization. Please contact support.'
+            );
+            setIsLoading(false);
           }
-        }, 500);
+        } else {
+          toasts.error('Invalid invitation link. Please contact support.');
+          setIsLoading(false);
+        }
       } else {
         toasts.success(
           'Account created successfully! Welcome to Teton Tracker!'
         );
 
+        // Set authenticating state first to prevent form flicker
+        setIsAuthenticating(true);
+        setIsLoading(false);
+
         // Regular signup - redirect to home
         setTimeout(() => {
           navigate({ to: '/' });
-        }, 500);
+        }, 800);
       }
     } catch (error: any) {
       // Handle network errors or other unexpected errors
@@ -198,10 +239,16 @@ function SignUpPage() {
         toasts.error('An unexpected error occurred. Please try again.');
       }
       console.error('Sign-up error:', error);
-    } finally {
       setIsLoading(false);
+    } finally {
+      // Loading state is explicitly managed in success and error cases
     }
   };
+
+  // Show full-screen loader when authenticating
+  if (isAuthenticating) {
+    return <FullScreenLoader message="Setting up your account..." />;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -237,7 +284,7 @@ function SignUpPage() {
                     <FormControl>
                       <Input
                         placeholder="Enter your full name"
-                        disabled={isLoading}
+                        disabled={isLoading || isAuthenticating}
                         {...field}
                       />
                     </FormControl>
@@ -261,7 +308,7 @@ function SignUpPage() {
                             ? 'Email from invitation'
                             : 'Enter your email'
                         }
-                        disabled={isLoading}
+                        disabled={isLoading || isAuthenticating}
                         readOnly={isInvitationSignUp}
                         className={
                           isInvitationSignUp
@@ -292,7 +339,7 @@ function SignUpPage() {
                       <Input
                         type="password"
                         placeholder="Enter your password"
-                        disabled={isLoading}
+                        disabled={isLoading || isAuthenticating}
                         {...field}
                       />
                     </FormControl>
@@ -314,7 +361,7 @@ function SignUpPage() {
                         <Input
                           type="password"
                           placeholder="Confirm your password"
-                          disabled={isLoading}
+                          disabled={isLoading || isAuthenticating}
                           {...field}
                         />
                         {passwordsMatch && (
@@ -333,36 +380,34 @@ function SignUpPage() {
               >
                 {isLoading
                   ? isInvitationSignUp
-                    ? 'Accepting invitation...'
+                    ? 'Creating account & joining organization...'
                     : 'Creating account...'
                   : !isFormSubmittable()
                     ? 'Please fill out all fields'
                     : isInvitationSignUp
-                      ? 'Accept Invite & Create Account'
+                      ? 'Create Account & Join Organization'
                       : 'Create Account'}
               </Button>
             </form>
           </Form>
 
-          {!isInvitationSignUp && (
-            <div className="mt-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                Already have an account?{' '}
-                <Button
-                  variant="link"
-                  className="p-0 h-auto font-bold text-highlight hover:text-highlight/80 underline"
-                  onClick={() =>
-                    navigate({
-                      to: '/sign-in',
-                      search: redirect ? { redirect } : undefined,
-                    })
-                  }
-                >
-                  Sign in
-                </Button>
-              </p>
-            </div>
-          )}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              Already have an account?{' '}
+              <Button
+                variant="link"
+                className="p-0 h-auto font-bold text-highlight hover:text-highlight/80 underline"
+                onClick={() =>
+                  navigate({
+                    to: '/sign-in',
+                    search: redirect ? { redirect } : undefined,
+                  })
+                }
+              >
+                Sign in
+              </Button>
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

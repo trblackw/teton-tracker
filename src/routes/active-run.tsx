@@ -209,7 +209,7 @@ function ActiveRunPage() {
     return (
       <div className="space-y-6">
         <Card>
-          <CardContent className="py-12 text-center">
+          <CardContent className="text-center">
             <div className="space-y-4">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
                 <Car className="h-8 w-8 text-gray-400" />

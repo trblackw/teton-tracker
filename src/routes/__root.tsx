@@ -12,7 +12,6 @@ import {
   Car,
   FileText,
   LayoutTemplate,
-  Plane,
   Plus,
   Users,
 } from 'lucide-react';
@@ -151,7 +150,7 @@ function DriverNavItems() {
           )}
         </MobileAwareNavLink>
       </Button>
-      <Button asChild variant="ghost" className="w-full justify-start">
+      {/* <Button asChild variant="ghost" className="w-full justify-start">
         <MobileAwareNavLink
           to="/flights"
           className="flex items-center gap-2"
@@ -162,7 +161,7 @@ function DriverNavItems() {
           <Plane className="h-4 w-4" />
           Upcoming Flights
         </MobileAwareNavLink>
-      </Button>
+      </Button> */}
       <Button asChild variant="ghost" className="w-full justify-start">
         <MobileAwareNavLink
           to={getOrgPath('/notifications')}

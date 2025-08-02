@@ -293,7 +293,7 @@ function DriverDetailPage() {
   if (runsLoading || driverLoading) {
     return (
       <PageWrapper>
-        <div className="flex items-center justify-center py-12">
+        <div className="flex items-center justify-center ">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground">Loading driver details...</p>
@@ -306,7 +306,7 @@ function DriverDetailPage() {
   if (runsError) {
     return (
       <PageWrapper>
-        <div className="text-center py-12">
+        <div className="text-center ">
           <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
           <h1 className="text-2xl font-bold mb-4">Error Loading Data</h1>
           <p className="text-muted-foreground">

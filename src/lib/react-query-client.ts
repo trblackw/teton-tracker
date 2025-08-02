@@ -57,7 +57,6 @@ export const queryClient = new QueryClient({
       },
 
       // Refetch configuration optimized for low connectivity
-      refetchOnWindowFocus: false, // Don't refetch on window focus to save bandwidth
       refetchOnReconnect: true, // Refetch when network reconnects
       refetchOnMount: 'always', // Always refetch when component mounts with fresh data
 
@@ -155,6 +154,8 @@ export const queryKeys = {
   organizations: () => ['organizations'] as const,
   organizationMembers: (orgId: string) =>
     ['organization-members', orgId] as const,
+  organizationInvitations: (orgId: string) =>
+    ['organization-invitations', orgId] as const,
   userRole: (orgId: string) => ['user-role', orgId] as const,
   userPermissions: () => ['user-permissions'] as const,
 } as const;

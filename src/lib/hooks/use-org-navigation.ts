@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router';
-import { useUserOrganization } from '../auth-client';
+import { authClient, useUserOrganization } from '../auth-client';
 
 /**
  * Hook that returns a function to get organizational route paths
@@ -73,4 +73,40 @@ export function useCurrentOrgId(): string | undefined {
 export function useCurrentOrganization() {
   const { data: organization, ...rest } = useUserOrganization();
   return { data: organization || null, ...rest };
+}
+
+/**
+ * Helper function to determine where to navigate a user after sign-in based on their organizations
+ * This is used during authentication flow to redirect to the appropriate page
+ */
+export async function getPostSignInNavigationPath(): Promise<{
+  to: string;
+  params?: any;
+}> {
+  try {
+    // Get user's organizations
+    const organizationsResponse = await authClient.organization.list();
+
+    if (organizationsResponse.data && organizationsResponse.data.length > 0) {
+      // Navigate to the first organization's home page (runs)
+      return {
+        to: '/organizations/$organizationId/runs',
+        params: { organizationId: organizationsResponse.data[0].id },
+      };
+    }
+
+    // If no organizations, redirect to no-organization page
+    return {
+      to: '/no-organization',
+    };
+  } catch (error) {
+    console.error(
+      'Failed to get user organizations for post-signin navigation:',
+      error
+    );
+    // Fallback to home page
+    return {
+      to: '/',
+    };
+  }
 }

@@ -29,6 +29,7 @@ import {
 } from '../../../components/ui/form';
 import { Input } from '../../../components/ui/input';
 import { OrganizationLink } from '../../../components/ui/organization-link';
+import PageWrapper from '../../../components/ui/page-wrapper';
 import {
   Select,
   SelectContent,
@@ -36,6 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../components/ui/select';
+import { StickyHeader } from '../../../components/ui/sticky-header';
 import { Textarea } from '../../../components/ui/textarea';
 import {
   useCurrentOrgId,
@@ -86,8 +88,6 @@ function AddRunsPage() {
 
   // State for form management
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
-  const [hasSubmitted, setHasSubmitted] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Query for report templates
   const {
@@ -258,18 +258,6 @@ function AddRunsPage() {
     setSelectedTemplateId(templateId);
   };
 
-  // Show loading state while checking admin access
-  if (isLoading || !isAdmin) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Checking permissions...</p>
-        </div>
-      </div>
-    );
-  }
-
   // Show error state for templates
   if (templatesError) {
     return (
@@ -325,13 +313,11 @@ function AddRunsPage() {
   // Show no templates state
   if (templates.length === 0) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Add Runs</h2>
-          <p className="text-muted-foreground mt-1">
-            Create runs using organization report templates
-          </p>
-        </div>
+      <PageWrapper>
+        <StickyHeader
+          title="Add Runs"
+          subtitle="Create runs using organization report templates"
+        />
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
@@ -350,22 +336,20 @@ function AddRunsPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </PageWrapper>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">
-          {editingRun ? 'Edit Run' : 'Add Runs'}
-        </h2>
-        <p className="text-muted-foreground mt-1">
-          {editingRun
+    <PageWrapper>
+      <StickyHeader
+        title={editingRun ? 'Edit Run' : 'Add Runs'}
+        subtitle={
+          editingRun
             ? 'Update the details for this run'
-            : 'Create runs using organization report templates'}
-        </p>
-      </div>
+            : 'Create runs using organization report templates'
+        }
+      />
 
       <Card>
         <CardHeader>
@@ -562,7 +546,7 @@ function AddRunsPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </PageWrapper>
   );
 }
 export const Route = createFileRoute('/organizations/$organizationId/add-runs')(

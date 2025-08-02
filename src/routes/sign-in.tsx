@@ -1,7 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { LoaderIcon, Plane } from 'lucide-react';
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '../components/ui/button';
@@ -19,10 +18,10 @@ import {
   FormLabel,
   FormMessage,
 } from '../components/ui/form';
+import { FullScreenLoader } from '../components/ui/full-screen-loader';
 import { Input } from '../components/ui/input';
-import { signIn } from '../lib/auth-client';
+import { useSignInMutation } from '../lib/hooks/use-auth-mutations';
 import { checkAuthRedirect } from '../lib/hooks/use-auth-redirect';
-import { toasts } from '../lib/toast';
 
 const signInSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -34,7 +33,7 @@ type SignInForm = z.infer<typeof signInSchema>;
 function SignInPage() {
   const navigate = useNavigate();
   const { redirect } = Route.useSearch();
-  const [isLoading, setIsLoading] = useState(false);
+  const signInMutation = useSignInMutation(redirect);
 
   const form = useForm<SignInForm>({
     resolver: zodResolver(signInSchema),
@@ -44,58 +43,14 @@ function SignInPage() {
     },
   });
 
-  const onSubmit = async (values: SignInForm) => {
-    setIsLoading(true);
-    try {
-      const result = await signIn.email({
-        email: values.email,
-        password: values.password,
-      });
-
-      if (result.error) {
-        // Handle specific better-auth errors
-        const errorMessage = result.error.message || 'Failed to sign in';
-        if (
-          errorMessage.includes('Invalid credentials') ||
-          errorMessage.includes('not found')
-        ) {
-          toasts.error(
-            'Invalid email or password. Please check your credentials and try again.'
-          );
-        } else {
-          toasts.error(errorMessage);
-        }
-        return;
-      }
-
-      // Success - user signed in
-      toasts.success('Welcome back to Teton Tracker!');
-
-      // Small delay to ensure session is established before navigation
-      setTimeout(() => {
-        if (redirect) {
-          window.location.href = redirect; // Use window.location for external redirects
-        } else {
-          navigate({ to: '/' });
-        }
-      }, 100);
-    } catch (error: any) {
-      // Handle network errors or other unexpected errors
-      if (
-        error?.message?.includes('Invalid credentials') ||
-        error?.message?.includes('not found')
-      ) {
-        toasts.error(
-          'Invalid email or password. Please check your credentials and try again.'
-        );
-      } else {
-        toasts.error('An unexpected error occurred. Please try again.');
-      }
-      console.error('Sign-in error:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const onSubmit = (values: SignInForm) => {
+    signInMutation.mutate(values);
   };
+
+  // Show full-screen loader when sign-in is successful and navigating
+  if (signInMutation.isSuccess) {
+    return <FullScreenLoader message="Signing you in..." />;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -119,7 +74,9 @@ function SignInPage() {
                       <Input
                         type="email"
                         placeholder="Enter your email"
-                        disabled={isLoading}
+                        disabled={
+                          signInMutation.isPending || signInMutation.isSuccess
+                        }
                         {...field}
                       />
                     </FormControl>
@@ -137,7 +94,9 @@ function SignInPage() {
                       <Input
                         type="password"
                         placeholder="Enter your password"
-                        disabled={isLoading}
+                        disabled={
+                          signInMutation.isPending || signInMutation.isSuccess
+                        }
                         {...field}
                       />
                     </FormControl>
@@ -148,10 +107,16 @@ function SignInPage() {
               <Button
                 type="submit"
                 className="w-full bg-highlight text-white hover:bg-highlight/80 flex items-center justify-center"
-                disabled={isLoading || !form.formState.isValid}
+                disabled={
+                  signInMutation.isPending ||
+                  signInMutation.isSuccess ||
+                  !form.formState.isValid
+                }
               >
-                {isLoading && <LoaderIcon className="animate-spin size-3" />}
-                {isLoading ? 'Signing in...' : 'Sign In'}
+                {signInMutation.isPending && (
+                  <LoaderIcon className="animate-spin size-3" />
+                )}
+                {signInMutation.isPending ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
           </Form>
