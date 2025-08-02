@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { Mail, Plus, Search, Shield, Trash2, Users } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
@@ -30,7 +30,9 @@ import {
   TabsTrigger,
 } from '../../components/ui/tabs';
 import { authClient, useUserOrganization } from '../../lib/auth-client';
+import { cn } from '../../lib/cn';
 import { useNonAdminRedirect } from '../../lib/hooks';
+import { OrganizationRole } from '../../lib/schema';
 import { toasts } from '../../lib/toast';
 
 interface OrganizationParams {
@@ -42,6 +44,7 @@ function OrganizationPage() {
   const { data: organization, refetch: refetchOrganization } =
     useUserOrganization();
   const [activeTab, setActiveTab] = useState<'members' | 'invites'>('members');
+  const [invitationsCount, setInvitationsCount] = useState(0);
 
   if (isLoading) {
     return (
@@ -94,7 +97,12 @@ function OrganizationPage() {
                 ({members.length})
               </span>
             </TabsTrigger>
-            <TabsTrigger value="invites">Invites</TabsTrigger>
+            <TabsTrigger value="invites">
+              Invites{' '}
+              <span className="text-sm text-muted-foreground ml-1">
+                ({invitationsCount})
+              </span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="members" className="space-y-4">
@@ -108,6 +116,7 @@ function OrganizationPage() {
             <InvitesContent
               organization={organization}
               onRefetch={refetchOrganization}
+              onInvitationsCountChange={setInvitationsCount}
             />
           </TabsContent>
         </Tabs>
@@ -218,42 +227,265 @@ function MembersContent({
 function InvitesContent({
   organization,
   onRefetch,
+  onInvitationsCountChange,
 }: {
   organization: any;
   onRefetch: () => void;
+  onInvitationsCountChange: (count: number) => void;
 }) {
+  const [invitations, setInvitations] = useState<any[]>([]);
+  const [isLoadingInvitations, setIsLoadingInvitations] = useState(true);
+  const [isResending, setIsResending] = useState<string | null>(null);
+
+  // Fetch invitations when component mounts or organization changes
+  useEffect(() => {
+    const fetchInvitations = async () => {
+      try {
+        setIsLoadingInvitations(true);
+        const { data, error } = await authClient.organization.listInvitations({
+          query: { organizationId: organization.id },
+        });
+
+        if (error) {
+          console.error('Failed to load invitations:', error);
+          toasts.error('Failed to load invitations');
+          return;
+        }
+
+        setInvitations(data || []);
+        onInvitationsCountChange((data || []).length);
+      } catch (error) {
+        console.error('Failed to load invitations:', error);
+        toasts.error('Failed to load invitations');
+      } finally {
+        setIsLoadingInvitations(false);
+      }
+    };
+
+    if (organization?.id) {
+      fetchInvitations();
+    }
+  }, [organization?.id]);
+
+  const handleResendInvitation = async (
+    invitationId: string,
+    email: string
+  ) => {
+    setIsResending(invitationId);
+    try {
+      // Cancel the existing invitation and create a new one
+      await authClient.organization.cancelInvitation({
+        invitationId,
+      });
+
+      const invitation = invitations.find(inv => inv.id === invitationId);
+      if (invitation) {
+        await authClient.organization.inviteMember({
+          organizationId: organization.id,
+          email: invitation.email,
+          role: invitation.role,
+        });
+
+        toasts.success(`Invitation resent to ${email}`);
+
+        // Refresh invitations list
+        const { data } = await authClient.organization.listInvitations({
+          query: { organizationId: organization.id },
+        });
+        setInvitations(data || []);
+        onInvitationsCountChange((data || []).length);
+      }
+    } catch (error) {
+      console.error('Failed to resend invitation:', error);
+      toasts.error('Failed to resend invitation');
+    } finally {
+      setIsResending(null);
+    }
+  };
+
+  const handleCancelInvitation = async (
+    invitationId: string,
+    email: string
+  ) => {
+    try {
+      await authClient.organization.cancelInvitation({
+        invitationId,
+      });
+
+      toasts.success(`Invitation to ${email} has been cancelled`);
+
+      // Remove from local state
+      setInvitations(prev => {
+        const updated = prev.filter(inv => inv.id !== invitationId);
+        onInvitationsCountChange(updated.length);
+        return updated;
+      });
+    } catch (error) {
+      console.error('Failed to cancel invitation:', error);
+      toasts.error('Failed to cancel invitation');
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return (
+          <Badge
+            variant="outline"
+            className="text-yellow-600 border-yellow-300"
+          >
+            Pending
+          </Badge>
+        );
+      case 'accepted':
+        return (
+          <Badge variant="default" className="bg-green-100 text-green-800">
+            Accepted
+          </Badge>
+        );
+      case 'rejected':
+        return <Badge variant="destructive">Rejected</Badge>;
+      case 'expired':
+        return (
+          <Badge variant="secondary" className="text-gray-600">
+            Expired
+          </Badge>
+        );
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const formatDate = (date: string | Date) => {
+    return new Date(date).toLocaleDateString();
+  };
+
   return (
     <div className="space-y-4">
+      {/* Simple Invite Button */}
+      <div className="flex justify-center">
+        <InviteMemberDialog
+          organizationId={organization.id}
+          onSuccess={() => {
+            onRefetch();
+            // Refresh invitations list after sending new invite
+            authClient.organization
+              .listInvitations({
+                query: { organizationId: organization.id },
+              })
+              .then(({ data }) => {
+                setInvitations(data || []);
+                onInvitationsCountChange((data || []).length);
+              });
+          }}
+        />
+      </div>
+
+      {/* Pending Invitations */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col items-center justify-center space-y-4">
-            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-              <Mail className="h-8 w-8 text-primary" />
-            </div>
-            <div className="space-y-2 text-center">
-              <h3 className="text-xl font-medium text-foreground">
-                Invite New Members
-              </h3>
-              <p className="text-muted-foreground max-w-md">
-                Send email invitations to add new members to your organization.
-              </p>
-            </div>
-            <InviteMemberDialog
-              organizationId={organization.id}
-              onSuccess={onRefetch}
-            />
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium text-foreground">
+              Pending Invitations
+            </h3>
+            {!isLoadingInvitations && (
+              <span className="text-sm text-muted-foreground">
+                {invitations.length} invitation
+                {invitations.length !== 1 ? 's' : ''}
+              </span>
+            )}
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Future: This is where pending invitations could be displayed */}
-      <Card className="border-dashed">
-        <CardContent className="flex flex-col items-center justify-center py-8">
-          <div className="text-center space-y-2">
-            <p className="text-sm text-muted-foreground">
-              Pending invitations will appear here once sent
-            </p>
-          </div>
+          {isLoadingInvitations ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              <span className="ml-2 text-muted-foreground">
+                Loading invitations...
+              </span>
+            </div>
+          ) : invitations.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-3">
+                <Mail className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <p className="text-muted-foreground">No pending invitations</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {invitations.map(invitation => (
+                <Card key={invitation.id} className="border-muted">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                          <span className="text-sm font-medium">
+                            {invitation.email.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-foreground truncate">
+                            {invitation.email}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
+                            <span>Role: {invitation.role}</span>
+                            <span className="hidden sm:inline">•</span>
+                            {invitation.expiresAt && (
+                              <>
+                                <span className="hidden sm:inline">•</span>
+                                <span className="sm:ml-1">
+                                  Expires: {formatDate(invitation.expiresAt)}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 shrink-0">
+                        {getStatusBadge(invitation.status)}
+
+                        {invitation.status === 'pending' && (
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                handleResendInvitation(
+                                  invitation.id,
+                                  invitation.email
+                                )
+                              }
+                              disabled={isResending === invitation.id}
+                            >
+                              {isResending === invitation.id ? (
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary mr-1" />
+                              ) : (
+                                <Mail className="h-3 w-3 mr-1" />
+                              )}
+                              Resend
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                handleCancelInvitation(
+                                  invitation.id,
+                                  invitation.email
+                                )
+                              }
+                              className="text-destructive hover:text-destructive"
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -269,11 +501,11 @@ function MemberCard({
   onRemove: () => void;
   canRemove: boolean;
 }) {
-  const getRoleBadgeVariant = (role: string) => {
+  const getRoleBadgeVariant = (role: OrganizationRole) => {
     switch (role) {
-      case 'owner':
+      case OrganizationRole.owner:
         return 'default';
-      case 'admin':
+      case OrganizationRole.admin:
         return 'secondary';
       default:
         return 'outline';
@@ -282,8 +514,8 @@ function MemberCard({
 
   const getRoleIcon = (role: string) => {
     switch (role) {
-      case 'owner':
-      case 'admin':
+      case OrganizationRole.owner:
+      case OrganizationRole.admin:
         return <Shield className="h-3 w-3" />;
       default:
         return null;
@@ -292,9 +524,9 @@ function MemberCard({
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'owner':
+      case OrganizationRole.owner:
         return 'bg-primary';
-      case 'admin':
+      case OrganizationRole.admin:
         return 'bg-secondary';
     }
   };
@@ -315,7 +547,10 @@ function MemberCard({
               </h3>
               <Badge
                 variant={getRoleBadgeVariant(member.role)}
-                className="flex items-center gap-1"
+                className={cn(
+                  'flex items-center gap-1',
+                  getRoleColor(member.role)
+                )}
               >
                 {getRoleIcon(member.role)}
                 {member.role}
@@ -389,7 +624,7 @@ function InviteMemberDialog({
           Invite Member
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="border">
         <DialogHeader>
           <DialogTitle>Invite New Member</DialogTitle>
           <DialogDescription>
@@ -398,7 +633,9 @@ function InviteMemberDialog({
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email Address *</Label>
+            <Label htmlFor="email">
+              Email Address <span className="text-xs text-destructive">*</span>
+            </Label>
             <Input
               id="email"
               type="email"
@@ -428,15 +665,20 @@ function InviteMemberDialog({
               organization settings and members.
             </p>
           </div>
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-between gap-2">
             <Button variant="outline" onClick={() => setIsOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleInvite} disabled={isInviting}>
+            <Button
+              type="submit"
+              onClick={handleInvite}
+              disabled={isInviting}
+              className="border border-highlight text-highlight bg-secondary hover:bg-secondary/90"
+            >
               {isInviting ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                <div className="animate-spin text-highlight rounded-full h-4 w-4 border-b-2 mr-2" />
               ) : (
-                <Mail className="h-4 w-4 mr-2" />
+                <Mail className="h-4 w-4" />
               )}
               Send Invitation
             </Button>

@@ -12,10 +12,8 @@ export * from './use-timezone';
 export * from './use-user';
 
 // Route protection types
-export type UserRole = 'driver' | 'admin' | 'owner' | 'super-admin';
-
 export interface RouteAccess {
-  allowedRoles: UserRole[];
+  allowedRoles: OrganizationRole[];
   requiresOrganization?: boolean;
 }
 
@@ -26,14 +24,14 @@ export function useRouteProtection(accessConfig: RouteAccess) {
   const isSuperAdmin = useIsSuperAdmin();
 
   // Get user's role in current organization
-  const getUserRole = (): UserRole | null => {
-    if (isSuperAdmin) return 'super-admin';
+  const getUserRole = (): OrganizationRole | null => {
+    if (isSuperAdmin) return OrganizationRole.owner;
     if (!organization || !currentUser) return null;
 
     const member = organization.members?.find(
       (m: any) => m.user?.id === currentUser.id
     );
-    return (member?.role as UserRole) || null;
+    return (member?.role as OrganizationRole) || null;
   };
 
   const userRole = getUserRole();
@@ -59,6 +57,7 @@ import { notificationsApi } from '../api/notifications-api';
 import { preferencesApi } from '../api/preferences-api';
 import { reportTemplatesApi } from '../api/report-templates-api';
 import { runsApi } from '../api/runs-api';
+import { OrganizationRole } from '../schema';
 import { useCurrentOrgId } from './use-org-navigation';
 
 /**

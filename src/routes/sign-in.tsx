@@ -33,6 +33,7 @@ type SignInForm = z.infer<typeof signInSchema>;
 
 function SignInPage() {
   const navigate = useNavigate();
+  const { redirect } = Route.useSearch();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<SignInForm>({
@@ -72,7 +73,11 @@ function SignInPage() {
 
       // Small delay to ensure session is established before navigation
       setTimeout(() => {
-        navigate({ to: '/' });
+        if (redirect) {
+          window.location.href = redirect; // Use window.location for external redirects
+        } else {
+          navigate({ to: '/' });
+        }
       }, 100);
     } catch (error: any) {
       // Handle network errors or other unexpected errors
@@ -157,7 +162,12 @@ function SignInPage() {
               <Button
                 variant="link"
                 className="p-0 h-auto font-normal text-highlight hover:text-highlight/80 underline"
-                onClick={() => navigate({ to: '/sign-up' })}
+                onClick={() =>
+                  navigate({
+                    to: '/sign-up',
+                    search: redirect ? { redirect } : undefined,
+                  })
+                }
               >
                 Sign up
               </Button>
@@ -170,6 +180,9 @@ function SignInPage() {
 }
 
 export const Route = createFileRoute('/sign-in')({
+  validateSearch: z.object({
+    redirect: z.string().optional(),
+  }),
   beforeLoad: async () => {
     // Redirect authenticated users away from sign-in page
     await checkAuthRedirect();

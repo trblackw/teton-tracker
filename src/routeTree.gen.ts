@@ -18,6 +18,7 @@ import { Route as ActiveRunRouteImport } from './routes/active-run';
 import { Route as SplatRouteImport } from './routes/$';
 import { Route as IndexRouteImport } from './routes/index';
 import { Route as OrganizationsOrganizationIdRouteImport } from './routes/organizations/$organizationId';
+import { Route as AcceptInvitationIdRouteImport } from './routes/accept-invitation.$id';
 import { Route as OrganizationsOrganizationIdIndexRouteImport } from './routes/organizations/$organizationId/index';
 import { Route as OrganizationsOrganizationIdSettingsRouteImport } from './routes/organizations/$organizationId/settings';
 import { Route as OrganizationsOrganizationIdRunsRouteImport } from './routes/organizations/$organizationId/runs';
@@ -76,6 +77,11 @@ const OrganizationsOrganizationIdRoute =
     path: '/organizations/$organizationId',
     getParentRoute: () => rootRouteImport,
   } as any);
+const AcceptInvitationIdRoute = AcceptInvitationIdRouteImport.update({
+  id: '/accept-invitation/$id',
+  path: '/accept-invitation/$id',
+  getParentRoute: () => rootRouteImport,
+} as any);
 const OrganizationsOrganizationIdIndexRoute =
   OrganizationsOrganizationIdIndexRouteImport.update({
     id: '/',
@@ -152,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof SignInRoute;
   '/sign-up': typeof SignUpRoute;
   '/super-admin': typeof SuperAdminRoute;
+  '/accept-invitation/$id': typeof AcceptInvitationIdRoute;
   '/organizations/$organizationId': typeof OrganizationsOrganizationIdRouteWithChildren;
   '/organizations/$organizationId/add-runs': typeof OrganizationsOrganizationIdAddRunsRoute;
   '/organizations/$organizationId/drivers': typeof OrganizationsOrganizationIdDriversRoute;
@@ -174,6 +181,7 @@ export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute;
   '/sign-up': typeof SignUpRoute;
   '/super-admin': typeof SuperAdminRoute;
+  '/accept-invitation/$id': typeof AcceptInvitationIdRoute;
   '/organizations/$organizationId/add-runs': typeof OrganizationsOrganizationIdAddRunsRoute;
   '/organizations/$organizationId/drivers': typeof OrganizationsOrganizationIdDriversRoute;
   '/organizations/$organizationId/members': typeof OrganizationsOrganizationIdMembersRoute;
@@ -196,6 +204,7 @@ export interface FileRoutesById {
   '/sign-in': typeof SignInRoute;
   '/sign-up': typeof SignUpRoute;
   '/super-admin': typeof SuperAdminRoute;
+  '/accept-invitation/$id': typeof AcceptInvitationIdRoute;
   '/organizations/$organizationId': typeof OrganizationsOrganizationIdRouteWithChildren;
   '/organizations/$organizationId/add-runs': typeof OrganizationsOrganizationIdAddRunsRoute;
   '/organizations/$organizationId/drivers': typeof OrganizationsOrganizationIdDriversRoute;
@@ -220,6 +229,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/super-admin'
+    | '/accept-invitation/$id'
     | '/organizations/$organizationId'
     | '/organizations/$organizationId/add-runs'
     | '/organizations/$organizationId/drivers'
@@ -242,6 +252,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/super-admin'
+    | '/accept-invitation/$id'
     | '/organizations/$organizationId/add-runs'
     | '/organizations/$organizationId/drivers'
     | '/organizations/$organizationId/members'
@@ -263,6 +274,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/super-admin'
+    | '/accept-invitation/$id'
     | '/organizations/$organizationId'
     | '/organizations/$organizationId/add-runs'
     | '/organizations/$organizationId/drivers'
@@ -286,6 +298,7 @@ export interface RootRouteChildren {
   SignInRoute: typeof SignInRoute;
   SignUpRoute: typeof SignUpRoute;
   SuperAdminRoute: typeof SuperAdminRoute;
+  AcceptInvitationIdRoute: typeof AcceptInvitationIdRoute;
   OrganizationsOrganizationIdRoute: typeof OrganizationsOrganizationIdRouteWithChildren;
 }
 
@@ -352,6 +365,13 @@ declare module '@tanstack/react-router' {
       path: '/organizations/$organizationId';
       fullPath: '/organizations/$organizationId';
       preLoaderRoute: typeof OrganizationsOrganizationIdRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/accept-invitation/$id': {
+      id: '/accept-invitation/$id';
+      path: '/accept-invitation/$id';
+      fullPath: '/accept-invitation/$id';
+      preLoaderRoute: typeof AcceptInvitationIdRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/organizations/$organizationId/': {
@@ -487,6 +507,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
   SuperAdminRoute: SuperAdminRoute,
+  AcceptInvitationIdRoute: AcceptInvitationIdRoute,
   OrganizationsOrganizationIdRoute:
     OrganizationsOrganizationIdRouteWithChildren,
 };

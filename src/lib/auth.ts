@@ -2,6 +2,8 @@ import { betterAuth } from 'better-auth';
 import { organization } from 'better-auth/plugins';
 import { Pool } from 'pg';
 import { getBetterAuthUrl } from './api/api-tools';
+import { getBaseUrl } from './environment';
+import { EmailService } from './services/email-service';
 
 export const auth = betterAuth({
   database: new Pool({
@@ -26,6 +28,27 @@ export const auth = betterAuth({
       membershipLimit: 100, // Max 100 members per org
       creatorRole: 'admin', // Creator gets admin role
       invitationExpiresIn: 60 * 60 * 48, // 48 hours
+      sendInvitationEmail: async data => {
+        // Construct the invitation link with email and organization name as params
+        const baseUrl = getBaseUrl();
+        const params = new URLSearchParams({
+          email: data.email,
+          org: data.organization.name,
+        });
+        const inviteLink = `${baseUrl}/accept-invitation/${data.id}?${params.toString()}`;
+
+        // Send the invitation email
+        await EmailService.sendOrganizationInvitation({
+          email: data.email,
+          inviterId: data.inviter.user.id,
+          inviterName: data.inviter.user.name || 'Unknown',
+          inviterEmail: data.inviter.user.email,
+          organizationName: data.organization.name,
+          teamName: data.invitation.teamId ? 'Team' : undefined,
+          inviteLink,
+          expiresAt: data.invitation.expiresAt,
+        });
+      },
     }),
   ],
 

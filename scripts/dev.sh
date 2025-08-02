@@ -48,7 +48,7 @@ echo -e "${GREEN}🚀 Starting development servers...${NC}"
 
 # Start API server in background
 echo -e "${YELLOW}📡 Starting API server on port 3001...${NC}"
-bun run src/api-server.ts &
+NODE_ENV=development bun run src/api-server.ts &
 API_PID=$!
 
 # Wait a moment for API server to start
@@ -57,7 +57,7 @@ sleep 2
 # Start frontend dev server with hot reload
 echo -e "${YELLOW}🎨 Starting frontend dev server on port 3000...${NC}"
 echo -e "${GREEN}✨ Hot reload enabled!${NC}"
-exec bun --hot index.html
+NODE_ENV=development exec bun --hot index.html
 
 # If we exit, kill the API server
 trap "kill $API_PID 2>/dev/null" EXIT 

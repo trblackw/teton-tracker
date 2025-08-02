@@ -251,6 +251,12 @@ export interface UserMetadata {
   firstSeen?: Date;
 }
 
+export enum OrganizationRole {
+  owner = 'owner',
+  admin = 'admin',
+  member = 'member',
+}
+
 // Notification schema
 export const NotificationSchema = z.object({
   id: z.string().uuid('Invalid notification ID format'),

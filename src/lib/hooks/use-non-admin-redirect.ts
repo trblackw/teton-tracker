@@ -1,6 +1,8 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect } from 'react';
-import { useUserOrganization } from '../auth-client';
+import { useIsSuperAdmin, useUserOrganization } from '../auth-client';
+import { OrganizationRole } from '../schema';
+import { useOrgRoutePath } from './use-org-navigation';
 
 interface UseNonAdminRedirectResult {
   isAdmin: boolean;
@@ -13,11 +15,18 @@ export function useNonAdminRedirect(
 ): UseNonAdminRedirectResult {
   const { data: organization, isPending: orgLoading } = useUserOrganization();
   const navigate = useNavigate();
+  const isSuperAdmin = useIsSuperAdmin();
+  const path = useOrgRoutePath();
+  const pathRedirectTo = path(redirectTo);
 
-  // Check if user has admin role in the organization
-  const isAdmin =
-    organization?.members?.some((member: any) => member.role === 'admin') ||
-    false;
+  const isAdmin = (() => {
+    if (isSuperAdmin) return true;
+    return (
+      organization?.members?.some(
+        (member: any) => member.role === OrganizationRole.admin
+      ) || false
+    );
+  })();
 
   const isLoading = orgLoading;
 
@@ -25,9 +34,9 @@ export function useNonAdminRedirect(
   useEffect(() => {
     if (!isLoading && !isAdmin) {
       console.log('🚫 Non-admin user detected, redirecting to:', redirectTo);
-      navigate({ to: redirectTo });
+      navigate({ to: pathRedirectTo });
     }
-  }, [isAdmin, isLoading, navigate, redirectTo]);
+  }, [isAdmin, isLoading, navigate, pathRedirectTo]);
 
   return {
     isAdmin,

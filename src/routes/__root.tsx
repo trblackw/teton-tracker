@@ -50,6 +50,7 @@ import {
 } from '../lib/auth-client';
 import { useCurrentRunsCount, useMobile, useOrgRoutePath } from '../lib/hooks';
 import { queryClient } from '../lib/react-query-client';
+import { OrganizationRole } from '../lib/schema';
 import { toasts } from '../lib/toast';
 
 const activeNavClass = 'bg-primary/10 text-highlight';
@@ -101,7 +102,7 @@ function useUserRole() {
 
   // Super-admin has all privileges
   if (isSuperAdmin) {
-    return 'super-admin';
+    return OrganizationRole.owner;
   }
 
   if (!organization || !currentUser) {
@@ -301,7 +302,7 @@ function AdminNavItems() {
 function SuperAdminNavItems() {
   const userRole = useUserRole();
 
-  if (userRole !== 'super-admin') {
+  if (userRole !== OrganizationRole.owner) {
     return null;
   }
 
