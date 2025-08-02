@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { LoaderIcon } from 'lucide-react';
+import { LoaderIcon, Plane } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -96,12 +96,10 @@ function SignInPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
-            Sign In
+          <CardTitle className="text-2xl font-bold text-center flex items-center justify-center">
+            <Plane className="size-6 mr-2" />
+            Teton Tracker
           </CardTitle>
-          <p className="text-muted-foreground text-center">
-            Enter your credentials to access Teton Tracker
-          </p>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -145,7 +143,7 @@ function SignInPage() {
               <Button
                 type="submit"
                 className="w-full bg-highlight text-white hover:bg-highlight/80 flex items-center justify-center"
-                disabled={isLoading}
+                disabled={isLoading || !form.formState.isValid}
               >
                 {isLoading && <LoaderIcon className="animate-spin size-3" />}
                 {isLoading ? 'Signing in...' : 'Sign In'}
