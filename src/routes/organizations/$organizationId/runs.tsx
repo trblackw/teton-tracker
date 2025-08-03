@@ -33,7 +33,12 @@ import {
   TabsList,
   TabsTrigger,
 } from '../../../components/ui/tabs';
-import { useOrgRunsApi } from '../../../lib/hooks';
+import {
+  useIsSuperAdmin,
+  useUser,
+  useUserOrganization,
+} from '../../../lib/auth-client';
+import { useOrgRoutePath, useOrgRunsApi } from '../../../lib/hooks';
 import { useMultipleRunsData } from '../../../lib/hooks/use-api-data';
 import { useTimezoneFormatters } from '../../../lib/hooks/use-timezone';
 import { queryKeys } from '../../../lib/react-query-client';
@@ -45,7 +50,14 @@ function Runs() {
   const { formatTime } = useTimezoneFormatters();
   const navigate = useNavigate();
   const runsApi = useOrgRunsApi();
-
+  const orgPath = useOrgRoutePath();
+  const { data: organization } = useUserOrganization();
+  const { user: currentUser } = useUser();
+  const isSuperAdmin = useIsSuperAdmin();
+  const userRole =
+    organization?.members?.find(
+      (member: any) => member.user?.id === currentUser?.id
+    )?.role || 'member';
   // Tab state
   const [activeTab, setActiveTab] = useState<'current' | 'past'>('current');
 
@@ -521,12 +533,15 @@ function Runs() {
                   No current runs
                 </h3>
               </div>
-              <Link to="/add">
-                <Button className="bg-highlight hover:bg-highlight/90 text-white">
-                  <Plus className="h-4 w-4" strokeWidth={3} />
-                  Schedule Run
-                </Button>
-              </Link>
+              {userRole === 'admin' ||
+                (isSuperAdmin && (
+                  <Link to={orgPath('/add')}>
+                    <Button className="bg-highlight hover:bg-highlight/90 text-white">
+                      <Plus className="h-4 w-4" strokeWidth={3} />
+                      Schedule Run
+                    </Button>
+                  </Link>
+                ))}
             </div>
           </CardContent>
         </Card>

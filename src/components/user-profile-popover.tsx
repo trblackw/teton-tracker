@@ -160,46 +160,6 @@ function OrganizationSelect() {
   );
 }
 
-// Regular organization display for non-super-admin users
-function RegularOrganizationDisplay({
-  onNavClick,
-}: {
-  onNavClick: () => void;
-}) {
-  const { data: organization, isPending: orgsLoading } = useUserOrganization();
-  const isSuperAdmin = useIsSuperAdmin();
-
-  if (isSuperAdmin || !organization) return null;
-
-  return (
-    <div className="p-3 border-b">
-      {orgsLoading ? (
-        <div className="text-xs text-muted-foreground">
-          Loading organization...
-        </div>
-      ) : (
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 min-w-0 flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-              <Link
-                to="/organization"
-                className="text-sm font-medium truncate text-blue-500"
-                onClick={onNavClick}
-              >
-                {organization.name}
-              </Link>
-            </div>
-          </div>
-          <span className="text-xs text-muted-foreground capitalize flex items-center gap-2">
-            {(organization as any).role?.replace('org:', '') || 'Member'}
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function UserProfilePopover() {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
@@ -279,10 +239,6 @@ export function UserProfilePopover() {
 
         {/* Organization Section - Enhanced for Super Admin */}
         {isSuperAdmin && <OrganizationSelect />}
-        {!isSuperAdmin && organization && (
-          <RegularOrganizationDisplay onNavClick={handleNavClick} />
-        )}
-
         <div className="p-1">
           <Button
             asChild

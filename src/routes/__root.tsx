@@ -105,6 +105,10 @@ function useUserRole() {
   }
 
   if (!organization || !currentUser) {
+    console.log('useUserRole - missing data:', {
+      organization: !!organization,
+      currentUser: !!currentUser,
+    });
     return null;
   }
 
@@ -177,21 +181,23 @@ function DriverNavItems() {
           Notifications
         </MobileAwareNavLink>
       </Button>
-      <Button asChild variant="ghost" className="w-full justify-start">
-        <MobileAwareNavLink
-          to={getOrgPath('/')}
-          className="flex items-center gap-2"
-          activeProps={{
-            className: activeNavClass,
-          }}
-          activeOptions={{
-            exact: true, // Only active on exact org index path
-          }}
-        >
-          <Building2 className="h-4 w-4" />
-          Organization
-        </MobileAwareNavLink>
-      </Button>
+      {userRole !== 'member' && (
+        <Button asChild variant="ghost" className="w-full justify-start">
+          <MobileAwareNavLink
+            to={getOrgPath('/')}
+            className="flex items-center gap-2"
+            activeProps={{
+              className: activeNavClass,
+            }}
+            activeOptions={{
+              exact: true, // Only active on exact org index path
+            }}
+          >
+            <Building2 className="h-4 w-4" />
+            Organization
+          </MobileAwareNavLink>
+        </Button>
+      )}
     </>
   );
 }
@@ -202,14 +208,25 @@ function AdminNavItems() {
   const getOrgPath = useOrgRoutePath();
   const userRole = useUserRole();
 
+  // Debug logging
+  console.log(
+    'AdminNavItems - userRole:',
+    userRole,
+    'organization:',
+    !!organization
+  );
+
   // Only show if user has admin or super-admin privileges
   if (
     !userRole ||
     !organization ||
     (userRole !== 'admin' && userRole !== 'owner' && userRole !== 'super-admin')
   ) {
+    console.log('AdminNavItems - hiding admin items for role:', userRole);
     return null;
   }
+
+  console.log('AdminNavItems - showing admin items for role:', userRole);
 
   return (
     <>
