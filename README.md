@@ -35,14 +35,68 @@ Teton Tracker is a comprehensive web application designed for managing airport s
 
 ## 🛠️ Tech Stack
 
-- **Runtime:** [Bun](https://bun.sh) - Fast JavaScript runtime and package manager
-- **Frontend:** [React 19](https://react.dev) with TypeScript
-- **Routing:** [TanStack Router](https://tanstack.com/router) - Type-safe routing
-- **Styling:** [Tailwind CSS 4](https://tailwindcss.com) - Utility-first CSS framework
-- **UI Components:** [shadcn/ui](https://ui.shadcn.com) - Radix-based component library
-- **State Management:** [TanStack Query](https://tanstack.com/query) - Data fetching and caching
-- **Theme:** [next-themes](https://github.com/pacocoursey/next-themes) - Theme management
-- **Icons:** [Lucide React](https://lucide.dev) - Beautiful & consistent icons
+### Core Runtime & Development
+
+- **[Bun](https://bun.sh)** - JavaScript runtime, package manager, and bundler. Handles development server, dependency management, and production builds
+- **TypeScript** - Type safety across the entire application
+- **Custom Build System** - Bun-based build pipeline with automatic asset optimization and Tailwind CSS processing
+
+### Frontend Architecture
+
+- **[React 19](https://react.dev)** - Component-based UI with latest concurrent features
+- **[TanStack Router](https://tanstack.com/router)** - File-based routing with full TypeScript support and type-safe navigation
+- **[TanStack React Query](https://tanstack.com/query)** - Server state management, caching, background updates, and optimistic UI updates
+- **[React Hook Form](https://react-hook-form.com)** - Form state management with validation
+- **[Tailwind CSS 4](https://tailwindcss.com)** - Utility-first styling with custom design system
+- **[shadcn/ui](https://ui.shadcn.com)** - Component library built on Radix UI primitives
+- **[Framer Motion](https://framer.com/motion)** - Animation library for transitions and micro-interactions
+- **[next-themes](https://github.com/pacocoursey/next-themes)** - Theme switching with system preference detection
+- **[Lucide React](https://lucide.dev)** - Icon system with consistent styling
+- **[Sonner](https://sonner.emilkowal.ski)** - Toast notification system
+
+### Backend & API
+
+- **[Hono](https://hono.dev)** - Modern web framework handling API routes, middleware, and CORS
+- **[better-auth](https://better-auth.com)** - Authentication system with organization management, email/password auth, and session handling
+- **[PostgreSQL](https://postgresql.org)** - Primary database with connection pooling via pg driver
+- **[Zod](https://zod.dev)** - Schema validation for API requests, form data, and database operations
+
+### External Service Integrations
+
+- **[SendGrid](https://sendgrid.com)** - Transactional email service for organization invitations and notifications
+- **[Twilio](https://twilio.com)** - SMS service for mobile notifications and alerts
+- **[AviationStack API](https://aviationstack.com)** - Real-time flight status, delay tracking, and airport data
+- **[TomTom API](https://tomtom.com)** - Traffic conditions, route optimization, and mapping services
+- **[Nodemailer](https://nodemailer.com)** - SMTP email handling for development environment
+
+### Data Management & Validation
+
+- **Database Layer** - Custom database abstraction with organized modules for runs, notifications, preferences, and report templates
+- **Schema Validation** - Comprehensive Zod schemas for flight numbers, airport codes, dates, and business logic
+- **Migration System** - Custom database migration runner with semantic versioning
+- **Caching Strategy** - Flight data caching, query result caching, and session management
+
+### Development & Build Tools
+
+- **[Bun Plugin Tailwind](https://github.com/oven-sh/bun)** - Integrated CSS processing and optimization
+- **[Prettier](https://prettier.io)** - Code formatting with lint-staged pre-commit hooks
+- **[Husky](https://typicode.github.io/husky)** - Git hooks for code quality enforcement
+- **Environment Detection** - Centralized environment utilities for browser/server detection and API switching
+- **Hot Reload** - Development server with instant updates and state preservation
+
+### Progressive Web App Features
+
+- **Service Worker** - Offline functionality and background sync
+- **Web App Manifest** - Native app-like installation and behavior
+- **Responsive Design** - Mobile-first approach with adaptive layouts
+- **Performance Optimization** - Code splitting, lazy loading, and asset optimization
+
+### Monitoring & Utilities
+
+- **[libphonenumber-js](https://github.com/catamphetamine/libphonenumber-js)** - International phone number validation and formatting
+- **[date-fns](https://date-fns.org) & [date-fns-tz](https://github.com/marnusw/date-fns-tz)** - Date manipulation with timezone support
+- **[class-variance-authority](https://github.com/joe-bell/cva)** - Component variant management
+- **[clsx](https://github.com/lukeed/clsx) & [tailwind-merge](https://github.com/dcastil/tailwind-merge)** - Conditional class name handling
 
 ## 🚀 Quick Start
 
@@ -191,17 +245,55 @@ teton-tracker/
 
 ### Available Scripts
 
-- `bun dev` - Start development server with hot reload
+- `bun dev` - Start development server with hot reload and API server
+- `bun run dev:frontend` - Start frontend development server only
+- `bun run dev:api` - Start API server only
 - `bun start` - Start production server
 - `bun run build` - Build application for production
 - `bun run format` - Format code with Prettier
 - `bun run format:check` - Check code formatting
+- `bun run typecheck` - Run TypeScript type checking
+- `bun run setup-db` - Initialize database schema
+- `bun run migrate-db` - Run database migrations
+- `bun run migrate` - Run database migrations (alias)
+- `bun run rollback` - Rollback last migration
+- `bun run migration-status` - Check migration status
+- `bun run create-migration` - Create new migration file
+- `bun run verify-db` - Verify database connection and structure
+- `bun run cleanup-db` - Clean development database
+- `bun run generate-social-preview` - Generate social media preview images
 
-### Code Quality
+### Development Environment
 
-- **TypeScript** for type safety
-- **Prettier** for consistent code formatting
-- **Modern React** patterns with hooks and functional components
+The application uses Bun for all development operations. The development server runs on `localhost:3000` with API endpoints served from the same port. Environment detection automatically switches between development and production configurations.
+
+**Development Features:**
+
+- Hot module replacement for instant updates
+- Automatic TypeScript compilation
+- Integrated Tailwind CSS processing
+- Mock data generation for testing
+- Environment-specific API switching
+- Database migration management
+
+### Code Quality & Architecture
+
+- **TypeScript** - Strict type checking across frontend and backend
+- **Prettier** - Automatic code formatting with pre-commit hooks
+- **ESLint Configuration** - Modern React patterns with hooks and functional components
+- **Modular Architecture** - Organized codebase with clear separation of concerns
+- **Custom Hooks** - Reusable state logic for common operations
+- **Type-Safe APIs** - End-to-end type safety from database to UI
+
+### Database Development
+
+The application includes comprehensive database tooling:
+
+- Semantic versioned migrations with rollback support
+- Automatic schema validation and setup
+- Development data seeding and cleanup utilities
+- Connection pooling and error handling
+- Environment-specific configurations
 
 ## 🤝 Contributing
 
