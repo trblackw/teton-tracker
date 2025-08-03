@@ -1,9 +1,9 @@
 import { organizationClient } from 'better-auth/client/plugins';
 import { createAuthClient } from 'better-auth/react';
-import { getApiBaseUrl, SUPER_ADMIN_EMAIL } from './environment';
+import { getBetterAuthClientUrl, SUPER_ADMIN_EMAIL } from './environment';
 
 export const authClient = createAuthClient({
-  baseURL: `${getApiBaseUrl()}/api/auth`, // Include the full basePath for BetterAuth
+  baseURL: getBetterAuthClientUrl(), // Environment-specific BetterAuth URL
   credentials: 'include', // Ensure cookies are sent with cross-origin requests
   fetchOptions: {
     credentials: 'include', // Also set on fetch options for better compatibility

@@ -163,3 +163,18 @@ export function buildApiUrl(endpoint: string): string {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   return `${apiUrl}${cleanEndpoint}`;
 }
+
+/**
+ * Get the BetterAuth client URL for the current environment
+ * - Development: http://localhost:3001/api/auth (API server)
+ * - Production: https://tetontracker.com/api/auth (main domain)
+ */
+export function getBetterAuthClientUrl(): string {
+  if (isDevelopment()) {
+    // In development, BetterAuth runs on the API server (port 3001)
+    return 'http://localhost:3001/api/auth';
+  } else {
+    // In production, BetterAuth runs on the main domain
+    return 'https://tetontracker.com/api/auth';
+  }
+}
