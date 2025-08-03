@@ -13,34 +13,46 @@ interface UseNonAdminRedirectResult {
 export function useNonAdminRedirect(
   redirectTo: string = '/runs'
 ): UseNonAdminRedirectResult {
-  const { data: organization, isPending: orgLoading } = useUserOrganization();
-  const navigate = useNavigate();
-  const isSuperAdmin = useIsSuperAdmin();
-  const path = useOrgRoutePath();
-  const pathRedirectTo = path(redirectTo);
+  try {
+    const { data: organization, isPending: orgLoading } = useUserOrganization();
+    const navigate = useNavigate();
+    const isSuperAdmin = useIsSuperAdmin();
+    const path = useOrgRoutePath();
+    const pathRedirectTo = path(redirectTo);
 
-  const isAdmin = (() => {
-    if (isSuperAdmin) return true;
-    return (
-      organization?.members?.some(
-        (member: any) => member.role === OrganizationRole.admin
-      ) || false
-    );
-  })();
+    const isAdmin = (() => {
+      if (isSuperAdmin) return true;
+      return (
+        organization?.members?.some(
+          (member: any) =>
+            member.role === OrganizationRole.admin ||
+            member.role === OrganizationRole.owner
+        ) || false
+      );
+    })();
 
-  const isLoading = orgLoading;
+    const isLoading = orgLoading;
 
-  // Redirect non-admin users once loading is complete
-  useEffect(() => {
-    if (!isLoading && !isAdmin) {
-      console.log('🚫 Non-admin user detected, redirecting to:', redirectTo);
-      navigate({ to: pathRedirectTo });
-    }
-  }, [isAdmin, isLoading, navigate, pathRedirectTo]);
+    // Redirect non-admin users once loading is complete
+    useEffect(() => {
+      if (!isLoading && !isAdmin) {
+        console.log('🚫 Non-admin user detected, redirecting to:', redirectTo);
+        navigate({ to: pathRedirectTo });
+      }
+    }, [isAdmin, isLoading, navigate, pathRedirectTo]);
 
-  return {
-    isAdmin,
-    isLoading,
-    organization: organization || null,
-  };
+    return {
+      isAdmin,
+      isLoading,
+      organization: organization || null,
+    };
+  } catch (error) {
+    console.warn('useNonAdminRedirect error:', error);
+    // Return safe fallback state
+    return {
+      isAdmin: false,
+      isLoading: false,
+      organization: null,
+    };
+  }
 }

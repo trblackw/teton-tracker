@@ -49,9 +49,9 @@ async function getOrganizationMemberIds(
       return [];
     }
 
-    // Find the first organization where user has admin role
+    // Find the first organization where user has admin privileges (admin or owner)
     const adminMembership = adminMemberships.rows.find(
-      row => row.role === 'admin'
+      row => row.role === 'admin' || row.role === 'owner'
     );
 
     if (!adminMembership) {

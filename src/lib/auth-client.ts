@@ -53,7 +53,18 @@ export function useIsSuperAdmin() {
 
 // Now use BetterAuth organization hooks instead of custom ones
 export function useUserOrganization() {
-  return authClient.useActiveOrganization();
+  try {
+    return authClient.useActiveOrganization();
+  } catch (error) {
+    console.warn('useUserOrganization error:', error);
+    // Return a fallback state to prevent crashes
+    return {
+      data: null,
+      isPending: false,
+      error: error,
+      isLoading: false,
+    };
+  }
 }
 
 export function useUserOrganizations() {

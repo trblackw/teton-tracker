@@ -19,7 +19,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import {
   Asterisk,
-  Command,
   Edit3,
   Ellipsis,
   Eye,
@@ -37,13 +36,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@radix-ui/react-popover';
-import {
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@radix-ui/react-select';
-import { CommandEmpty, CommandGroup, CommandInput, CommandItem } from 'cmdk';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import {
@@ -55,6 +47,14 @@ import {
   CardTitle,
 } from '../../../components/ui/card';
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '../../../components/ui/command';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -65,7 +65,6 @@ import {
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
 import PageWrapper from '../../../components/ui/page-wrapper';
-import { Select } from '../../../components/ui/select';
 import { StickyHeader } from '../../../components/ui/sticky-header';
 import { Textarea } from '../../../components/ui/textarea';
 import { useAppContext } from '../../../lib/AppContextProvider';
@@ -251,7 +250,7 @@ function ReportTemplatesPage() {
           <DialogTrigger asChild>
             <Button
               size="sm"
-              className="flex items-center gap-2 font-bold bg-emerald-400 text-white hover:bg-emerald-400/90 w-full lg:max-w-md lg:mx-auto"
+              className="flex items-center gap-2 font-bold bg-highlight text-white hover:bg-highlight/90 w-full lg:max-w-md lg:mx-auto"
             >
               <Plus className="h-4 w-4" strokeWidth={3} />
               Create Template
@@ -666,7 +665,7 @@ function TemplateFormDialog({
       </DialogHeader>
 
       <div className="grid gap-6 py-4 max-h-[60vh] overflow-y-auto">
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-2">
           <div className="space-y-2">
             <Label htmlFor="name">
               Template Name <span className="text-xs text-destructive">*</span>
@@ -681,12 +680,12 @@ function TemplateFormDialog({
               spellCheck={false}
             />
             {errors.name && (
-              <p className="text-sm text-red-500">{errors.name.message}</p>
+              <p className="text-sm text-destructive">{errors.name.message}</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="reportType">Report Type</Label>
+            {/* <Label htmlFor="reportType">Report Type</Label>
             <Select
               value={watch('reportType')}
               onValueChange={(value: ReportType) =>
@@ -701,9 +700,9 @@ function TemplateFormDialog({
                 <SelectItem value="flight">Flight Report</SelectItem>
                 <SelectItem value="traffic">Traffic Report</SelectItem>
               </SelectContent>
-            </Select>
+            </Select> */}
             {errors.reportType && (
-              <p className="text-sm text-red-500">
+              <p className="text-sm text-destructive">
                 {errors.reportType.message}
               </p>
             )}
@@ -719,7 +718,9 @@ function TemplateFormDialog({
             rows={3}
           />
           {errors.description && (
-            <p className="text-sm text-red-500">{errors.description.message}</p>
+            <p className="text-sm text-destructive">
+              {errors.description.message}
+            </p>
           )}
           <div className="flex items-center justify-start gap-2">
             <input
@@ -742,7 +743,7 @@ function TemplateFormDialog({
             <div>
               <Label className="text-base">Column Configuration</Label>
               {errors.columnConfig?.root && (
-                <p className="text-sm text-red-500 mt-1">
+                <p className="text-sm text-destructive mt-1">
                   {errors.columnConfig.root.message}
                 </p>
               )}
@@ -818,7 +819,7 @@ function TemplateFormDialog({
         <Button
           onClick={handleSubmit(onSubmit)}
           disabled={!isValid || columnConfig.length < 2 || isLoading}
-          className="bg-blue-400 text-white hover:bg-blue-500/90"
+          className="bg-highlight text-white hover:bg-highlight/90"
         >
           {isLoading ? (
             <>
@@ -963,64 +964,73 @@ function AddColumnCombobox({
           <Plus className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="start">
-        <Command>
+      <PopoverContent
+        align="start"
+        className="w-[calc(100vw-2.5rem)] md:w-[480px] max-w-[calc(100vw-2.5rem)] rounded-lg p-0 border-2 border-border shadow-lg"
+        sideOffset={4}
+      >
+        <Command className="w-full">
           <CommandInput
             placeholder="Search existing columns or type new name..."
             value={searchValue}
             onValueChange={setSearchValue}
+            className="border-b-2 border-border bg-muted/20"
           />
-          <CommandEmpty>
-            {isNewColumn ? (
-              <div className="p-2">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start"
-                  onClick={handleCreateNew}
-                >
+          <CommandList className="max-h-64">
+            <CommandEmpty>
+              {isNewColumn ? (
+                <div className="p-2">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start"
+                    onClick={handleCreateNew}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create "{searchValue}"
+                  </Button>
+                </div>
+              ) : (
+                'No columns found.'
+              )}
+            </CommandEmpty>
+            {availableColumns.length > 0 && (
+              <CommandGroup heading="Existing Columns">
+                {availableColumns
+                  .filter(
+                    col =>
+                      col.field
+                        .toLowerCase()
+                        .includes(searchValue.toLowerCase()) ||
+                      col.label
+                        .toLowerCase()
+                        .includes(searchValue.toLowerCase())
+                  )
+                  .map(col => (
+                    <CommandItem
+                      key={col.field}
+                      onSelect={() => handleSelect(col.field, col.label)}
+                      className="flex items-center justify-between"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-medium">{col.label}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {col.field} • usage: {col.usageCount}
+                          {col.usageCount !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    </CommandItem>
+                  ))}
+              </CommandGroup>
+            )}
+            {searchValue && isNewColumn && availableColumns.length > 0 && (
+              <CommandGroup heading="Create New">
+                <CommandItem onSelect={handleCreateNew}>
                   <Plus className="mr-2 h-4 w-4" />
                   Create "{searchValue}"
-                </Button>
-              </div>
-            ) : (
-              'No columns found.'
+                </CommandItem>
+              </CommandGroup>
             )}
-          </CommandEmpty>
-          {availableColumns.length > 0 && (
-            <CommandGroup heading="Existing Columns">
-              {availableColumns
-                .filter(
-                  col =>
-                    col.field
-                      .toLowerCase()
-                      .includes(searchValue.toLowerCase()) ||
-                    col.label.toLowerCase().includes(searchValue.toLowerCase())
-                )
-                .map(col => (
-                  <CommandItem
-                    key={col.field}
-                    onSelect={() => handleSelect(col.field, col.label)}
-                    className="flex items-center justify-between"
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-medium">{col.label}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {col.field} • usage: {col.usageCount}
-                        {col.usageCount !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  </CommandItem>
-                ))}
-            </CommandGroup>
-          )}
-          {searchValue && isNewColumn && availableColumns.length > 0 && (
-            <CommandGroup heading="Create New">
-              <CommandItem onSelect={handleCreateNew}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create "{searchValue}"
-              </CommandItem>
-            </CommandGroup>
-          )}
+          </CommandList>
         </Command>
       </PopoverContent>
     </Popover>

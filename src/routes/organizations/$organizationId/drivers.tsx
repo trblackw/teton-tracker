@@ -69,6 +69,59 @@ function DriversPage() {
     enabled: !!organizationId && !!currentUser?.id && isAdmin,
   });
 
+  // Helper function to check driver availability based on runs
+  const getDriverAvailability = (member: any, filter: string) => {
+    const driverRuns = allRuns.filter(
+      (run: any) => run.createdById === member.user?.id
+    );
+    const now = new Date();
+
+    const activeRuns = driverRuns.filter((run: any) => run.status === 'active');
+    const scheduledRuns = driverRuns.filter(
+      (run: any) => run.status === 'scheduled'
+    );
+
+    // Get the next scheduled run
+    const upcomingRuns = scheduledRuns
+      .map((run: any) => ({
+        ...run,
+        scheduledDate: new Date(run.scheduledTime),
+      }))
+      .filter((run: any) => run.scheduledDate > now)
+      .sort(
+        (a: any, b: any) =>
+          a.scheduledDate.getTime() - b.scheduledDate.getTime()
+      );
+
+    const nextRun = upcomingRuns[0];
+
+    switch (filter) {
+      case 'available':
+        return activeRuns.length === 0;
+      case 'available-1h':
+        return (
+          activeRuns.length === 0 &&
+          (!nextRun ||
+            nextRun.scheduledDate.getTime() - now.getTime() > 60 * 60 * 1000)
+        );
+      case 'available-2h':
+        return (
+          activeRuns.length === 0 &&
+          (!nextRun ||
+            nextRun.scheduledDate.getTime() - now.getTime() > 120 * 60 * 1000)
+        );
+      case 'busy':
+        return activeRuns.length > 0;
+      case 'upcoming':
+        return (
+          nextRun &&
+          nextRun.scheduledDate.getTime() - now.getTime() <= 60 * 60 * 1000
+        );
+      default:
+        return true;
+    }
+  };
+
   // Filter and search drivers
   const filteredDrivers = useMemo(() => {
     let filtered = drivers;
@@ -196,59 +249,6 @@ function DriversPage() {
       return { text: 'Available', variant: 'default' as const };
     } else {
       return { text: 'Scheduled', variant: 'secondary' as const };
-    }
-  };
-
-  // Helper function to check driver availability based on runs
-  const getDriverAvailability = (member: any, filter: string) => {
-    const driverRuns = allRuns.filter(
-      (run: any) => run.createdById === member.user?.id
-    );
-    const now = new Date();
-
-    const activeRuns = driverRuns.filter((run: any) => run.status === 'active');
-    const scheduledRuns = driverRuns.filter(
-      (run: any) => run.status === 'scheduled'
-    );
-
-    // Get the next scheduled run
-    const upcomingRuns = scheduledRuns
-      .map((run: any) => ({
-        ...run,
-        scheduledDate: new Date(run.scheduledTime),
-      }))
-      .filter((run: any) => run.scheduledDate > now)
-      .sort(
-        (a: any, b: any) =>
-          a.scheduledDate.getTime() - b.scheduledDate.getTime()
-      );
-
-    const nextRun = upcomingRuns[0];
-
-    switch (filter) {
-      case 'available':
-        return activeRuns.length === 0;
-      case 'available-1h':
-        return (
-          activeRuns.length === 0 &&
-          (!nextRun ||
-            nextRun.scheduledDate.getTime() - now.getTime() > 60 * 60 * 1000)
-        );
-      case 'available-2h':
-        return (
-          activeRuns.length === 0 &&
-          (!nextRun ||
-            nextRun.scheduledDate.getTime() - now.getTime() > 120 * 60 * 1000)
-        );
-      case 'busy':
-        return activeRuns.length > 0;
-      case 'upcoming':
-        return (
-          nextRun &&
-          nextRun.scheduledDate.getTime() - now.getTime() <= 60 * 60 * 1000
-        );
-      default:
-        return true;
     }
   };
 

@@ -9,7 +9,7 @@ import {
 import { type ReportTemplateForm, type ReportType } from '../lib/schema';
 import { getCurrentAuthUser } from './auth';
 
-// Helper function to check if user is admin using BetterAuth database
+// Helper function to check if user has admin privileges (admin or owner)
 async function checkAdminRole(
   userId: string,
   organizationId: string
@@ -22,7 +22,11 @@ async function checkAdminRole(
       [userId, organizationId]
     );
 
-    return result.rows.length > 0 && result.rows[0].role === 'admin';
+    if (result.rows.length === 0) return false;
+
+    const userRole = result.rows[0].role;
+    // Both 'owner' and 'admin' have admin privileges
+    return userRole === 'admin' || userRole === 'owner';
   } catch (error) {
     console.error('Error checking admin role:', error);
     return false;

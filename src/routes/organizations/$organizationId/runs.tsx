@@ -523,7 +523,7 @@ function Runs() {
               </div>
               <Link to="/add">
                 <Button className="bg-highlight hover:bg-highlight/90 text-white">
-                  <Plus className="mr-2 h-4 w-4" strokeWidth={3} />
+                  <Plus className="h-4 w-4" strokeWidth={3} />
                   Schedule Run
                 </Button>
               </Link>

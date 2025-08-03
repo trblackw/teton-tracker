@@ -70,7 +70,10 @@ function SignUpPage() {
     if (!redirect || !redirect.startsWith('/accept-invitation/')) {
       return null;
     }
-    return redirect.replace('/accept-invitation/', '');
+    // Remove the '/accept-invitation/' prefix and any query parameters
+    const pathWithoutPrefix = redirect.replace('/accept-invitation/', '');
+    const invitationId = pathWithoutPrefix.split('?')[0]; // Get everything before the first '?'
+    return invitationId || null;
   };
 
   // Get organization ID for callback URL
@@ -168,22 +171,35 @@ function SignUpPage() {
       if (isInvitationSignUp) {
         // Auto-accept the invitation for new signups
         const invitationId = getInvitationId();
+        console.log('🔍 Auto-accepting invitation:', {
+          invitationId,
+          redirect,
+          organizationName,
+        });
+
         if (invitationId) {
           try {
+            // Wait a moment for the user session to be fully established
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
             const { error: acceptError } =
               await authClient.organization.acceptInvitation({
                 invitationId,
               });
 
             if (acceptError) {
-              console.error('Failed to auto-accept invitation:', acceptError);
+              console.error(
+                '❌ Failed to auto-accept invitation:',
+                acceptError
+              );
               toasts.error(
-                'Account created but failed to join organization. Please contact support.'
+                `Account created successfully, but failed to join ${organizationName || 'the organization'}. Please try clicking the invitation link again.`
               );
               setIsLoading(false);
               return;
             }
 
+            console.log('✅ Successfully auto-accepted invitation');
             toasts.success(
               `Account created successfully! Welcome to ${organizationName || 'the organization'}!`
             );
@@ -202,13 +218,14 @@ function SignUpPage() {
               }
             }, 800);
           } catch (err) {
-            console.error('Failed to auto-accept invitation:', err);
+            console.error('❌ Exception during auto-accept invitation:', err);
             toasts.error(
-              'Account created but failed to join organization. Please contact support.'
+              `Account created successfully, but failed to join ${organizationName || 'the organization'}. Please try clicking the invitation link again.`
             );
             setIsLoading(false);
           }
         } else {
+          console.error('❌ No invitation ID found in redirect:', { redirect });
           toasts.error('Invalid invitation link. Please contact support.');
           setIsLoading(false);
         }

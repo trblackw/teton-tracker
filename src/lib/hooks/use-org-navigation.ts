@@ -62,8 +62,13 @@ export function useOrgNavigate() {
  * Returns null if no organization is found (instead of throwing)
  */
 export function useCurrentOrgId(): string | undefined {
-  const { data: organization } = useUserOrganization();
-  return organization?.id || undefined;
+  try {
+    const { data: organization } = useUserOrganization();
+    return organization?.id || undefined;
+  } catch (error) {
+    console.warn('useCurrentOrgId error:', error);
+    return undefined;
+  }
 }
 
 /**

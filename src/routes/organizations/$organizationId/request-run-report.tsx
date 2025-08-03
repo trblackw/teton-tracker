@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from '../../../components/ui/card';
 import PageWrapper from '../../../components/ui/page-wrapper';
+import { StickyHeader } from '../../../components/ui/sticky-header';
 import { useCurrentUserData } from '../../../lib/hooks/use-user';
 
 function RequestRunReport() {
@@ -16,14 +17,10 @@ function RequestRunReport() {
   return (
     <PageWrapper>
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          Request Run Report
-        </h1>
-        <p className="text-muted-foreground">
-          Generate detailed reports for your organization's runs
-        </p>
-      </div>
+      <StickyHeader
+        title="Request Run Report"
+        subtitle="Generate detailed reports for your organization's runs"
+      />
 
       {/* Coming Soon */}
       <Card>
