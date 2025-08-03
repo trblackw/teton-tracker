@@ -304,13 +304,14 @@ export function useCachedApiData(
 // Hook for fetching organization invitations with network awareness
 export function useOrganizationInvitations(
   organizationId: string,
-  enabled: boolean = true
+  enabled: boolean = true,
+  statusFilter?: string
 ) {
   const networkOptions = useNetworkAwareOptions();
   const { isOffline } = useNetworkStatus();
 
   return useQuery({
-    queryKey: queryKeys.organizationInvitations(organizationId),
+    queryKey: queryKeys.organizationInvitations(organizationId, statusFilter),
     queryFn: async () => {
       const { authClient } = await import('../auth-client');
       const { data, error } = await authClient.organization.listInvitations({
@@ -323,7 +324,16 @@ export function useOrganizationInvitations(
         );
       }
 
-      return data || [];
+      let invitations = data || [];
+
+      // Filter by status if specified
+      if (statusFilter) {
+        invitations = invitations.filter(
+          (invitation: any) => invitation.status === statusFilter
+        );
+      }
+
+      return invitations;
     },
     enabled: enabled && !!organizationId && !isOffline,
     staleTime: networkOptions.staleTime,

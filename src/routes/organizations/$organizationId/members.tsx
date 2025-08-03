@@ -29,8 +29,7 @@ import { toasts } from '../../../lib/toast';
 
 function MembersPage() {
   const { isAdmin, isLoading } = useNonAdminRedirect();
-  const { data: organization, refetch: refetchOrganization } =
-    useUserOrganization();
+  const { data: organization } = useUserOrganization();
   const [searchTerm, setSearchTerm] = useState('');
 
   if (isLoading) {
@@ -82,7 +81,6 @@ function MembersPage() {
       toasts.success(
         `${member.user?.name || 'Member'} has been removed from the organization`
       );
-      refetchOrganization();
     } catch (error) {
       toasts.error('Failed to remove member');
       console.error('Remove member error:', error);
@@ -108,10 +106,7 @@ function MembersPage() {
 
       {/* Search and Stats */}
       <div className="my-2 flex flex-col items-center gap-2">
-        <InviteMemberDialog
-          organizationId={organization.id}
-          onSuccess={() => refetchOrganization()}
-        />
+        <InviteMemberDialog organizationId={organization.id} />
         <div className="text-sm text-muted-foreground text-center">
           {filteredMembers.length} of {members.length} members
         </div>
@@ -160,10 +155,7 @@ function MembersPage() {
             <p className="text-sm text-muted-foreground text-center mb-6">
               Invite the first member to get started
             </p>
-            <InviteMemberDialog
-              organizationId={organization.id}
-              onSuccess={() => refetchOrganization()}
-            />
+            <InviteMemberDialog organizationId={organization.id} />
           </CardContent>
         </Card>
       )}
@@ -249,7 +241,7 @@ function InviteMemberDialog({
   onSuccess,
 }: {
   organizationId: string;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
@@ -274,7 +266,7 @@ function InviteMemberDialog({
       toasts.success(`Invitation sent to ${formData.email}`);
       setIsOpen(false);
       setFormData({ email: '', role: 'member' });
-      onSuccess();
+      onSuccess?.();
     } catch (error) {
       toasts.error('Failed to send invitation');
       console.error('Invite error:', error);

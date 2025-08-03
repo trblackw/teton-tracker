@@ -24,11 +24,11 @@ export async function getUserOrganizationId(
     const db = getDatabase();
 
     const result = await db.query(
-      'SELECT organization_id FROM organization_memberships WHERE user_id = $1 LIMIT 1',
+      'SELECT "organizationId" FROM member WHERE "userId" = $1 LIMIT 1',
       [userId]
     );
 
-    return result.rows.length > 0 ? result.rows[0].organization_id : null;
+    return result.rows.length > 0 ? result.rows[0].organizationId : null;
   } catch (error) {
     console.error('Error fetching user organization:', error);
     return null;

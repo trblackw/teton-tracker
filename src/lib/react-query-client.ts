@@ -154,8 +154,8 @@ export const queryKeys = {
   organizations: () => ['organizations'] as const,
   organizationMembers: (orgId: string) =>
     ['organization-members', orgId] as const,
-  organizationInvitations: (orgId: string) =>
-    ['organization-invitations', orgId] as const,
+  organizationInvitations: (orgId: string, statusFilter?: string) =>
+    ['organization-invitations', orgId, statusFilter] as const,
   userRole: (orgId: string) => ['user-role', orgId] as const,
   userPermissions: () => ['user-permissions'] as const,
 } as const;

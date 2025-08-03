@@ -238,7 +238,7 @@ async function getUserOrganizationId(userId: string): Promise<string | null> {
   try {
     const db = getDatabase();
     const result = await db.query(
-      'SELECT organization_id FROM organization_memberships WHERE user_id = $1 LIMIT 1',
+      'SELECT "organizationId" FROM member WHERE "userId" = $1 LIMIT 1',
       [userId]
     );
 
@@ -246,7 +246,7 @@ async function getUserOrganizationId(userId: string): Promise<string | null> {
       return null;
     }
 
-    return result.rows[0].organization_id;
+    return result.rows[0].organizationId;
   } catch (error) {
     console.error('Error fetching user organization:', error);
     return null;
@@ -327,7 +327,7 @@ async function getOrganizationDrivers(
 
     // First get the user's organization ID
     const userOrgResult = await db.query(
-      'SELECT organization_id FROM organization_memberships WHERE user_id = $1 LIMIT 1',
+      'SELECT "organizationId" FROM member WHERE "userId" = $1 LIMIT 1',
       [userId]
     );
 
@@ -336,15 +336,15 @@ async function getOrganizationDrivers(
       return [];
     }
 
-    const organizationId = userOrgResult.rows[0].organization_id;
+    const organizationId = userOrgResult.rows[0].organizationId;
 
     // Get all members of the organization with their user details
     const membersResult = await db.query(
       `
-      SELECT u.id, u.name, u.email, om.role 
+      SELECT u.id, u.name, u.email, m.role 
       FROM "user" u 
-      JOIN organization_memberships om ON u.id = om.user_id 
-      WHERE om.organization_id = $1 AND u.id != $2
+      JOIN member m ON u.id = m."userId" 
+      WHERE m."organizationId" = $1 AND u.id != $2
     `,
       [organizationId, userId]
     );

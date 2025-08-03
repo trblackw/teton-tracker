@@ -244,11 +244,23 @@ function DriversPage() {
     const isBusy = getDriverAvailability(member, 'busy');
 
     if (isBusy) {
-      return { text: 'Busy', variant: 'destructive' as const };
+      return {
+        text: 'Busy',
+        variant: 'destructive' as const,
+        className: 'bg-red-100 text-red-800',
+      };
     } else if (isAvailable) {
-      return { text: 'Available', variant: 'default' as const };
+      return {
+        text: 'Available',
+        variant: 'default' as const,
+        className: 'bg-green-100 text-green-800',
+      };
     } else {
-      return { text: 'Scheduled', variant: 'secondary' as const };
+      return {
+        text: 'Scheduled',
+        variant: 'secondary' as const,
+        className: 'bg-blue-100 text-blue-800',
+      };
     }
   };
 
@@ -312,11 +324,6 @@ function DriversPage() {
             ) : undefined
           }
         />
-        {!filtersApplied && (
-          <div className="text-xs text-muted-foreground/50 flex justify-center">
-            Showing {filteredDrivers.length} of {drivers.length} drivers
-          </div>
-        )}
       </StickyHeader>
 
       {/* Driver Cards */}
@@ -355,8 +362,8 @@ function DriversPage() {
 
           return (
             <Card key={member.id} className="overflow-hidden">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
+              <CardContent>
+                <div className="flex flex-col items-start justify-between">
                   {/* Driver Info */}
                   <div className="flex items-center gap-4">
                     <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
@@ -369,13 +376,13 @@ function DriversPage() {
                       <p className="text-sm text-muted-foreground">
                         {driver?.email || 'No email'}
                       </p>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-2 mt-1 mb-5">
                         <Badge variant="outline" className="text-xs">
                           {member.role}
                         </Badge>
                         <Badge
                           variant={availabilityInfo.variant}
-                          className="text-xs"
+                          className={`text-xs ${availabilityInfo.className}`}
                         >
                           {availabilityInfo.text}
                         </Badge>
@@ -508,15 +515,7 @@ function DriversPage() {
                         </p>
                       )}
                     </div>
-                  ) : (
-                    <div className="text-center py-4 text-muted-foreground">
-                      <Car className="h-6 w-6 mx-auto mb-1 opacity-50" />
-                      <p>No active runs assigned</p>
-                      <p className="text-xs mt-1">
-                        {completedRuns.length} completed runs total
-                      </p>
-                    </div>
-                  )}
+                  ) : null}
                 </div>
               </CardContent>
             </Card>

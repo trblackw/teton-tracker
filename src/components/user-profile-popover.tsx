@@ -253,7 +253,7 @@ export function UserProfilePopover() {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-64 p-0" align="end">
-        <div className="p-3 border-b">
+        <div className="p-3 border-b overflow-hidden">
           <div className="flex items-center space-x-2">
             {currentUser.image ? (
               <img
@@ -268,9 +268,9 @@ export function UserProfilePopover() {
                 </span>
               </div>
             )}
-            <div className="flex flex-col">
+            <div className="flex flex-col truncate">
               <span className="text-sm font-medium">{currentUser.name}</span>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-muted-foreground truncate">
                 {currentUser.email}
               </span>
             </div>

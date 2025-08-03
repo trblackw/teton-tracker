@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { Toaster } from 'sonner';
-import { ActiveRunBanner } from '../components/active-run-banner';
+
 import { AuthGuard } from '../components/auth-guard';
 import { ErrorBoundary } from '../components/error-boundary';
 import { PasswordProtection } from '../components/password-protection';
@@ -439,9 +439,6 @@ function RootComponent() {
               </TopNavRight>
             </TopNav>
           )}
-
-          {/* Active Run Banner - only for authenticated routes */}
-          {!isPublicRoute && <ActiveRunBanner />}
 
           {/* Main Content */}
           <main

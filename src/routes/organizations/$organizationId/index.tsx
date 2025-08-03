@@ -39,17 +39,20 @@ import { toasts } from '../../../lib/toast';
 
 function OrganizationPage() {
   const { isAdmin, isLoading } = useNonAdminRedirect();
-  const { data: organization, refetch: refetchOrganization } =
-    useUserOrganization();
+  const { data: organization } = useUserOrganization();
   const [activeTab, setActiveTab] = useState<'members' | 'invites'>('members');
 
-  // Fetch invitations using react-query
+  // Fetch pending invitations using react-query
   const {
     data: invitations = [],
     isLoading: isLoadingInvitations,
     error: invitationsError,
     refetch: refetchInvitations,
-  } = useOrganizationInvitations(organization?.id || '', !!organization?.id);
+  } = useOrganizationInvitations(
+    organization?.id || '',
+    !!organization?.id,
+    'pending'
+  );
 
   if (isLoading) {
     return (
@@ -104,17 +107,16 @@ function OrganizationPage() {
             </TabsTrigger>
             <TabsTrigger value="invites">
               Invites{' '}
-              <span className="text-sm text-muted-foreground ml-1">
-                ({invitations.length})
-              </span>
+              {invitations.length > 0 && (
+                <span className="text-sm text-muted-foreground ml-1">
+                  ({invitations.length})
+                </span>
+              )}
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="members" className="space-y-4">
-            <MembersContent
-              organization={organization}
-              onRefetch={refetchOrganization}
-            />
+            <MembersContent organization={organization} />
           </TabsContent>
 
           <TabsContent value="invites" className="space-y-4">
@@ -123,7 +125,6 @@ function OrganizationPage() {
               invitations={invitations}
               isLoadingInvitations={isLoadingInvitations}
               invitationsError={invitationsError}
-              onRefetch={refetchOrganization}
               onRefetchInvitations={refetchInvitations}
             />
           </TabsContent>
@@ -133,13 +134,7 @@ function OrganizationPage() {
   );
 }
 
-function MembersContent({
-  organization,
-  onRefetch,
-}: {
-  organization: any;
-  onRefetch: () => void;
-}) {
+function MembersContent({ organization }: { organization: any }) {
   const [searchTerm, setSearchTerm] = useState('');
   const members = organization.members || [];
 
@@ -160,7 +155,6 @@ function MembersContent({
       toasts.success(
         `${member.user?.name || 'Member'} has been removed from the organization`
       );
-      onRefetch();
     } catch (error) {
       toasts.error('Failed to remove member');
       console.error('Remove member error:', error);
@@ -170,10 +164,7 @@ function MembersContent({
   return (
     <>
       <div className="flex flex-col items-center gap-2">
-        <InviteMemberDialog
-          organizationId={organization.id}
-          onSuccess={onRefetch}
-        />
+        <InviteMemberDialog organizationId={organization.id} />
       </div>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -218,10 +209,7 @@ function MembersContent({
             <p className="text-sm text-muted-foreground text-center mb-6">
               Invite the first member to get started
             </p>
-            <InviteMemberDialog
-              organizationId={organization.id}
-              onSuccess={onRefetch}
-            />
+            <InviteMemberDialog organizationId={organization.id} />
           </CardContent>
         </Card>
       )}
@@ -234,7 +222,6 @@ interface InvitesContentProps {
   invitations: any[];
   isLoadingInvitations: boolean;
   invitationsError: Error | null;
-  onRefetch: () => void;
   onRefetchInvitations: () => void;
 }
 
@@ -243,7 +230,6 @@ function InvitesContent({
   invitations,
   isLoadingInvitations,
   invitationsError,
-  onRefetch,
   onRefetchInvitations,
 }: InvitesContentProps) {
   const [isResending, setIsResending] = useState<string | null>(null);
@@ -348,7 +334,6 @@ function InvitesContent({
         <InviteMemberDialog
           organizationId={organization.id}
           onSuccess={() => {
-            onRefetch();
             // Refresh invitations list after sending new invite
             onRefetchInvitations();
           }}
@@ -370,13 +355,13 @@ function InvitesContent({
               <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-3">
                 <Mail className="h-6 w-6 text-muted-foreground" />
               </div>
-              <p className="text-muted-foreground">No pending invitations</p>
+              <p className="text-muted-foreground">No pending invites</p>
             </div>
           ) : (
             <div className="space-y-3">
               {invitations.map(invitation => (
                 <Card key={invitation.id} className="border-muted">
-                  <CardContent className="p-4">
+                  <CardContent>
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
@@ -388,9 +373,13 @@ function InvitesContent({
                           <p className="font-medium text-foreground truncate">
                             {invitation.email}
                           </p>
-                          <div className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
-                            <span>Role: {invitation.role}</span>
-                            <span className="hidden sm:inline">•</span>
+                          <div className="flex flex-col gap-2 text-sm text-muted-foreground">
+                            <Badge
+                              variant="secondary"
+                              className="text-xs border border-border text-muted-foreground bg-accent"
+                            >
+                              {invitation.role}
+                            </Badge>
                             {invitation.expiresAt && (
                               <>
                                 <span className="hidden sm:inline">•</span>
@@ -406,41 +395,39 @@ function InvitesContent({
                       <div className="flex items-center gap-3 shrink-0">
                         {getStatusBadge(invitation.status)}
 
-                        {invitation.status === 'pending' && (
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                handleResendInvitation(
-                                  invitation.id,
-                                  invitation.email
-                                )
-                              }
-                              disabled={isResending === invitation.id}
-                            >
-                              {isResending === invitation.id ? (
-                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary mr-1" />
-                              ) : (
-                                <Mail className="h-3 w-3 mr-1" />
-                              )}
-                              Resend
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                handleCancelInvitation(
-                                  invitation.id,
-                                  invitation.email
-                                )
-                              }
-                              className="text-destructive hover:text-destructive"
-                            >
-                              Cancel
-                            </Button>
-                          </div>
-                        )}
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              handleResendInvitation(
+                                invitation.id,
+                                invitation.email
+                              )
+                            }
+                            disabled={isResending === invitation.id}
+                          >
+                            {isResending === invitation.id ? (
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary mr-1" />
+                            ) : (
+                              <Mail className="h-3 w-3 mr-1" />
+                            )}
+                            Resend
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              handleCancelInvitation(
+                                invitation.id,
+                                invitation.email
+                              )
+                            }
+                            className="text-destructive hover:text-destructive"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -532,7 +519,7 @@ function InviteMemberDialog({
   onSuccess,
 }: {
   organizationId: string;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
@@ -557,7 +544,7 @@ function InviteMemberDialog({
       toasts.success(`Invitation sent to ${formData.email}`);
       setIsOpen(false);
       setFormData({ email: '', role: 'member' });
-      onSuccess();
+      onSuccess?.();
     } catch (error) {
       toasts.error('Failed to send invitation');
       console.error('Invite error:', error);

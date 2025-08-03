@@ -18,7 +18,7 @@ async function checkAdminRole(
     const db = getDatabase();
 
     const result = await db.query(
-      'SELECT role FROM organization_memberships WHERE user_id = $1 AND organization_id = $2',
+      'SELECT role FROM member WHERE "userId" = $1 AND "organizationId" = $2',
       [userId, organizationId]
     );
 

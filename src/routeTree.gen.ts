@@ -14,7 +14,6 @@ import { Route as SignUpRouteImport } from './routes/sign-up';
 import { Route as SignInRouteImport } from './routes/sign-in';
 import { Route as NoOrganizationRouteImport } from './routes/no-organization';
 import { Route as FlightsRouteImport } from './routes/flights';
-import { Route as ActiveRunRouteImport } from './routes/active-run';
 import { Route as SplatRouteImport } from './routes/$';
 import { Route as IndexRouteImport } from './routes/index';
 import { Route as OrganizationsOrganizationIdRouteImport } from './routes/organizations/$organizationId';
@@ -54,11 +53,6 @@ const NoOrganizationRoute = NoOrganizationRouteImport.update({
 const FlightsRoute = FlightsRouteImport.update({
   id: '/flights',
   path: '/flights',
-  getParentRoute: () => rootRouteImport,
-} as any);
-const ActiveRunRoute = ActiveRunRouteImport.update({
-  id: '/active-run',
-  path: '/active-run',
   getParentRoute: () => rootRouteImport,
 } as any);
 const SplatRoute = SplatRouteImport.update({
@@ -152,7 +146,6 @@ const OrganizationsOrganizationIdDriverDriverIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute;
   '/$': typeof SplatRoute;
-  '/active-run': typeof ActiveRunRoute;
   '/flights': typeof FlightsRoute;
   '/no-organization': typeof NoOrganizationRoute;
   '/sign-in': typeof SignInRoute;
@@ -175,7 +168,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute;
   '/$': typeof SplatRoute;
-  '/active-run': typeof ActiveRunRoute;
   '/flights': typeof FlightsRoute;
   '/no-organization': typeof NoOrganizationRoute;
   '/sign-in': typeof SignInRoute;
@@ -198,7 +190,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   '/': typeof IndexRoute;
   '/$': typeof SplatRoute;
-  '/active-run': typeof ActiveRunRoute;
   '/flights': typeof FlightsRoute;
   '/no-organization': typeof NoOrganizationRoute;
   '/sign-in': typeof SignInRoute;
@@ -223,7 +214,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$'
-    | '/active-run'
     | '/flights'
     | '/no-organization'
     | '/sign-in'
@@ -246,7 +236,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$'
-    | '/active-run'
     | '/flights'
     | '/no-organization'
     | '/sign-in'
@@ -268,7 +257,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/$'
-    | '/active-run'
     | '/flights'
     | '/no-organization'
     | '/sign-in'
@@ -292,7 +280,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
   SplatRoute: typeof SplatRoute;
-  ActiveRunRoute: typeof ActiveRunRoute;
   FlightsRoute: typeof FlightsRoute;
   NoOrganizationRoute: typeof NoOrganizationRoute;
   SignInRoute: typeof SignInRoute;
@@ -337,13 +324,6 @@ declare module '@tanstack/react-router' {
       path: '/flights';
       fullPath: '/flights';
       preLoaderRoute: typeof FlightsRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    '/active-run': {
-      id: '/active-run';
-      path: '/active-run';
-      fullPath: '/active-run';
-      preLoaderRoute: typeof ActiveRunRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/$': {
@@ -501,7 +481,6 @@ const OrganizationsOrganizationIdRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SplatRoute: SplatRoute,
-  ActiveRunRoute: ActiveRunRoute,
   FlightsRoute: FlightsRoute,
   NoOrganizationRoute: NoOrganizationRoute,
   SignInRoute: SignInRoute,

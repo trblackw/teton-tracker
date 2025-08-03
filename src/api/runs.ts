@@ -26,22 +26,22 @@ async function getOrganizationMemberIds(
 
       // Get all organization members from our database
       const orgMembers = await db.query(
-        `SELECT user_id 
-         FROM organization_memberships 
-         WHERE organization_id = $1`,
+        `SELECT "userId" 
+         FROM member 
+         WHERE "organizationId" = $1`,
         [organizationId]
       );
 
       // Return all member user IDs
-      return orgMembers.rows.map(row => row.user_id);
+      return orgMembers.rows.map(row => row.userId);
     }
 
     // For regular users, use existing membership-based logic
     // Get admin's organization memberships from our database
     const adminMemberships = await db.query(
-      `SELECT organization_id, role 
-       FROM organization_memberships 
-       WHERE user_id = $1`,
+      `SELECT "organizationId", role 
+       FROM member 
+       WHERE "userId" = $1`,
       [adminUserId]
     );
 
@@ -58,18 +58,18 @@ async function getOrganizationMemberIds(
       throw new Error('Access denied: Admin role required');
     }
 
-    const orgId = adminMembership.organization_id;
+    const orgId = adminMembership.organizationId;
 
     // Get all organization members from our database
     const orgMembers = await db.query(
-      `SELECT user_id 
-       FROM organization_memberships 
-       WHERE organization_id = $1`,
+      `SELECT "userId" 
+       FROM member 
+       WHERE "organizationId" = $1`,
       [orgId]
     );
 
     // Return all member user IDs
-    return orgMembers.rows.map(row => row.user_id);
+    return orgMembers.rows.map(row => row.userId);
   } catch (error) {
     console.error('Error fetching organization members:', error);
     throw error;
