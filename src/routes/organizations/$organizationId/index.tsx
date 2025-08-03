@@ -472,43 +472,47 @@ function MemberCard({
   };
 
   return (
-    <Card>
-      <CardContent className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <span className="text-sm font-medium">
-              {member.user?.name?.charAt(0).toUpperCase() || '?'}
-            </span>
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <h3 className="font-medium">
-                {member.user?.name || 'Unknown User'}
-              </h3>
-              <Badge
-                variant={getRoleBadgeVariant(member.role)}
-                className="flex items-center gap-1"
-              >
-                {getRoleIcon(member.role)}
-                {member.role}
-              </Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {member.user?.email || 'No email'}
-            </p>
-          </div>
+    <Card className="w-full">
+      <CardContent className="flex items-center gap-3 px-4">
+        {/* Avatar - fixed width */}
+        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+          <span className="text-sm font-medium">
+            {member.user?.name?.charAt(0).toUpperCase() || '?'}
+          </span>
         </div>
 
-        {canRemove && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onRemove}
-            className="text-destructive hover:text-destructive hover:bg-destructive/10 ml-2 shrink-0"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        )}
+        {/* Content - flexible but constrained */}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-medium truncate">
+              {member.user?.name || 'Unknown User'}
+            </h3>
+            <Badge
+              variant={getRoleBadgeVariant(member.role)}
+              className="flex items-center gap-1 shrink-0"
+            >
+              {getRoleIcon(member.role)}
+              {member.role}
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground truncate">
+            {member.user?.email || 'No email'}
+          </p>
+        </div>
+
+        {/* Action button - fixed width */}
+        <div className="shrink-0 w-10 flex justify-center">
+          {canRemove && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRemove}
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

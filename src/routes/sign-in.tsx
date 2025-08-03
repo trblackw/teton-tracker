@@ -53,7 +53,7 @@ function SignInPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 lg:max-w-lg mx-auto">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center flex items-center justify-center">
@@ -120,24 +120,6 @@ function SignInPage() {
               </Button>
             </form>
           </Form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              Don't have an account?{' '}
-              <Button
-                variant="link"
-                className="p-0 h-auto font-normal text-highlight hover:text-highlight/80 underline"
-                onClick={() =>
-                  navigate({
-                    to: '/sign-up',
-                    search: redirect ? { redirect } : undefined,
-                  })
-                }
-              >
-                Sign up
-              </Button>
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>

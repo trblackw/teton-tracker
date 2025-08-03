@@ -1,18 +1,13 @@
-import { createErrorResponse } from '../lib/access-control';
+import { createErrorResponse, getCurrentUser } from '../lib/access-control';
 import { initJSONResponse } from '../lib/api/api-tools';
 import { preferencesDb } from '../lib/db/preferences-db';
 import { type UserPreferences } from '../lib/schema';
-import { getCurrentAuthUser } from './auth';
 
 // GET /api/preferences
 export async function GET(request: Request): Promise<Response> {
   try {
     // Validate auth and get user from session
-    const [user, response] = await getCurrentAuthUser(request);
-
-    if (response && response.status !== 200) {
-      return response;
-    }
+    const user = await getCurrentUser(request);
 
     if (!user) {
       return initJSONResponse({ error: 'Authentication required' }, 401);
@@ -34,11 +29,7 @@ export async function GET(request: Request): Promise<Response> {
 export async function PUT(request: Request): Promise<Response> {
   try {
     // Validate auth and get user from session
-    const [user, response] = await getCurrentAuthUser(request);
-
-    if (response && response.status !== 200) {
-      return response;
-    }
+    const user = await getCurrentUser(request);
 
     if (!user) {
       return initJSONResponse({ error: 'Authentication required' }, 401);

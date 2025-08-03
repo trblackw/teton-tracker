@@ -1,3 +1,4 @@
+import { getCurrentUser } from '../lib/access-control';
 import type { OrganizationRequest } from '../lib/api/api-tools';
 import { initJSONResponse } from '../lib/api/api-tools';
 import { getUserOrganizationId } from '../lib/api/server-utils';
@@ -7,7 +8,6 @@ import {
   type ReportTemplatesQuery,
 } from '../lib/db/report-templates-db';
 import { type ReportTemplateForm, type ReportType } from '../lib/schema';
-import { getCurrentAuthUser } from './auth';
 
 // Helper function to check if user has admin privileges (admin or owner)
 async function checkAdminRole(
@@ -37,11 +37,7 @@ async function checkAdminRole(
 export async function GET(request: Request): Promise<Response> {
   try {
     const url = new URL(request.url);
-    const [user, response] = await getCurrentAuthUser(request);
-
-    if (response && response.status !== 200) {
-      return response;
-    }
+    const user = await getCurrentUser(request);
 
     if (!user) {
       return initJSONResponse({ error: 'Authentication required' }, 401);
@@ -86,11 +82,7 @@ export async function POST(request: Request): Promise<Response> {
     };
 
     // Validate auth and get user from session
-    const [user, response] = await getCurrentAuthUser(request);
-
-    if (response && response.status !== 200) {
-      return response;
-    }
+    const user = await getCurrentUser(request);
 
     if (!user) {
       return initJSONResponse({ error: 'Authentication required' }, 401);
@@ -139,11 +131,7 @@ export async function PUT(request: Request): Promise<Response> {
     }
 
     // Validate auth and get user from session
-    const [user, response] = await getCurrentAuthUser(request);
-
-    if (response && response.status !== 200) {
-      return response;
-    }
+    const user = await getCurrentUser(request);
 
     if (!user) {
       return initJSONResponse({ error: 'Authentication required' }, 401);
@@ -193,11 +181,7 @@ export async function DELETE(request: Request): Promise<Response> {
     }
 
     // Validate auth and get user from session
-    const [user, response] = await getCurrentAuthUser(request);
-
-    if (response && response.status !== 200) {
-      return response;
-    }
+    const user = await getCurrentUser(request);
 
     if (!user) {
       return initJSONResponse({ error: 'Authentication required' }, 401);

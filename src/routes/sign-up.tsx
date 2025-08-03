@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { Check } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -56,14 +56,11 @@ function SignUpPage() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const navigate = useNavigate();
   const { redirect, email, org } = Route.useSearch();
-  const acceptingInvitation = redirect?.startsWith('/accept-invitation/');
 
-  // Extract invitation data from search parameters
-  const invitationEmail = email || '';
-  const organizationName = org || '';
-
-  // Check if this is an invitation signup
-  const isInvitationSignUp = acceptingInvitation && !!invitationEmail;
+  // At this point, we know all parameters are valid due to beforeLoad validation
+  const invitationEmail = email!;
+  const organizationName = org!;
+  const isInvitationSignUp = true; // Always true since we only reach here with valid invitations
 
   // Extract invitation ID from redirect URL
   const getInvitationId = (): string | null => {
@@ -437,9 +434,92 @@ export const Route = createFileRoute('/sign-up')({
     email: z.string().optional(),
     org: z.string().optional(),
   }),
-  beforeLoad: async () => {
+  beforeLoad: async ({ search }) => {
     // Redirect authenticated users away from sign-up page
     await checkAuthRedirect();
+
+    // Require organization invitation to access sign-up page
+    if (
+      !search.redirect?.startsWith('/accept-invitation/') ||
+      !search.email ||
+      !search.org
+    ) {
+      throw redirect({
+        to: '/sign-in',
+      });
+    }
+
+    // At this point we know redirect is defined and valid
+    const invitationId = search.redirect
+      .replace('/accept-invitation/', '')
+      .split('?')[0];
+
+    if (!invitationId) {
+      throw redirect({
+        to: '/sign-in',
+      });
+    }
+
+    try {
+      const { data: invitation, error } =
+        await authClient.organization.getInvitation({
+          query: { id: invitationId },
+        });
+
+      if (error || !invitation) {
+        throw redirect({
+          to: '/sign-in',
+        });
+      }
+
+      // Validate that the email matches the invitation
+      if (search.email && invitation.email !== search.email) {
+        throw redirect({
+          to: '/sign-in',
+        });
+      }
+
+      // Return the invitation data for use by the component
+      return {
+        invitation,
+        organizationName:
+          search.org || invitation.organizationName || 'Unknown Organization',
+      };
+    } catch (err) {
+      throw redirect({
+        to: '/sign-in',
+      });
+    }
   },
+  errorComponent: ({ error }) => (
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center text-destructive">
+            Access Restricted
+          </CardTitle>
+          <p className="text-muted-foreground text-center">
+            {error.message ||
+              'Organization invitation required to create an account'}
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground text-center">
+              Sign-up is only available through organization invitations. If you
+              have an invitation link, please use that to create your account.
+            </p>
+            <Button
+              onClick={() => (window.location.href = '/sign-in')}
+              className="w-full"
+              variant="outline"
+            >
+              Go to Sign In
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  ),
   component: SignUpPage,
 });

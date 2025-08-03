@@ -1,10 +1,13 @@
-import { checkRunOwnership, createErrorResponse } from '../lib/access-control';
+import {
+  checkRunOwnership,
+  createErrorResponse,
+  getCurrentUser,
+} from '../lib/access-control';
 import type { OrganizationRequest } from '../lib/api/api-tools';
 import { initJSONResponse } from '../lib/api/api-tools';
 import { getDatabase } from '../lib/db/index';
 import { runsDb, type RunsQuery } from '../lib/db/runs-db';
 import { type NewRunForm, type Run, type RunStatus } from '../lib/schema';
-import { getCurrentAuthUser } from './auth';
 
 // Helper function to get organization member user IDs for admin operations
 async function getOrganizationMemberIds(
@@ -79,11 +82,7 @@ async function getOrganizationMemberIds(
 // GET /api/runs/organization - Admin-only endpoint to get runs for all org members
 export async function getOrganizationRuns(request: Request): Promise<Response> {
   try {
-    const [user, response] = await getCurrentAuthUser(request);
-
-    if (response && response.status !== 200) {
-      return response;
-    }
+    const user = await getCurrentUser(request);
 
     if (!user) {
       return initJSONResponse({ error: 'Authentication required' }, 401);
@@ -129,11 +128,7 @@ export async function getOrganizationRuns(request: Request): Promise<Response> {
 // GET /api/runs
 export async function GET(request: Request): Promise<Response> {
   try {
-    const [user, response] = await getCurrentAuthUser(request);
-
-    if (response && response.status !== 200) {
-      return response;
-    }
+    const user = await getCurrentUser(request);
 
     if (!user) {
       return initJSONResponse({ error: 'Authentication required' }, 401);
@@ -182,11 +177,7 @@ export async function GET(request: Request): Promise<Response> {
 // POST /api/runs
 export async function POST(request: Request): Promise<Response> {
   try {
-    const [user, response] = await getCurrentAuthUser(request);
-
-    if (response && response.status !== 200) {
-      return response;
-    }
+    const user = await getCurrentUser(request);
 
     if (!user) {
       return initJSONResponse({ error: 'Authentication required' }, 401);
@@ -210,11 +201,7 @@ export async function POST(request: Request): Promise<Response> {
 // PUT /api/runs
 export async function PUT(request: Request): Promise<Response> {
   try {
-    const [user, response] = await getCurrentAuthUser(request);
-
-    if (response && response.status !== 200) {
-      return response;
-    }
+    const user = await getCurrentUser(request);
 
     if (!user) {
       return initJSONResponse({ error: 'Authentication required' }, 401);
@@ -285,11 +272,7 @@ export async function PUT(request: Request): Promise<Response> {
 // DELETE /api/runs/:id
 export async function DELETE(request: Request): Promise<Response> {
   try {
-    const [user, response] = await getCurrentAuthUser(request);
-
-    if (response && response.status !== 200) {
-      return response;
-    }
+    const user = await getCurrentUser(request);
 
     if (!user) {
       return initJSONResponse({ error: 'Authentication required' }, 401);

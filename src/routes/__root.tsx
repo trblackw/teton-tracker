@@ -20,7 +20,6 @@ import { Toaster } from 'sonner';
 
 import { AuthGuard } from '../components/auth-guard';
 import { ErrorBoundary } from '../components/error-boundary';
-import { PasswordProtection } from '../components/password-protection';
 import { ThemeProvider } from '../components/theme-provider';
 import { Button } from '../components/ui/button';
 import { OfflineIndicator } from '../components/ui/offline-indicator';
@@ -498,9 +497,7 @@ function RootComponent() {
       <ErrorBoundary>
         <AppContextProvider>
           <ThemeProvider>
-            <PasswordProtection>
-              {isPublicRoute ? appContent : <AuthGuard>{appContent}</AuthGuard>}
-            </PasswordProtection>
+            {isPublicRoute ? appContent : <AuthGuard>{appContent}</AuthGuard>}
           </ThemeProvider>
         </AppContextProvider>
       </ErrorBoundary>
